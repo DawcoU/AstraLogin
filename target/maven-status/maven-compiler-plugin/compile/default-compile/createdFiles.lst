@@ -1,0 +1,14 @@
+pl\dawcou\astralogin\IPManager.class
+pl\dawcou\astralogin\AstraLogin.class
+pl\dawcou\astralogin\UpdateChecker.class
+pl\dawcou\astralogin\LogFilter$Factory.class
+pl\dawcou\astralogin\PasswordManager.class
+pl\dawcou\astralogin\ResetIPCommand.class
+META-INF\org\apache\logging\log4j\core\config\plugins\Log4j2Plugins.dat
+pl\dawcou\astralogin\HashPassword.class
+pl\dawcou\astralogin\LoginAttemptSystem.class
+pl\dawcou\astralogin\LogFilter.class
+pl\dawcou\astralogin\IPSecurity.class
+pl\dawcou\astralogin\ConfigUpdater.class
+pl\dawcou\astralogin\LoginSystem$1.class
+pl\dawcou\astralogin\LoginSystem.class

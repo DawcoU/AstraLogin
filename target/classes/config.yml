@@ -1,0 +1,83 @@
+# +---------------------------------------------------------------------------+
+# |                         AstraLogin - Modern Auth System                   |
+# +---------------------------------------------------------------------------+
+
+# --- System Settings ---
+# DO NOT change this value. It is used to track config compatibility.
+config-version: 2.0.0
+check-updates: true
+
+# --- Security & Logging ---
+security:
+  # IP-Lock: Prevents login if the player's IP address has changed.
+  ip-lock-enabled: true
+
+  # Two accounts from the same IP cannot be registered.
+  anti-multiaccount: true
+
+# --- Login Features ---
+features:
+  # Enable or disable the login countdown timer.
+  login-time-enabled: true
+  login-time-limit: 60 # Time in seconds
+
+  # Enable or disable maximum login attempts.
+  max-attempts-enabled: true
+  max-login-attempts: 3
+
+  # Session System: Allows players to reconnect without password for a limited time.
+  session-enabled: true
+  session-time: 5 # Time in minutes
+
+# --- Password Requirements ---
+requirements:
+  # Minimum number of characters in a password
+  min-password-length: 6
+
+  # Maximum number of characters in a password
+
+  max-password-length: 16
+
+# --- Visual Effects ---
+visuals:
+  # Apply blindness effect to unauthenticated players.
+  use-blindness: true
+
+# --- Messages Section ---
+# You can use color codes (e.g., &a, &c, &l) and placeholders like %time%, %player%, %min%.
+messages:
+  wrong-password: "&cBłędne hasło!"
+  already-logged: "&cJesteś już zalogowany!"
+  no-account: "&cNie masz konta! wpisz &e/zarejestruj <hasło> <powtórz hasło>"
+  success-login: "&aZalogowano"
+  success-register: "&aZarejestrowano"
+  reminder-login: "&eZaloguj się: &f/zaloguj <hasło>"
+  reminder-register: "&eZarejestruj się: &f/zarejestruj <hasło>"
+  kick-timeout: "&cCzas Logowania Minął!"
+  actionbar-timer: "&eCzas &6%time%s &ena zalogowanie!"
+  usage-login: "&cPoprawne użycie: &e/zaloguj <hasło>"
+  usage-register: "&cPoprawne użycie: &e/zarejestruj <hasło> <powtórz hasło>"
+  has-account: "&cMasz już konto! Wpisz &e/zaloguj <hasło>"
+  no-permission: "&cNie masz permisji!"
+  reload-success: "&aKonfiguracja przeładowana pomyślnie!"
+  title-login: "&a&lZALOGOWANO"
+  subtitle-login: "&7Witaj z powrotem!"
+  title-register: "&a&lZAREJESTROWANO"
+  subtitle-register: "&7Witaj na serwerze!"
+  usage-reset: "&cPoprawne użycie: &e/zresetujhaslo <gracz>"
+  usage-reset-ip: "&cPoprawne użycie: &e/zresetujip <gracz>"
+  no-account-reset: "&cTen gracz nie ma konta!"
+  admin-reset-success: "&aKonto gracza &6%player% &azostało usunięte"
+  player-reset-kick: "&cTwoje hasło zostało zresetowane przez administratora!"
+  password-too-short: "&cHasło jest za krótkie! Minimum &6%min% &cznaków"
+  password-too-long: "&cHasło jest za długie! Maksimum &6%max% &cznaków"
+  kick-max-attempts: "&cPrzekroczono limit prób logowania!"
+  passwords-not-match: "&cHasła nie są identyczne!"
+  already-online: "&cGracz o tym nicku jest już na serwerze!"
+  admin-ip-reset-success: "&aIP gracza &6%player% &azostało zresetowane"
+  ip-lock-kick: "Twoje IP nie zgadza się z tym kontem!"
+  anti-multiaccount-kick: "&cNa tym IP zarejestrowano już inne konto!"
+  usage-change-password: "&cPoprawne użycie: &e/zmienhaslo <stare> <nowe> <powtórz>"
+  wrong-old-password: "&cStare hasło jest niepoprawne!"
+  success-change-password: "&aTwoje Hasło zostało zmienione! &eZaloguj się ponownie"
+  session-restored: "&eSesja aktywna &aZalogowano automatycznie"

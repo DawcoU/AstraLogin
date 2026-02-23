@@ -1,0 +1,28 @@
+name: AstraLogin
+version: '2.0.0'
+main: pl.dawcou.astralogin.AstraLogin
+api-version: '1.21'
+
+commands:
+  astralogin:
+    aliases: [al]
+  zresetujhaslo:
+    aliases: [resetpassword]
+  zmienhaslo:
+    aliases: [changepassword]
+  zresetujip:
+    aliases: [resetip]
+  zaloguj:
+    aliases: [login]
+  zarejestruj:
+    aliases: [register]
+
+permissions:
+  astralogin.reload:
+    default: op
+  astralogin.update:
+    default: op
+  astralogin.resetpassword:
+    default: op
+  astralogin.resetip:
+    default: op
