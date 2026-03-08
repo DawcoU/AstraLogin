@@ -1,6 +1,7 @@
 package pl.dawcou.astralogin;
 
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.filter.AbstractFilter;
 import org.apache.logging.log4j.message.Message;
@@ -8,6 +9,9 @@ import org.apache.logging.log4j.message.Message;
 public class LogFilter extends AbstractFilter {
 
     private final AstraLogin plugin;
+    private static final Logger ROOT_LOGGER = LogManager.getRootLogger();
+    // Niewidzialny znacznik: reset koloru, którego nie widać w konsoli 🛡️
+    private static final String HIDDEN_MARKER = "§r";
 
     public LogFilter(AstraLogin plugin) {
         this.plugin = plugin;
@@ -19,28 +23,31 @@ public class LogFilter extends AbstractFilter {
         if (msg == null) return Result.NEUTRAL;
 
         String formatted = msg.getFormattedMessage();
-        if (formatted == null || !formatted.contains("issued server command:")) {
+        if (formatted == null) return Result.NEUTRAL;
+
+        // Jeśli log kończy się naszym niewidzialnym markerem - puszczaj! ⚓
+        if (formatted.endsWith(HIDDEN_MARKER)) {
             return Result.NEUTRAL;
         }
 
-        String lower = formatted.toLowerCase();
-        if (lower.contains("/login ") ||
-                lower.contains("/register ") ||
-                lower.contains("/zaloguj ") ||
-                lower.contains("/zarejestruj ") ||
-                lower.contains("/zmienhaslo ") ||
-                lower.contains("/changepassword ")) {
+        if (formatted.contains("issued server command:")) {
+            String lower = formatted.toLowerCase();
+            if (lower.contains("/login ") || lower.contains("/register ") ||
+                    lower.contains("/zaloguj ") || lower.contains("/zarejestruj ") ||
+                    lower.contains("/zmienhaslo ") || lower.contains("/changepassword ")) {
 
-            // Pobieramy TYLKO akcję. Domyślnie "deny", bo to najbezpieczniejsza opcja.
-            String action = plugin.getConfig().getString("security.logger.action", "deny");
+                String action = plugin.getConfig().getString("security.logger.action", "deny");
 
-            if (action.equalsIgnoreCase("mask")) {
-                String masked = maskPassword(formatted);
-                LogManager.getLogger("AstraLogin").info(masked);
+                if (action.equalsIgnoreCase("mask")) {
+                    String masked = maskPassword(formatted);
+
+                    // WYSYŁAMY: Prefix + Wiadomość + Niewidzialny Marker
+                    // W konsoli marker §r nie zajmuje miejsca i jest niewidoczny! 🚀
+                    ROOT_LOGGER.info(AstraLogin.PREFIX2 + " §f" + masked + HIDDEN_MARKER);
+                }
+
+                return Result.DENY;
             }
-
-            // Oryginał ZAWSZE ginie. Zero luk.
-            return Result.DENY;
         }
 
         return Result.NEUTRAL;

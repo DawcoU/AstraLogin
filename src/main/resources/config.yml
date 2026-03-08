@@ -12,8 +12,10 @@ security:
   # IP-Lock: Prevents login if the player's IP address has changed.
   ip-lock-enabled: true
 
-  # Two accounts from the same IP cannot be registered.
-  anti-multiaccount: true
+  anti-multiaccount:
+    enabled: true
+    # How many accounts can be registered on ONE IP address?
+    limit: 2
 
   logger:
     # Available options:
@@ -82,7 +84,7 @@ messages:
   already-online: "&cGracz o tym nicku jest już na serwerze!"
   admin-ip-reset-success: "&aIP gracza &6%player% &azostało zresetowane"
   ip-lock-kick: "Twoje IP nie zgadza się z tym kontem!"
-  anti-multiaccount-kick: "&cNa tym IP zarejestrowano już inne konto!"
+  anti-multiaccount-kick: "&cNa tym IP już nie może zarejestrować się więcej kont!"
   usage-change-password: "&cPoprawne użycie: &e/zmienhaslo <stare> <nowe> <powtórz>"
   wrong-old-password: "&cStare hasło jest niepoprawne!"
   success-change-password: "&aTwoje Hasło zostało zmienione! &eZaloguj się ponownie"

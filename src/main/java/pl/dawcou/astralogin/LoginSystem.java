@@ -1,7 +1,5 @@
 package pl.dawcou.astralogin;
 
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -9,28 +7,8 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityPickupItemEvent;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryOpenEvent;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
-import org.bukkit.event.player.PlayerCommandPreprocessEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
-import org.bukkit.event.entity.FoodLevelChangeEvent;
-import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
-import org.bukkit.event.player.PlayerSwapHandItemsEvent;
-import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,16 +22,18 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
     private final PasswordManager data;
     private final IPManager ipData;
     private final AstraLogin plugin;
-
-    // Teraz jest czyściutko i wydajnie:
+    private final InventoryStorage storage;
     private final Set<UUID> zalogowani = new HashSet<>();
     private final Map<UUID, Long> sesje = new HashMap<>();
     private final Map<UUID, String> sesjeIP = new HashMap<>();
     private final LoginAttemptSystem attemptSystem;
 
-    public LoginSystem(PasswordManager data, AstraLogin plugin) {
-        this.data = data;
+    public LoginSystem(AstraLogin plugin, PasswordManager data, InventoryStorage storage) {
         this.plugin = plugin;
+        this.data = data;
+        this.storage = storage;
+
+        // Tutaj tworzysz resztę, żeby nie musieć ich podawać w onEnable:
         this.ipData = new IPManager(plugin);
         this.attemptSystem = new LoginAttemptSystem(plugin);
     }
@@ -154,14 +134,12 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             }
 
             if (args.length == 1 && args[0].equalsIgnoreCase("info")) {
-                sender.sendMessage("§8------------ " + AstraLogin.PREFIX + " §8------------");
+                sender.sendMessage("§7------------ " + AstraLogin.PREFIX + " §7----------");
                 sender.sendMessage("§aPlugin created by: §eDawcoU");
+                sender.sendMessage("§aPlugin version: §ev" + plugin.getDescription().getVersion());
                 sender.sendMessage("");
-                sender.sendMessage("§6Plugin files:");
-                sender.sendMessage("§fconfig.yml: §7Plugin Settings");
-                sender.sendMessage("§fpasswords.yml: §7Player password file §4(Read only)");
-                sender.sendMessage("§fips.yml: §7Player IP file §4(Read only)");
-                sender.sendMessage("§8------------------------");
+                sender.sendMessage("§6Copyright © 2026 DawcoU All rights reserved");
+                sender.sendMessage("§7-----------------------");
                 return true;
             }
         }
@@ -200,6 +178,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 finishLogin(p);
                 p.sendTitle(c("messages.title-register"), c("messages.subtitle-register"), 10, 40, 10);
                 p.sendMessage(AstraLogin.PREFIX + " " + c("messages.success-register"));
+                storage.restore(p);
             } else {
                 p.sendMessage(AstraLogin.PREFIX + " " + c("messages.usage-register"));
             }
@@ -233,6 +212,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                     finishLogin(p);
                     p.sendTitle(c("messages.title-login"), c("messages.subtitle-login"), 10, 40, 10);
                     p.sendMessage(AstraLogin.PREFIX + " " + c("messages.success-login"));
+                    storage.restore(p);
                 } else {
                     p.sendMessage(AstraLogin.PREFIX + " " + c("messages.wrong-password"));
                     if (plugin.getConfig().getBoolean("features.max-attempts-enabled")) {
@@ -247,7 +227,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
         return false;
     }
 
-    private void finishLogin(Player p) {
+    public void finishLogin(Player p) {
         zalogowani.add(p.getUniqueId());
         p.removePotionEffect(PotionEffectType.BLINDNESS);
         attemptSystem.resetuj(p.getUniqueId());
@@ -275,240 +255,17 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 .collect(java.util.stream.Collectors.toList());
     }
 
-    @EventHandler
-    public void onQuit(PlayerQuitEvent e) {
-        Player p = e.getPlayer();
-        UUID uuid = p.getUniqueId();
-
-        // Jeśli gracz był zalogowany, zapisujemy sesję
-        if (zalogowani.contains(uuid) && plugin.getConfig().getBoolean("features.session-enabled")) {
-            sesje.put(uuid, System.currentTimeMillis());
-            sesjeIP.put(uuid, p.getAddress().getAddress().getHostAddress());
-        }
-
-        zalogowani.remove(uuid);
-        attemptSystem.resetuj(uuid);
-    }
-
-    @EventHandler
-    public void onJoin(PlayerJoinEvent e) {
-        Player p = e.getPlayer();
-        UUID uuid = p.getUniqueId();
-        String currentIP = p.getAddress().getAddress().getHostAddress();
-
-        if (plugin.getConfig().getBoolean("check-updates", true) && p.hasPermission("astralogin.update")) {
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                new UpdateChecker(plugin).getVersion(version -> {
-                    if (!plugin.getDescription().getVersion().equals(version)) {
-                        Bukkit.getScheduler().runTask(plugin, () -> {
-                            p.sendMessage("");
-                            p.sendMessage("§8§m----------------- " + AstraLogin.PREFIX + " §8§m-----------------");
-                            p.sendMessage("§eDostępna jest nowa wersja AstraLogin: §fv" + version);
-                            p.sendMessage("§aPobierz ją tutaj:");
-                            p.sendMessage("§b§nhttps://modrinth.com/plugin/astralogin/version/" + version);
-                            p.sendMessage("§8§m----------------------------------");
-                            p.sendMessage("");
-                        });
-                    }
-                });
-            });
-        }
-
-        zalogowani.remove(p.getUniqueId());
-
-        // --- SYSTEM SESJI (NOWOŚĆ 2.0.0) ---
-        if (plugin.getConfig().getBoolean("features.session-enabled")) {
-            if (sesje.containsKey(uuid) && sesjeIP.get(uuid).equals(currentIP)) {
-                long lastLogout = sesje.get(uuid);
-                long sessionLimit = plugin.getConfig().getLong("features.session-time") * 60 * 1000; // minuty na milisekundy
-
-                if (System.currentTimeMillis() - lastLogout <= sessionLimit) {
-                    finishLogin(p);
-                    p.sendMessage(AstraLogin.PREFIX + " " + c("messages.session-restored"));
-                    sesje.remove(uuid);
-                    sesjeIP.remove(uuid);
-                    return; // Gracz zalogowany, kończymy onJoin
-                }
-            }
-        }
-
-        if (plugin.getConfig().getBoolean("visuals.use-blindness")) {
-            p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, Integer.MAX_VALUE, 0, false, false));
-        }
-
-        if (data.maHaslo(p.getUniqueId().toString())) {
-            p.sendMessage(AstraLogin.PREFIX + " " + c("messages.reminder-login"));
-        } else {
-            p.sendMessage(AstraLogin.PREFIX + " " + c("messages.reminder-register"));
-        }
-
-        if (plugin.getConfig().getBoolean("features.login-time-enabled")) {
-            final int[] time = {plugin.getConfig().getInt("features.login-time-limit")};
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    if (!p.isOnline() || zalogowani.contains(p.getUniqueId())) {
-                        this.cancel();
-                        return;
-                    }
-                    if (time[0] <= 0) {
-                        p.kickPlayer(c("messages.kick-timeout"));
-                        this.cancel();
-                        return;
-                    }
-
-                    p.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(c("messages.actionbar-timer").replace("%time%", String.valueOf(time[0]))));
-
-                    time[0]--;
-                }
-            }.runTaskTimer(plugin, 0L, 20L);
-        }
-    }
-
     private String c(String path) {
         String msg = plugin.getConfig().getString(path);
         if (msg == null) return "§cMissing message: " + path;
         return org.bukkit.ChatColor.translateAlternateColorCodes('&', msg);
     }
 
-    @EventHandler
-    public void onPreLogin(AsyncPlayerPreLoginEvent e) {
-        String name = e.getName();
-        UUID uuid = e.getUniqueId();
-        String currentIP = e.getAddress().getHostAddress();
-
-        Player target = Bukkit.getPlayerExact(name);
-        if (target != null && target.isOnline()) {
-            e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, c("messages.already-online"));
-            return;
-        }
-
-        if (plugin.getConfig().getBoolean("security.anti-multiaccount", true)) {
-            String existingUUID = ipData.getGraczByIP(currentIP);
-
-            // Jeśli IP istnieje w bazie, ale pod innym UUID niż to, które właśnie wchodzi
-            if (existingUUID != null && !existingUUID.equals(uuid.toString())) {
-                e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, c("messages.anti-multiaccount-kick"));
-                return;
-            }
-        }
-
-        if (plugin.getConfig().getBoolean("security.ip-lock-enabled")) {
-            String savedIP = ipData.getIP(uuid.toString());
-            if (savedIP != null) {
-                if (!new IPSecurity().isIPSafe(savedIP, currentIP)) {
-                    e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, c("messages.ip-lock-kick"));
-                }
-            }
-        }
-    }
-
-    @EventHandler
-    public void onChat(AsyncPlayerChatEvent e) {
-        if (!zalogowani.contains(e.getPlayer().getUniqueId())) {
-            e.setCancelled(true);
-            e.getPlayer().sendMessage(AstraLogin.PREFIX + " " + c("messages.reminder-login"));
-        }
-    }
-
-    @EventHandler
-    public void onCommand(PlayerCommandPreprocessEvent e) {
-        if (zalogowani.contains(e.getPlayer().getUniqueId())) return;
-
-        String m = e.getMessage().toLowerCase();
-        if (m.startsWith("/zaloguj") || m.startsWith("/zarejestruj") ||
-                m.startsWith("/login") || m.startsWith("/register") ||
-                m.startsWith("/zmienhaslo") || m.startsWith("/changepassword")) {
-            return;
-        }
-
-        e.setCancelled(true);
-        e.getPlayer().sendMessage(AstraLogin.PREFIX + " " + c("messages.reminder-login"));
-    }
-
-    @EventHandler
-    public void onMove(PlayerMoveEvent e) {
-        if (!zalogowani.contains(e.getPlayer().getUniqueId())) {
-            e.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onBreak(BlockBreakEvent e) {
-        if (!zalogowani.contains(e.getPlayer().getUniqueId())) {
-            e.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onPlace(BlockPlaceEvent e) {
-        if (!zalogowani.contains(e.getPlayer().getUniqueId())) {
-            e.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onDmg(EntityDamageEvent e) {
-        if (e.getEntity() instanceof Player && !zalogowani.contains(e.getEntity().getUniqueId())) {
-            e.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onInteract(PlayerInteractEvent e) {
-        if (!zalogowani.contains(e.getPlayer().getUniqueId())) {
-            e.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onInv(InventoryClickEvent e) {
-        if (!zalogowani.contains(e.getWhoClicked().getUniqueId())) {
-            e.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onInventoryOpen(InventoryOpenEvent e) {
-        if (!zalogowani.contains(e.getPlayer().getUniqueId())) {
-            e.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onDrop(PlayerDropItemEvent e) {
-        if (!zalogowani.contains(e.getPlayer().getUniqueId())) {
-            e.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onPickup(EntityPickupItemEvent e) {
-        if (e.getEntity() instanceof Player && !zalogowani.contains(e.getEntity().getUniqueId())) {
-            e.setCancelled(true);
-        }
-    }
-
-    // --- DODATKOWE BLOKADY (BUNKER MODE) ---
-
-    @EventHandler
-    public void onHunger(FoodLevelChangeEvent e) {
-        if (e.getEntity() instanceof Player && !zalogowani.contains(e.getEntity().getUniqueId())) {
-            e.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onSwap(PlayerSwapHandItemsEvent e) {
-        if (!zalogowani.contains(e.getPlayer().getUniqueId())) {
-            e.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onTarget(EntityTargetLivingEntityEvent e) {
-        if (e.getTarget() instanceof Player && !zalogowani.contains(e.getTarget().getUniqueId())) {
-            e.setCancelled(true);
-        }
-    }
+    public Set<UUID> getZalogowani() { return zalogowani; }
+    public Map<UUID, Long> getSesje() { return sesje; }
+    public Map<UUID, String> getSesjeIP() { return sesjeIP; }
+    public InventoryStorage getStorage() { return storage; }
+    public PasswordManager getData() { return data; }
+    public IPManager getIpData() { return ipData; }
+    public LoginAttemptSystem getAttemptSystem() { return attemptSystem; }
 }

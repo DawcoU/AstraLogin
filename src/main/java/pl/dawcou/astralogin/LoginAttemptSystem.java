@@ -14,7 +14,7 @@ public class LoginAttemptSystem {
     }
 
     public void dodajProbe(Player p) {
-        int max = plugin.getConfig().getInt("settings.max-login-attempts");
+        int max = plugin.getConfig().getInt("features.max-login-attempts");
         int aktualne = proby.getOrDefault(p.getUniqueId(), 0) + 1;
 
         if (aktualne >= max) {

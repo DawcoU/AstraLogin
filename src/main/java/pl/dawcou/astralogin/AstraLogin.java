@@ -1,13 +1,16 @@
 package pl.dawcou.astralogin;
 
+import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import net.md_5.bungee.api.ChatColor;
 
-public class AstraLogin extends JavaPlugin {
+public class AstraLogin extends JavaPlugin implements Listener {
 
     public static final String PREFIX = ChatColor.of("#0088FF") + "[" + ChatColor.of("#00D5FF") + "AstraLogin" + ChatColor.of("#0088FF") + "]";
 
     public static final String PREFIX2 = ("§9[§bAstraLogin§9]");
+
+    private InventoryStorage inventoryStorage;
 
     @Override
     public void onEnable() {
@@ -29,12 +32,16 @@ public class AstraLogin extends JavaPlugin {
         new ConfigUpdater(this).check();
 
         // --- 3. LOGIKA ---
-        // Najpierw tworzymy menedżerów (tylko raz!)
+        // 1. Tworzymy menedżery
         PasswordManager passwordManager = new PasswordManager(this);
         IPManager ipManager = new IPManager(this);
 
-        // Teraz podajemy gotowy passwordManager do LoginSystem
-        LoginSystem loginSystem = new LoginSystem(passwordManager, this);
+        // 1. Najpierw tworzysz bazę (InventoryStorage)
+        this.inventoryStorage = new InventoryStorage(this);
+
+        LoginSystem loginSystem = new LoginSystem(this, passwordManager, this.inventoryStorage);
+
+        getServer().getPluginManager().registerEvents(new LoginBlocks(this, loginSystem, this.inventoryStorage), this);
 
         // --- 4. REJESTRACJA KOMEND I EVENTÓW ---
         getCommand("zarejestruj").setExecutor(loginSystem);
@@ -48,26 +55,41 @@ public class AstraLogin extends JavaPlugin {
 
         // --- 5. LOGI STARTOWE ---
         getLogger().info("");
-        getLogger().info("§8------------ " + PREFIX2 + " §8------------");
+        getLogger().info("§7------------ " + PREFIX2 + " §7------------");
         getLogger().info("§6   AstraLogin §ev" + getDescription().getVersion());
         getLogger().info("§6   Status: §aEnabled");
         getLogger().info("§6   Author: §eDawcoU");
-        getLogger().info("§8----------------------------------------------");
+        getLogger().info("§7----------------------------------------------");
         getLogger().info("");
 
         // --- 6. SPRAWDZANIE NOWEJ WERSJI:
         getServer().getScheduler().runTaskAsynchronously(this, () -> {
-            // Sprawdzamy czy opcja jest włączona w configu
             if (getConfig().getBoolean("check-updates", true)) {
                 new UpdateChecker(this).getVersion(version -> {
-                    if (this.getDescription().getVersion().equals(version)) {
-                        getLogger().info("§aAstraLogin jest aktualny! (§f" + version + "§a)");
-                    } else {
+                    String currentVersion = this.getDescription().getVersion();
+
+                    if (currentVersion.equals(version)) {
                         getLogger().info("");
-                        getLogger().info("§8------------ " + PREFIX2 + " §8------------");
+                        getLogger().info("§aAstraLogin jest aktualny §f(§e" + version + "§f)");
+                        getLogger().info("");
+                    }
+                    // Sprawdzamy, czy masz wersję wyższą niż na Modrinth (np. Twoje 2.2.0 vs 2.1.0 na stronie)
+                    else if (currentVersion.compareTo(version) > 0) {
+                        getLogger().info("");
+                        getLogger().info("§7------------ " + PREFIX2 + " §7------------");
+                        getLogger().info("§bUżywasz wersji testowej (Development): §f§nv" + currentVersion);
+                        getLogger().info("§eNa Modrinth najnowsza stabilna to: §fv" + version);
+                        getLogger().info("§bUważaj na błędy, kod jest w fazie rozwoju!");
+                        getLogger().info("§7----------------------------------------------");
+                        getLogger().info("");
+                    }
+                    // Standardowa informacja o aktualizacji (Twój plugin jest starszy)
+                    else {
+                        getLogger().info("");
+                        getLogger().info("§7------------ " + PREFIX2 + " §7------------");
                         getLogger().info("§eDostępna jest nowa wersja AstraLogin: §fv" + version);
                         getLogger().info("§aPobierz: §f§nhttps://modrinth.com/plugin/astralogin/version/" + version);
-                        getLogger().info("§8----------------------------------------------");
+                        getLogger().info("§7----------------------------------------------");
                         getLogger().info("");
                     }
                 });
@@ -77,10 +99,11 @@ public class AstraLogin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+
         getLogger().info("");
-        getLogger().info("§8------------ §4[§cAstraLogin§4] §8---------");
+        getLogger().info("§7------------ §4[§cAstraLogin§4] §7---------");
         getLogger().info("§6   Status: §cDisabled §7- §eSee you! :D");
-        getLogger().info("§8----------------------------------------------");
+        getLogger().info("§7----------------------------------------------");
         getLogger().info("");
     }
 }

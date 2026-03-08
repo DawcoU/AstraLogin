@@ -39,7 +39,7 @@ public class ConfigUpdater {
                 config.set("config-version", plugin.getDescription().getVersion());
                 config.save(configFile);
                 plugin.reloadConfig();
-                plugin.getLogger().info(AstraLogin.PREFIX + " §ePomyślnie zaktualizowano config do wersji §av" + plugin.getDescription().getVersion());
+                plugin.getLogger().info(AstraLogin.PREFIX2 + " §ePomyślnie zaktualizowano config do wersji §av" + plugin.getDescription().getVersion());
             } catch (Exception e) {
                 plugin.getLogger().severe("§cBłąd podczas zapisu configu: " + e.getMessage());
             }

@@ -9,7 +9,6 @@ import java.util.function.Consumer;
 public class UpdateChecker {
 
     private final AstraLogin plugin;
-    // TUTAJ WPISZ SWOJEGO SLUGA Z MODRINTHA (to co jest w linku po /project/)
     private final String projectSlug = "astralogin";
 
     public UpdateChecker(AstraLogin plugin) {
@@ -39,7 +38,7 @@ public class UpdateChecker {
                 }
             }
         } catch (Exception e) {
-            plugin.getLogger().warning("Nie udalo sie sprawdzic aktualizacji na Modrinth.");
+            plugin.getLogger().warning("§cNie udało się sprawdzić aktualizacji na Modrinth");
         }
     }
 }

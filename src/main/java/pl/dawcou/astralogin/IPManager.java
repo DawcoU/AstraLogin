@@ -41,15 +41,14 @@ public class IPManager {
         try { config.save(file); } catch (IOException e) { e.printStackTrace(); }
     }
 
-    public String getGraczByIP(String ip) {
-        // Sprawdzamy sekcję "ips", bo tam trzymasz dane
-        if (config.getConfigurationSection("ips") == null) return null;
-
+    public int getIloscKontByIP(String ip) {
+        if (config.getConfigurationSection("ips") == null) return 0;
+        int count = 0;
         for (String key : config.getConfigurationSection("ips").getKeys(false)) {
             if (ip.equals(config.getString("ips." + key))) {
-                return key; // Znalazło kogoś z tym IP!
+                count++;
             }
         }
-        return null; // Czysto, nikt inny nie ma tego IP
+        return count;
     }
 }
