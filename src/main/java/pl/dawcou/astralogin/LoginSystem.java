@@ -20,26 +20,29 @@ import java.util.UUID;
 public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
 
     private final PasswordManager data;
-    private final IPManager ipData;
     private final AstraLogin plugin;
     private final InventoryStorage storage;
+    private final IPManager ipManager;
+    private final LoginAttemptSystem attemptSystem;
+    private final SpawnManager spawnManager; // <--- DODAJ TO POLE
+
     private final Set<UUID> zalogowani = new HashSet<>();
     private final Map<UUID, Long> sesje = new HashMap<>();
     private final Map<UUID, String> sesjeIP = new HashMap<>();
-    private final LoginAttemptSystem attemptSystem;
 
-    public LoginSystem(AstraLogin plugin, PasswordManager data, InventoryStorage storage) {
+    public LoginSystem(AstraLogin plugin, PasswordManager data, InventoryStorage storage, IPManager ipManager, SpawnManager spawnManager) {
         this.plugin = plugin;
         this.data = data;
         this.storage = storage;
-
-        // Tutaj tworzysz resztę, żeby nie musieć ich podawać w onEnable:
-        this.ipData = new IPManager(plugin);
+        this.ipManager = ipManager;
+        this.spawnManager = spawnManager; // <--- MUSISZ TO DOPISAĆ TUTAJ
         this.attemptSystem = new LoginAttemptSystem(plugin);
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+
+        Player p = (sender instanceof Player) ? (Player) sender : null;
 
         if (command.getName().equalsIgnoreCase("zresetujhaslo")) {
             if (!sender.hasPermission("astralogin.resetpassword")) {
@@ -57,7 +60,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 return true;
             }
             data.usunKonto(target.getUniqueId().toString());
-            ipData.usunIP(target.getUniqueId().toString());
+            ipManager.usunIP(target.getUniqueId().toString());
             sender.sendMessage(AstraLogin.PREFIX + " " + c("messages.admin-reset-success").replace("%player%", args[0]));
             if (target.isOnline() && target.getPlayer() != null) {
                 zalogowani.remove(target.getUniqueId());
@@ -67,11 +70,10 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
         }
 
         if (command.getName().equalsIgnoreCase("zmienhaslo")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("§cOnly players can change their password!");
+            if (p == null) {
+                sender.sendMessage("§cTa komenda nie jest dostępna dla konsoli!");
                 return true;
             }
-            Player p = (Player) sender;
 
             if (args.length != 3) {
                 p.sendMessage(AstraLogin.PREFIX + " " + c("messages.usage-change-password"));
@@ -122,6 +124,52 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             return true;
         }
 
+        if (args.length > 0 && args[0].equalsIgnoreCase("setspawn")) {
+            if (p == null) {
+                sender.sendMessage("§cTa komenda nie jest dostępna dla konsoli!");
+                return true;
+            }
+
+            if (!p.hasPermission("astralogin.spawn")) {
+                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.no-permission"));
+                return true;
+            }
+            if (args.length < 2) {
+                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.spawn-usage").replace("%cmd%", "setspawn"));
+                return true;
+            }
+
+            String type = args[1].toLowerCase();
+            if (type.equals("before_login") || type.equals("after_login")) {
+                spawnManager.setSpawn(type, p);
+                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.spawn-set-success").replace("%type%", type));
+            } else {
+                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.spawn-invalid-type"));
+            }
+            return true;
+        }
+
+        if (args.length > 0 && args[0].equalsIgnoreCase("delspawn")) {
+            if (p == null) {
+                sender.sendMessage("§cTa komenda nie jest dostępna dla konsoli!");
+                return true;
+            }
+
+            if (!p.hasPermission("astralogin.spawn")) {
+                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.no-permission"));
+                return true;
+            }
+            if (args.length < 2) {
+                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.spawn-usage").replace("%cmd%", "delspawn"));
+                return true;
+            }
+
+            String type = args[1].toLowerCase();
+            spawnManager.delSpawn(type);
+            p.sendMessage(AstraLogin.PREFIX + " " + c("messages.spawn-delete-success").replace("%type%", type));
+            return true;
+        }
+
         if (command.getName().equalsIgnoreCase("astralogin") || command.getName().equalsIgnoreCase("al")) {
             if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
                 if (!sender.hasPermission("astralogin.reload")) {
@@ -144,10 +192,12 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             }
         }
 
-        if (!(sender instanceof Player)) return true;
-        Player p = (Player) sender;
-
         if (command.getName().equalsIgnoreCase("zarejestruj") || command.getName().equalsIgnoreCase("register")) {
+            if (p == null) {
+                sender.sendMessage("§cTa komenda nie jest dostępna dla konsoli!");
+                return true;
+            }
+
             if (data.getHaslo(p.getUniqueId().toString()) != null) {
                 p.sendMessage(AstraLogin.PREFIX + " " + c("messages.has-account"));
                 return true;
@@ -173,7 +223,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
 
                 String ip = p.getAddress().getAddress().getHostAddress();
                 data.zapiszHaslo(p.getUniqueId().toString(), HashPassword.hash(args[0]));
-                ipData.zapiszIP(p.getUniqueId().toString(), ip);
+                ipManager.zapiszIP(p.getUniqueId().toString(), ip);
 
                 finishLogin(p);
                 p.sendTitle(c("messages.title-register"), c("messages.subtitle-register"), 10, 40, 10);
@@ -186,6 +236,11 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
         }
 
         if (command.getName().equalsIgnoreCase("zaloguj") || command.getName().equalsIgnoreCase("login")) {
+            if (p == null) {
+                sender.sendMessage("§cTa komenda nie jest dostępna dla konsoli!");
+                return true;
+            }
+
             String pass = data.getHaslo(p.getUniqueId().toString());
             if (pass == null) {
                 p.sendMessage(AstraLogin.PREFIX + " " + c("messages.no-account"));
@@ -200,12 +255,12 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 if (HashPassword.verify(args[0], pass)) {
 
                     // Sprawdzamy czy gracz ma przypisane IP
-                    if (ipData.getIP(p.getUniqueId().toString()) == null) {
+                    if (ipManager.getIP(p.getUniqueId().toString()) == null) {
                         // Pobieramy aktualne IP gracza
                         String currentIP = p.getAddress().getAddress().getHostAddress();
 
                         // ZAPISUJEMY używając poprawnej nazwy zmiennej: currentIP
-                        ipData.zapiszIP(p.getUniqueId().toString(), currentIP);
+                        ipManager.zapiszIP(p.getUniqueId().toString(), currentIP);
 
                     }
 
@@ -231,24 +286,41 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
         zalogowani.add(p.getUniqueId());
         p.removePotionEffect(PotionEffectType.BLINDNESS);
         attemptSystem.resetuj(p.getUniqueId());
+        spawnManager.teleport(p, "after_login");
+
+        // Pobieramy opcję z głównego configu pluginu
+        boolean useLastLoc = plugin.getConfig().getBoolean("features.teleport-to-last-location", true);
+
+        if (useLastLoc) {
+            // Używamy nowej metody, którą dopisaliśmy do SpawnManagera
+            spawnManager.teleportToLastLocation(p);
+        } else {
+            // Jeśli opcja jest wyłączona, wtedy leci na after_login
+            spawnManager.teleport(p, "after_login");
+        }
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        // Jeśli to komenda resetu, zwracamy null (czyli listę graczy online wg Bukkit)
         if (command.getName().equalsIgnoreCase("zresetujhaslo") && args.length == 1) return null;
 
         List<String> hints = new java.util.ArrayList<>();
         String cmd = command.getName();
 
-        if ((cmd.equalsIgnoreCase("astralogin") || cmd.equalsIgnoreCase("al")) && args.length == 1) {
-            hints.add("info");
-            if (sender.hasPermission("astralogin.reload")) {
-                hints.add("reload");
+        if (cmd.equalsIgnoreCase("astralogin") || cmd.equalsIgnoreCase("al")) {
+            if (args.length == 1) {
+                hints.add("info");
+                if (sender.hasPermission("astralogin.reload")) hints.add("reload");
+                if (sender.hasPermission("astralogin.spawn")) {
+                    hints.add("setspawn");
+                    hints.add("delspawn");
+                }
+            } else if (args.length == 2 && (args[0].equalsIgnoreCase("setspawn") || args[0].equalsIgnoreCase("delspawn"))) {
+                hints.add("before_login");
+                hints.add("after_login");
             }
         }
 
-        // Najszybsze filtrowanie podpowiedzi pod Jave 17
         String lastArg = args[args.length - 1].toLowerCase();
         return hints.stream()
                 .filter(s -> s.toLowerCase().startsWith(lastArg))
@@ -266,6 +338,6 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
     public Map<UUID, String> getSesjeIP() { return sesjeIP; }
     public InventoryStorage getStorage() { return storage; }
     public PasswordManager getData() { return data; }
-    public IPManager getIpData() { return ipData; }
     public LoginAttemptSystem getAttemptSystem() { return attemptSystem; }
+    public IPManager getIpManager() { return this.ipManager; }
 }

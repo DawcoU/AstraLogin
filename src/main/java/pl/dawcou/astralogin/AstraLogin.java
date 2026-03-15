@@ -32,16 +32,13 @@ public class AstraLogin extends JavaPlugin implements Listener {
         new ConfigUpdater(this).check();
 
         // --- 3. LOGIKA ---
-        // 1. Tworzymy menedżery
-        PasswordManager passwordManager = new PasswordManager(this);
-        IPManager ipManager = new IPManager(this);
-
-        // 1. Najpierw tworzysz bazę (InventoryStorage)
         this.inventoryStorage = new InventoryStorage(this);
+        PasswordManager passwordManager = new PasswordManager(this);
+        IPManager ipManager = new IPManager(this); // Musi być najpierw!
+        SpawnManager spawnManager = new SpawnManager(this); // POTEM TO! ✅
 
-        LoginSystem loginSystem = new LoginSystem(this, passwordManager, this.inventoryStorage);
-
-        getServer().getPluginManager().registerEvents(new LoginBlocks(this, loginSystem, this.inventoryStorage), this);
+        LoginSystem loginSystem = new LoginSystem(this, passwordManager, this.inventoryStorage, ipManager, spawnManager);
+        getServer().getPluginManager().registerEvents(new LoginBlocks(this, loginSystem, this.inventoryStorage, spawnManager), this);
 
         // --- 4. REJESTRACJA KOMEND I EVENTÓW ---
         getCommand("zarejestruj").setExecutor(loginSystem);
@@ -50,7 +47,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
         getCommand("astralogin").setTabCompleter(loginSystem);
         getCommand("zresetujhaslo").setExecutor(loginSystem);
         getCommand("zmienhaslo").setExecutor(loginSystem);
-        getCommand("zresetujip").setExecutor(new ResetIPCommand(this, ipManager));
+        getCommand("zresetujip").setExecutor(new IPSecurity(this, ipManager));
         getServer().getPluginManager().registerEvents(loginSystem, this);
 
         // --- 5. LOGI STARTOWE ---
@@ -70,7 +67,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
                     if (currentVersion.equals(version)) {
                         getLogger().info("");
-                        getLogger().info("§aAstraLogin jest aktualny §f(§e" + version + "§f)");
+                        getLogger().info("§aAstraLogin jest aktualny §f(§ev" + version + "§f)");
                         getLogger().info("");
                     }
                     // Sprawdzamy, czy masz wersję wyższą niż na Modrinth (np. Twoje 2.2.0 vs 2.1.0 na stronie)

@@ -61,7 +61,7 @@ public class LogFilter extends AbstractFilter {
             for (int i = 0; i < parts.length - 1; i++) {
                 sb.append(parts[i]).append(" ");
             }
-            sb.append("********");
+            sb.append("*****");
             return sb.toString();
         }
         return message;

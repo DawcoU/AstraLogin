@@ -6,6 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
@@ -26,12 +27,13 @@ public class LoginBlocks implements Listener {
     private final AstraLogin plugin;
     private final LoginSystem loginSystem;
     private final InventoryStorage storage;
+    private final SpawnManager spawnManager;
 
-    // Musisz dodać 'InventoryStorage storage' tutaj w nawiasie:
-    public LoginBlocks(AstraLogin plugin, LoginSystem loginSystem, InventoryStorage storage) {
+    public LoginBlocks(AstraLogin plugin, LoginSystem loginSystem, InventoryStorage storage, SpawnManager spawnManager) {
         this.plugin = plugin;
         this.loginSystem = loginSystem;
-        this.storage = storage; // I przypisać go tutaj!
+        this.storage = storage;
+        this.spawnManager = spawnManager;
     }
 
     private String c(String path) {
@@ -44,6 +46,10 @@ public class LoginBlocks implements Listener {
     public void onQuit(PlayerQuitEvent e) {
         Player p = e.getPlayer();
         UUID uuid = p.getUniqueId();
+
+        if (loginSystem.getZalogowani().contains(p.getUniqueId())) {
+            spawnManager.saveLastLocation(p);
+        }
 
         if (loginSystem.getZalogowani().contains(uuid) && plugin.getConfig().getBoolean("features.session-enabled")) {
             loginSystem.getSesje().put(uuid, System.currentTimeMillis());
@@ -59,6 +65,8 @@ public class LoginBlocks implements Listener {
         Player p = e.getPlayer();
         UUID uuid = p.getUniqueId();
         String currentIP = p.getAddress().getAddress().getHostAddress();
+
+        spawnManager.teleport(p, "before_login");
 
         // Update Checker
         if (plugin.getConfig().getBoolean("check-updates", true) && p.hasPermission("astralogin.update")) {
@@ -142,11 +150,14 @@ public class LoginBlocks implements Listener {
         }
 
         if (plugin.getConfig().getBoolean("security.anti-multiaccount.enabled", true)) {
-            String zapisaneIP = loginSystem.getIpData().getIP(uuid.toString());
-            int limit = plugin.getConfig().getInt("security.anti-multiaccount.limit", 2);
-            int ileKont = loginSystem.getIpData().getIloscKontByIP(currentIP);
+            String zapisaneIP = loginSystem.getIpManager().getIP(uuid.toString());
 
-            if (!currentIP.equals(zapisaneIP) && ileKont >= limit) {
+            boolean isSafe = IPSecurity.isIPSafe(zapisaneIP, currentIP);
+
+            int limit = plugin.getConfig().getInt("security.anti-multiaccount.limit", 2);
+            int ileKont = loginSystem.getIpManager().getIloscKontByIP(currentIP);
+
+            if (!isSafe && ileKont >= limit) {
                 e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, c("messages.anti-multiaccount-kick"));
             }
         }
@@ -154,11 +165,29 @@ public class LoginBlocks implements Listener {
 
     // --- BLOKADY (ROZBITA LOGIKA) ---
 
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onCommand(PlayerCommandPreprocessEvent e) {
+        // Jedziemy bezpośrednio z e, tak jak w Twoim przykładzie z eq!
+        if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
+
+            String msg = e.getMessage().toLowerCase();
+
+            // Biała lista, żeby mogli wpisać hasło
+            if (msg.startsWith("/login") || msg.startsWith("/zaloguj") ||
+                    msg.startsWith("/register") || msg.startsWith("/zarejestruj")) {
+                return;
+            }
+
+            e.setCancelled(true);
+            e.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
+        }
+    }
+
     @EventHandler
     public void onChat(AsyncPlayerChatEvent e) {
         if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
-            e.getPlayer().sendMessage(PREFIX + " " + c("messages.reminder-login"));
+            e.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
         }
     }
 
@@ -173,6 +202,7 @@ public class LoginBlocks implements Listener {
     public void onBreak(BlockBreakEvent e) {
         if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
+            e.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
         }
     }
 
@@ -180,13 +210,35 @@ public class LoginBlocks implements Listener {
     public void onPlace(BlockPlaceEvent e) {
         if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
+            e.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
+
         }
     }
 
     @EventHandler
-    public void onDmg(EntityDamageEvent e) {
+    public void onDmg(EntityDamageByEntityEvent e) {
+        // 1. Blokada otrzymywania obrażeń (niezalogowany jest nieśmiertelny)
         if (e.getEntity() instanceof Player) {
             if (!loginSystem.getZalogowani().contains(e.getEntity().getUniqueId())) {
+                e.setCancelled(true);
+                return;
+            }
+        }
+
+        // 2. Blokada zadawania obrażeń (niezalogowany nikogo nie uderzy)
+        if (e.getDamager() instanceof Player) {
+            if (!loginSystem.getZalogowani().contains(e.getDamager().getUniqueId())) {
+                e.setCancelled(true);
+                e.getDamager().sendMessage(PREFIX + " " + c("messages.blocked-action"));
+            }
+        }
+    }
+
+    @EventHandler
+    public void onMobTarget(EntityTargetLivingEntityEvent e) {
+        // 3. Moby ignorują gracza bez loginu
+        if (e.getTarget() instanceof Player) {
+            if (!loginSystem.getZalogowani().contains(e.getTarget().getUniqueId())) {
                 e.setCancelled(true);
             }
         }
@@ -196,13 +248,19 @@ public class LoginBlocks implements Listener {
     public void onInteract(PlayerInteractEvent e) {
         if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
+            e.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
         }
     }
 
     @EventHandler
-    public void onInv(InventoryClickEvent e) {
+    public void onInventoryClick(InventoryClickEvent e) {
+        // Sprawdzamy UUID przez getWhoClicked()
         if (!loginSystem.getZalogowani().contains(e.getWhoClicked().getUniqueId())) {
+
             e.setCancelled(true);
+            Player p = (Player) e.getWhoClicked();
+
+            p.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
         }
     }
 
@@ -210,6 +268,7 @@ public class LoginBlocks implements Listener {
     public void onInventoryOpen(InventoryOpenEvent e) {
         if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
+            e.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
         }
     }
 
@@ -217,14 +276,18 @@ public class LoginBlocks implements Listener {
     public void onDrop(PlayerDropItemEvent e) {
         if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
+            e.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
         }
     }
 
     @EventHandler
     public void onPickup(EntityPickupItemEvent e) {
         if (e.getEntity() instanceof Player) {
-            if (!loginSystem.getZalogowani().contains(e.getEntity().getUniqueId())) {
+            Player p = (Player) e.getEntity();
+
+            if (!loginSystem.getZalogowani().contains(p.getUniqueId())) {
                 e.setCancelled(true);
+                p.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
             }
         }
     }

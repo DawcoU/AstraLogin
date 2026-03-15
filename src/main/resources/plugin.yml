@@ -1,5 +1,5 @@
 name: AstraLogin
-version: '2.2.0'
+version: '${project.version}'
 main: pl.dawcou.astralogin.AstraLogin
 api-version: '1.18'
 
@@ -21,6 +21,8 @@ permissions:
   astralogin.reload:
     default: op
   astralogin.update:
+    default: op
+  astralogin.spawn:
     default: op
   astralogin.resetpassword:
     default: op

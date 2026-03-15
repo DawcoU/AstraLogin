@@ -37,6 +37,9 @@ features:
   session-enabled: true
   session-time: 5 # Time in minutes
 
+  # After logging in, teleports the player to their last location, ignoring the spawn after logging in.
+  teleport-to-last-location: true
+
 # --- Password Requirements ---
 requirements:
   # Minimum number of characters in a password
@@ -59,6 +62,7 @@ messages:
   no-account: "&cNie masz konta! wpisz &e/zarejestruj <hasło> <powtórz hasło>"
   success-login: "&aZalogowano"
   success-register: "&aZarejestrowano"
+  blocked-action: "&cNie możesz wykonać tej akcji, dopóki się nie zalogujesz!"
   reminder-login: "&eZaloguj się: &f/zaloguj <hasło>"
   reminder-register: "&eZarejestruj się: &f/zarejestruj <hasło>"
   kick-timeout: "&cCzas Logowania Minął!"
@@ -90,3 +94,7 @@ messages:
   success-change-password: "&aTwoje Hasło zostało zmienione! &eZaloguj się ponownie"
   session-restored: "&eSesja aktywna &aZalogowano automatycznie"
   password-is-identical: "&cWpisane nowe hasło jest identyczne ze starym!"
+  spawn-set-success: "&aPomyślnie ustawiono lokalizację dla: &e%type%"
+  spawn-delete-success: "&aUsunięto lokalizację spawna: &e%type%"
+  spawn-usage: "&cPoprawne użycie: &e/astralogin %cmd% <before_login|after_login>"
+  spawn-invalid-type: "&cNieprawidłowy typ! &eUżyj: before_login lub after_login"
