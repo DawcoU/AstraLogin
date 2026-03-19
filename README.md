@@ -8,6 +8,9 @@ AstraLogin is an advanced and lightweight authentication system designed for Sur
 
 ### 🚀 Key Features
 * **Security:** Password hashing using the SHA-256 algorithm (no plain text in files).
+* **Equipment Protection:** Hiding player inventory when logging in
+* **Location Protection:** Teleporting the player to the location set by the admin and teleporting after logging in to the last location or spawn
+* **Session:** You return without logging in after leaving for a while
 * **Inventory Storage:** Safely hides player inventory and armor until login (Single-file storage). 📦
 * **HEX Colors:** Full support for HEX colors in the prefix and all messages. ✨
 * **Auto-Updater:** Automatically updates the configuration file when the plugin version changes. 🛠️
