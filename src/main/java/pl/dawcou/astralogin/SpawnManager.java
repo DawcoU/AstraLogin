@@ -128,6 +128,11 @@ public class SpawnManager {
         }
     }
 
+    public boolean hasSpawn(String type) {
+        // Sprawdzamy czy w pliku locations.yml (lub mapie) istnieje dany klucz
+        return config.contains("spawns." + type);
+    }
+
     private void save() {
         try {
             config.save(file);

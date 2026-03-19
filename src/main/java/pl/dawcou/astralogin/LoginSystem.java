@@ -130,16 +130,26 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 return true;
             }
 
-            if (!p.hasPermission("astralogin.spawn")) {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.no-permission"));
-                return true;
-            }
+            // 1. NAJPIERW SPRAWDZASZ DŁUGOŚĆ
             if (args.length < 2) {
                 p.sendMessage(AstraLogin.PREFIX + " " + c("messages.spawn-usage").replace("%cmd%", "setspawn"));
                 return true;
             }
 
+            // 2. DOPIERO TERAZ MOŻESZ BEZPIECZNIE POBRAĆ args[1]
             String type = args[1].toLowerCase();
+
+            if (!p.hasPermission("astralogin.spawn")) {
+                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.no-permission"));
+                return true;
+            }
+
+            // Sprawdzamy czy spawn istnieje aby nie nadpisało go
+            if (spawnManager.hasSpawn(type)) {
+                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.spawn-exists").replace("%type%", type));
+                return true;
+            }
+
             if (type.equals("before_login") || type.equals("after_login")) {
                 spawnManager.setSpawn(type, p);
                 p.sendMessage(AstraLogin.PREFIX + " " + c("messages.spawn-set-success").replace("%type%", type));
@@ -155,16 +165,20 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 return true;
             }
 
-            if (!p.hasPermission("astralogin.spawn")) {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.no-permission"));
-                return true;
-            }
+            // 1. NAJPIERW SPRAWDZASZ DŁUGOŚĆ
             if (args.length < 2) {
                 p.sendMessage(AstraLogin.PREFIX + " " + c("messages.spawn-usage").replace("%cmd%", "delspawn"));
                 return true;
             }
 
+            // 2. DOPIERO TERAZ MOŻESZ BEZPIECZNIE POBRAĆ args[1]
             String type = args[1].toLowerCase();
+
+            if (!p.hasPermission("astralogin.spawn")) {
+                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.no-permission"));
+                return true;
+            }
+
             spawnManager.delSpawn(type);
             p.sendMessage(AstraLogin.PREFIX + " " + c("messages.spawn-delete-success").replace("%type%", type));
             return true;

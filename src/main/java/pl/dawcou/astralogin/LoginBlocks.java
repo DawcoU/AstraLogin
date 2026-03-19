@@ -47,10 +47,12 @@ public class LoginBlocks implements Listener {
         Player p = e.getPlayer();
         UUID uuid = p.getUniqueId();
 
-        if (loginSystem.getZalogowani().contains(p.getUniqueId())) {
+        // 1. NAJPIERW ZAPISZ LOKALIZACJĘ (Zanim cokolwiek innego się stanie)
+        if (loginSystem.getZalogowani().contains(uuid)) {
             spawnManager.saveLastLocation(p);
         }
 
+        // 2. NA KOŃCU SESJE I CZYSZCZENIE
         if (loginSystem.getZalogowani().contains(uuid) && plugin.getConfig().getBoolean("features.session-enabled")) {
             loginSystem.getSesje().put(uuid, System.currentTimeMillis());
             loginSystem.getSesjeIP().put(uuid, p.getAddress().getAddress().getHostAddress());
@@ -64,7 +66,6 @@ public class LoginBlocks implements Listener {
     public void onJoin(PlayerJoinEvent e) {
         Player p = e.getPlayer();
         UUID uuid = p.getUniqueId();
-        String currentIP = p.getAddress().getAddress().getHostAddress();
 
         spawnManager.teleport(p, "before_login");
 
@@ -89,18 +90,38 @@ public class LoginBlocks implements Listener {
         loginSystem.getZalogowani().remove(uuid);
         loginSystem.getStorage().hide(p);
 
-        // SESJA
+        // SESJA (bez sprawdzania IP)
         if (plugin.getConfig().getBoolean("features.session-enabled")) {
-            if (loginSystem.getSesje().containsKey(uuid) && loginSystem.getSesjeIP().get(uuid).equals(currentIP)) {
-                long lastLogout = loginSystem.getSesje().get(uuid);
-                long sessionLimit = plugin.getConfig().getLong("features.session-time") * 60 * 1000;
+            if (loginSystem.getSesje().containsKey(uuid)) {
 
-                if (System.currentTimeMillis() - lastLogout <= sessionLimit) {
-                    loginSystem.finishLogin(p); // Ta metoda musi być public w LoginSystem!
+                // 1. POBIERAMY TEKST Z CONFIGU (np. "5 minutes" lub "10 seconds")
+                String timeRaw = plugin.getConfig().getString("features.session-time", "5 minutes").toLowerCase();
+                long sessionLimitMillis;
+
+                try {
+                    String[] parts = timeRaw.split(" ");
+                    long value = Long.parseLong(parts[0]);
+
+                    if (parts.length > 1 && parts[1].startsWith("hour")) {
+                        sessionLimitMillis = value * 3600000;
+                    } else if (parts.length > 1 && parts[1].startsWith("second")) {
+                        sessionLimitMillis = value * 1000;
+                    } else {
+                        sessionLimitMillis = value * 60000;
+                    }
+                } catch (Exception ex) {
+                    sessionLimitMillis = 300000;
+                    plugin.getLogger().warning("§cInvalid session-time format! Using default 5 minutes");
+                }
+
+                long lastLogout = loginSystem.getSesje().get(uuid);
+
+                // 2. SPRAWDZANIE CZASU
+                if (System.currentTimeMillis() - lastLogout <= sessionLimitMillis) {
+                    loginSystem.finishLogin(p);
                     p.sendMessage(PREFIX + " " + c("messages.session-restored"));
                     storage.restore(p);
                     loginSystem.getSesje().remove(uuid);
-                    loginSystem.getSesjeIP().remove(uuid);
                     return;
                 }
             }

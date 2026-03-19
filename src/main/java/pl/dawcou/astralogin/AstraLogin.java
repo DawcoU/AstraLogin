@@ -1,8 +1,12 @@
 package pl.dawcou.astralogin;
 
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 import net.md_5.bungee.api.ChatColor;
+
+import java.util.UUID;
 
 public class AstraLogin extends JavaPlugin implements Listener {
 
@@ -11,6 +15,9 @@ public class AstraLogin extends JavaPlugin implements Listener {
     public static final String PREFIX2 = ("§9[§bAstraLogin§9]");
 
     private InventoryStorage inventoryStorage;
+    private LoginSystem loginSystem;
+    private SpawnManager spawnManager;
+    private InventoryStorage storage;
 
     @Override
     public void onEnable() {
@@ -34,10 +41,10 @@ public class AstraLogin extends JavaPlugin implements Listener {
         // --- 3. LOGIKA ---
         this.inventoryStorage = new InventoryStorage(this);
         PasswordManager passwordManager = new PasswordManager(this);
-        IPManager ipManager = new IPManager(this); // Musi być najpierw!
-        SpawnManager spawnManager = new SpawnManager(this); // POTEM TO! ✅
+        IPManager ipManager = new IPManager(this);
+        spawnManager = new SpawnManager(this);
 
-        LoginSystem loginSystem = new LoginSystem(this, passwordManager, this.inventoryStorage, ipManager, spawnManager);
+        loginSystem = new LoginSystem(this, passwordManager, this.inventoryStorage, ipManager, spawnManager);
         getServer().getPluginManager().registerEvents(new LoginBlocks(this, loginSystem, this.inventoryStorage, spawnManager), this);
 
         // --- 4. REJESTRACJA KOMEND I EVENTÓW ---
@@ -96,6 +103,20 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        // 1. Przechodzimy przez wszystkich graczy online w momencie wyłączenia
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            UUID uuid = p.getUniqueId();
+
+            // 2. Jeśli był zalogowany, ratujemy jego pozycję!
+            if (loginSystem.getZalogowani().contains(uuid)) {
+                spawnManager.saveLastLocation(p);
+            }
+
+            // 3. Jeśli nie był zalogowany, oddajemy mu itemy, żeby nie zniknęły po restarcie
+            if (!loginSystem.getZalogowani().contains(uuid)) {
+                storage.restore(p);
+            }
+        }
 
         getLogger().info("");
         getLogger().info("§7------------ §4[§cAstraLogin§4] §7---------");
