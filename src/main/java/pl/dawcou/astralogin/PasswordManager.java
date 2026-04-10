@@ -31,7 +31,6 @@ public class PasswordManager {
         this.config = YamlConfiguration.loadConfiguration(file);
     }
 
-    // Reszta metod (zapiszHaslo, getHaslo, usunKonto) zostaje bez zmian!
     public void zapiszHaslo(String uuid, String haslo) {
         config.set("players." + uuid, haslo);
         try { config.save(file); } catch (IOException e) { e.printStackTrace(); }

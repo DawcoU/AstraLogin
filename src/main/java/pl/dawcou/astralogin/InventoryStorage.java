@@ -20,7 +20,7 @@ public class InventoryStorage {
         this.cfg = YamlConfiguration.loadConfiguration(file);
     }
 
-    public void hide(Player p) {
+    public void save(Player p) {
         String uuid = p.getUniqueId().toString();
         if (cfg.contains(uuid)) {
             p.getInventory().clear();
@@ -53,7 +53,12 @@ public class InventoryStorage {
         if (cfg.getConfigurationSection(uuid + ".inv") != null) {
             for (String key : cfg.getConfigurationSection(uuid + ".inv").getKeys(false)) {
                 int slot = Integer.parseInt(key);
-                inv[slot] = cfg.getItemStack(uuid + ".inv." + key);
+                ItemStack item = cfg.getItemStack(uuid + ".inv." + key);
+
+                // SPRAWDZENIE: Jeśli item istnieje w grze, dodaj go do slotu
+                if (item != null) {
+                    inv[slot] = item;
+                }
             }
         }
         p.getInventory().setContents(inv);
@@ -63,11 +68,17 @@ public class InventoryStorage {
         if (cfg.getConfigurationSection(uuid + ".arm") != null) {
             for (String key : cfg.getConfigurationSection(uuid + ".arm").getKeys(false)) {
                 int slot = Integer.parseInt(key);
-                armor[slot] = cfg.getItemStack(uuid + ".arm." + key);
+                ItemStack item = cfg.getItemStack(uuid + ".arm." + key);
+
+                // SPRAWDZENIE: Jeśli zbroja istnieje w grze, dodaj ją
+                if (item != null) {
+                    armor[slot] = item;
+                }
             }
         }
         p.getInventory().setArmorContents(armor);
 
+        // Czyszczenie danych po przywróceniu
         cfg.set(uuid, null);
         save();
     }

@@ -6,6 +6,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
 
 public class IPSecurity implements CommandExecutor {
 
@@ -20,10 +21,11 @@ public class IPSecurity implements CommandExecutor {
     // --- KOMENDA: /zresetujip ---
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+        Player p = (Player) sender;
         FileConfiguration config = plugin.getConfig();
 
         if (!sender.hasPermission("astralogin.resetip")) {
-            sender.sendMessage(AstraLogin.PREFIX + " " + c(config, "messages.no-permission"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
             return true;
         }
 
@@ -37,7 +39,7 @@ public class IPSecurity implements CommandExecutor {
         String uuid = target.getUniqueId().toString();
 
         if (ipManager.getIP(uuid) == null) {
-            sender.sendMessage(AstraLogin.PREFIX + " §cTen gracz nie ma zapisanego adresu IP!");
+            plugin.sendNoIPSaved(sender);
             return true;
         }
 

@@ -20,8 +20,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.UUID;
 
-import static pl.dawcou.astralogin.AstraLogin.PREFIX;
-
 public class LoginBlocks implements Listener {
 
     private final AstraLogin plugin;
@@ -46,6 +44,7 @@ public class LoginBlocks implements Listener {
     public void onQuit(PlayerQuitEvent e) {
         Player p = e.getPlayer();
         UUID uuid = p.getUniqueId();
+        String ip = p.getAddress().getAddress().getHostAddress();
 
         // 1. NAJPIERW ZAPISZ LOKALIZACJĘ (Zanim cokolwiek innego się stanie)
         if (loginSystem.getZalogowani().contains(uuid)) {
@@ -58,6 +57,8 @@ public class LoginBlocks implements Listener {
             loginSystem.getSesjeIP().put(uuid, p.getAddress().getAddress().getHostAddress());
         }
 
+        loginSystem.getSesje().put(uuid, System.currentTimeMillis());
+        loginSystem.getSesjeIP().put(uuid, ip);
         loginSystem.getZalogowani().remove(uuid);
         loginSystem.getAttemptSystem().resetuj(uuid);
     }
@@ -67,32 +68,21 @@ public class LoginBlocks implements Listener {
         Player p = e.getPlayer();
         UUID uuid = p.getUniqueId();
 
-        spawnManager.teleport(p, "before_login");
-
-        // Update Checker
-        if (plugin.getConfig().getBoolean("check-updates", true) && p.hasPermission("astralogin.update")) {
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                new UpdateChecker(plugin).getVersion(version -> {
-                    if (!plugin.getDescription().getVersion().equals(version)) {
-                        Bukkit.getScheduler().runTask(plugin, () -> {
-                            p.sendMessage("");
-                            p.sendMessage("§7------------ " + PREFIX + " §7------------");
-                            p.sendMessage("§eDostępna jest nowa wersja AstraLogin: §fv" + version);
-                            p.sendMessage("§aPobierz: §f§nhttps://modrinth.com/plugin/astralogin/version/" + version);
-                            p.sendMessage("§7----------------------------------------------");
-                            p.sendMessage("");
-                        });
-                    }
-                });
-            });
-        }
-
-        loginSystem.getZalogowani().remove(uuid);
-        loginSystem.getStorage().hide(p);
-
-        // SESJA (bez sprawdzania IP)
+        // Sesja
         if (plugin.getConfig().getBoolean("features.session-enabled")) {
             if (loginSystem.getSesje().containsKey(uuid)) {
+
+                // --- SPRAWDZANIE IP (ZABEZPIECZENIE) ---
+                if (p.getAddress() == null) return; // Mały safe-check
+                String currentIP = p.getAddress().getAddress().getHostAddress();
+                String savedIP = loginSystem.getSesjeIP().get(uuid);
+
+                // Jeśli IP się nie zgadza (ktoś inny próbuje wejść na sesję):
+                if (savedIP == null || !savedIP.equals(currentIP)) {
+                    loginSystem.getSesje().remove(uuid);
+                    loginSystem.getSesjeIP().remove(uuid);
+                    return; // Kończymy sprawdzanie sesji, gracz musi się zalogować
+                }
 
                 // 1. POBIERAMY TEKST Z CONFIGU (np. "5 minutes" lub "10 seconds")
                 String timeRaw = plugin.getConfig().getString("features.session-time", "5 minutes").toLowerCase();
@@ -111,7 +101,7 @@ public class LoginBlocks implements Listener {
                     }
                 } catch (Exception ex) {
                     sessionLimitMillis = 300000;
-                    plugin.getLogger().warning("§cInvalid session-time format! Using default 5 minutes");
+                    plugin.sendInvalidSessionFormatNotice();
                 }
 
                 long lastLogout = loginSystem.getSesje().get(uuid);
@@ -119,12 +109,33 @@ public class LoginBlocks implements Listener {
                 // 2. SPRAWDZANIE CZASU
                 if (System.currentTimeMillis() - lastLogout <= sessionLimitMillis) {
                     loginSystem.finishLogin(p);
-                    p.sendMessage(PREFIX + " " + c("messages.session-restored"));
-                    storage.restore(p);
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("session-restored"));
+
+                    // TUTAJ: Czyścimy obie mapy, bo sesja została właśnie zużyta
                     loginSystem.getSesje().remove(uuid);
+                    loginSystem.getSesjeIP().remove(uuid);
+
                     return;
                 }
             }
+        }
+
+        loginSystem.getStorage().save(p);
+        spawnManager.teleport(p, "before_login");
+        loginSystem.getZalogowani().remove(uuid);
+
+        // Update Checker
+        if (plugin.getConfig().getBoolean("check-updates", true) && p.hasPermission("astralogin.update")) {
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                new UpdateChecker(plugin).getVersion(version -> {
+                    if (!plugin.getDescription().getVersion().equals(version)) {
+                        Bukkit.getScheduler().runTask(plugin, () -> {
+                            // Wysyłamy powiadomienie o nowej wersji
+                            plugin.sendUpdateNotice(version);
+                        });
+                    }
+                });
+            });
         }
 
         if (plugin.getConfig().getBoolean("visuals.use-blindness")) {
@@ -132,9 +143,9 @@ public class LoginBlocks implements Listener {
         }
 
         if (loginSystem.getData().maHaslo(uuid.toString())) {
-            p.sendMessage(PREFIX + " " + c("messages.reminder-login"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix("reminder-login"));
         } else {
-            p.sendMessage(PREFIX + " " + c("messages.reminder-register"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix("reminder-register"));
         }
 
         // Timer logowania
@@ -148,12 +159,13 @@ public class LoginBlocks implements Listener {
                         return;
                     }
                     if (time[0] <= 0) {
-                        p.kickPlayer(c("messages.kick-timeout"));
+                        p.kickPlayer(plugin.getLanguageManager().getMessage("kick-timeout"));
                         this.cancel();
                         return;
                     }
-                    p.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(c("messages.actionbar-timer").replace("%time%", String.valueOf(time[0]))));
-                    time[0]--;
+                    String actionBarMsg = plugin.getLanguageManager().getMessage("actionbar-timer")
+                            .replace("%time%", String.valueOf(time[0]));
+                    p.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(actionBarMsg));
                 }
             }.runTaskTimer(plugin, 0L, 20L);
         }
@@ -166,7 +178,7 @@ public class LoginBlocks implements Listener {
         String currentIP = e.getAddress().getHostAddress();
 
         if (Bukkit.getPlayerExact(name) != null) {
-            e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, c("messages.already-online"));
+            e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, plugin.getLanguageManager().getMessage("already-online"));
             return;
         }
 
@@ -179,7 +191,7 @@ public class LoginBlocks implements Listener {
             int ileKont = loginSystem.getIpManager().getIloscKontByIP(currentIP);
 
             if (!isSafe && ileKont >= limit) {
-                e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, c("messages.anti-multiaccount-kick"));
+                e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, plugin.getLanguageManager().getMessage("anti-multiaccount-kick"));
             }
         }
     }
@@ -188,6 +200,7 @@ public class LoginBlocks implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onCommand(PlayerCommandPreprocessEvent e) {
+        Player p = e.getPlayer();
         // Jedziemy bezpośrednio z e, tak jak w Twoim przykładzie z eq!
         if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
 
@@ -200,15 +213,16 @@ public class LoginBlocks implements Listener {
             }
 
             e.setCancelled(true);
-            e.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
         }
     }
 
     @EventHandler
     public void onChat(AsyncPlayerChatEvent e) {
+        Player p = e.getPlayer();
         if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
-            e.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
         }
     }
 
@@ -221,17 +235,19 @@ public class LoginBlocks implements Listener {
 
     @EventHandler
     public void onBreak(BlockBreakEvent e) {
+        Player p = e.getPlayer();
         if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
-            e.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
         }
     }
 
     @EventHandler
     public void onPlace(BlockPlaceEvent e) {
+        Player p = e.getPlayer();
         if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
-            e.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
 
         }
     }
@@ -248,9 +264,10 @@ public class LoginBlocks implements Listener {
 
         // 2. Blokada zadawania obrażeń (niezalogowany nikogo nie uderzy)
         if (e.getDamager() instanceof Player) {
+            Player p = (Player) e.getDamager();
             if (!loginSystem.getZalogowani().contains(e.getDamager().getUniqueId())) {
                 e.setCancelled(true);
-                e.getDamager().sendMessage(PREFIX + " " + c("messages.blocked-action"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
             }
         }
     }
@@ -267,9 +284,10 @@ public class LoginBlocks implements Listener {
 
     @EventHandler
     public void onInteract(PlayerInteractEvent e) {
+        Player p = e.getPlayer();
         if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
-            e.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
         }
     }
 
@@ -281,23 +299,25 @@ public class LoginBlocks implements Listener {
             e.setCancelled(true);
             Player p = (Player) e.getWhoClicked();
 
-            p.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
         }
     }
 
     @EventHandler
     public void onInventoryOpen(InventoryOpenEvent e) {
+        Player p = (Player) e.getPlayer();
         if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
-            e.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
         }
     }
 
     @EventHandler
     public void onDrop(PlayerDropItemEvent e) {
+        Player p = e.getPlayer();
         if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
-            e.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
         }
     }
 
@@ -308,7 +328,7 @@ public class LoginBlocks implements Listener {
 
             if (!loginSystem.getZalogowani().contains(p.getUniqueId())) {
                 e.setCancelled(true);
-                p.getPlayer().sendMessage(PREFIX + " " + c("messages.blocked-action"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
             }
         }
     }

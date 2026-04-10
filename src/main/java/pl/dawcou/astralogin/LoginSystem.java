@@ -24,18 +24,26 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
     private final InventoryStorage storage;
     private final IPManager ipManager;
     private final LoginAttemptSystem attemptSystem;
-    private final SpawnManager spawnManager; // <--- DODAJ TO POLE
+    private final SpawnManager spawnManager;
 
     private final Set<UUID> zalogowani = new HashSet<>();
     private final Map<UUID, Long> sesje = new HashMap<>();
     private final Map<UUID, String> sesjeIP = new HashMap<>();
+
+    public Map<UUID, Long> getSesje() {
+        return sesje;
+    }
+
+    public Map<UUID, String> getSesjeIP() {
+        return sesjeIP;
+    }
 
     public LoginSystem(AstraLogin plugin, PasswordManager data, InventoryStorage storage, IPManager ipManager, SpawnManager spawnManager) {
         this.plugin = plugin;
         this.data = data;
         this.storage = storage;
         this.ipManager = ipManager;
-        this.spawnManager = spawnManager; // <--- MUSISZ TO DOPISAĆ TUTAJ
+        this.spawnManager = spawnManager;
         this.attemptSystem = new LoginAttemptSystem(plugin);
     }
 
@@ -46,37 +54,37 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
 
         if (command.getName().equalsIgnoreCase("zresetujhaslo")) {
             if (!sender.hasPermission("astralogin.resetpassword")) {
-                sender.sendMessage(AstraLogin.PREFIX + " " + c("messages.no-permission"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
                 return true;
             }
             if (args.length < 1) {
-                sender.sendMessage(AstraLogin.PREFIX + " " + c("messages.usage-reset"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-reset"));
                 return true;
             }
             @SuppressWarnings("deprecation")
             OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
             if (!data.maHaslo(target.getUniqueId().toString())) {
-                sender.sendMessage(AstraLogin.PREFIX + " " + c("messages.no-account-reset"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-account-reset"));
                 return true;
             }
             data.usunKonto(target.getUniqueId().toString());
             ipManager.usunIP(target.getUniqueId().toString());
-            sender.sendMessage(AstraLogin.PREFIX + " " + c("messages.admin-reset-success").replace("%player%", args[0]));
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("admin-reset-success", "%player%", args[0]));
             if (target.isOnline() && target.getPlayer() != null) {
                 zalogowani.remove(target.getUniqueId());
-                target.getPlayer().kickPlayer(c("messages.player-reset-kick"));
+                target.getPlayer().kickPlayer(plugin.getLanguageManager().getMessage("player-reset-kick"));
             }
             return true;
         }
 
         if (command.getName().equalsIgnoreCase("zmienhaslo")) {
             if (p == null) {
-                sender.sendMessage("§cTa komenda nie jest dostępna dla konsoli!");
+                sender.sendMessage(plugin.getLanguageManager().getWithoutPrefix("only-players"));
                 return true;
             }
 
             if (args.length != 3) {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.usage-change-password"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-change-password"));
                 return true;
             }
 
@@ -87,20 +95,20 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             // 1. SZYBKI CHECK: Czy nowe hasło jest takie samo jak stare (tekstowo)?
             // Robimy to ZANIM odpalimy BCrypta, żeby nie marnować zasobów.
             if (stareWpisane.equals(nowe1)) {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.password-is-identical"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-is-identical"));
                 return true;
             }
 
             // 2. Najpierw sprawdzamy stare hasło (POPRAWNIE - metodą verify)
             String obecneHasloWPliku = data.getHaslo(p.getUniqueId().toString());
             if (obecneHasloWPliku == null || !HashPassword.verify(stareWpisane, obecneHasloWPliku)) {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.wrong-old-password"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("wrong-old-password"));
                 return true;
             }
 
             // 3. Sprawdzamy czy nowe hasła się zgadzają
             if (!nowe1.equals(nowe2)) {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.passwords-not-match"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("passwords-not-match"));
                 return true;
             }
 
@@ -109,7 +117,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             int max = plugin.getConfig().getInt("requirements.max-password-length");
 
             if (nowe1.length() < min || nowe1.length() > max) {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.password-too-short-or-long"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-too-short-or-long"));
                 return true;
             }
 
@@ -117,22 +125,20 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             String noweHasloHash = HashPassword.hash(nowe1);
             data.zapiszHaslo(p.getUniqueId().toString(), noweHasloHash);
 
-            // Reszta logiki z kickowaniem...
             zalogowani.remove(p.getUniqueId());
-            p.kickPlayer(c("messages.success-change-password"));
-
+            p.kickPlayer(plugin.getLanguageManager().getMessage("success-change-password"));
             return true;
         }
 
         if (args.length > 0 && args[0].equalsIgnoreCase("setspawn")) {
             if (p == null) {
-                sender.sendMessage("§cTa komenda nie jest dostępna dla konsoli!");
+                sender.sendMessage(plugin.getLanguageManager().getWithoutPrefix("only-players"));
                 return true;
             }
 
             // 1. NAJPIERW SPRAWDZASZ DŁUGOŚĆ
             if (args.length < 2) {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.spawn-usage").replace("%cmd%", "setspawn"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-usage", "%cmd%", "delspawn"));
                 return true;
             }
 
@@ -140,34 +146,34 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             String type = args[1].toLowerCase();
 
             if (!p.hasPermission("astralogin.spawn")) {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.no-permission"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
                 return true;
             }
 
             // Sprawdzamy czy spawn istnieje aby nie nadpisało go
             if (spawnManager.hasSpawn(type)) {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.spawn-exists").replace("%type%", type));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-exists", "%type%", type));
                 return true;
             }
 
             if (type.equals("before_login") || type.equals("after_login")) {
                 spawnManager.setSpawn(type, p);
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.spawn-set-success").replace("%type%", type));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-set-success", "%type%", type));
             } else {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.spawn-invalid-type"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-invalid-type"));
             }
             return true;
         }
 
         if (args.length > 0 && args[0].equalsIgnoreCase("delspawn")) {
             if (p == null) {
-                sender.sendMessage("§cTa komenda nie jest dostępna dla konsoli!");
+                sender.sendMessage(plugin.getLanguageManager().getWithoutPrefix("only-players"));
                 return true;
             }
 
             // 1. NAJPIERW SPRAWDZASZ DŁUGOŚĆ
             if (args.length < 2) {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.spawn-usage").replace("%cmd%", "delspawn"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-usage", "%cmd%", "delspawn"));
                 return true;
             }
 
@@ -175,23 +181,24 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             String type = args[1].toLowerCase();
 
             if (!p.hasPermission("astralogin.spawn")) {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.no-permission"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
                 return true;
             }
 
             spawnManager.delSpawn(type);
-            p.sendMessage(AstraLogin.PREFIX + " " + c("messages.spawn-delete-success").replace("%type%", type));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-delete-success", "%type%", type));
             return true;
         }
 
         if (command.getName().equalsIgnoreCase("astralogin") || command.getName().equalsIgnoreCase("al")) {
             if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
                 if (!sender.hasPermission("astralogin.reload")) {
-                    sender.sendMessage(AstraLogin.PREFIX + " " + c("messages.no-permission"));
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
                     return true;
                 }
                 plugin.reloadConfig();
-                sender.sendMessage(AstraLogin.PREFIX + " " + c("messages.reload-success"));
+                plugin.setLanguageManager(new LanguageManager(plugin));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reload-success"));
                 return true;
             }
 
@@ -208,12 +215,12 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
 
         if (command.getName().equalsIgnoreCase("zarejestruj") || command.getName().equalsIgnoreCase("register")) {
             if (p == null) {
-                sender.sendMessage("§cTa komenda nie jest dostępna dla konsoli!");
+                sender.sendMessage(plugin.getLanguageManager().getWithoutPrefix("only-players"));
                 return true;
             }
 
             if (data.getHaslo(p.getUniqueId().toString()) != null) {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.has-account"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("has-account"));
                 return true;
             }
 
@@ -227,11 +234,11 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 int max = plugin.getConfig().getInt("requirements.max-password-length");
 
                 if (args[0].length() < min) {
-                    p.sendMessage(AstraLogin.PREFIX + " " + c("messages.password-too-short").replace("%min%", String.valueOf(min)));
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-too-short", "%min%", String.valueOf(min)));
                     return true;
                 }
                 if (args[0].length() > max) {
-                    p.sendMessage(AstraLogin.PREFIX + " " + c("messages.password-too-long").replace("%max%", String.valueOf(max)));
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-too-long", "%max%", String.valueOf(max)));
                     return true;
                 }
 
@@ -240,28 +247,32 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 ipManager.zapiszIP(p.getUniqueId().toString(), ip);
 
                 finishLogin(p);
-                p.sendTitle(c("messages.title-register"), c("messages.subtitle-register"), 10, 40, 10);
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.success-register"));
+                p.sendTitle(
+                        plugin.getLanguageManager().getMessage("title-register"),
+                        plugin.getLanguageManager().getMessage("subtitle-register"),
+                        10, 40, 10
+                );
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-register"));
                 storage.restore(p);
             } else {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.usage-register"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-register"));
             }
             return true;
         }
 
         if (command.getName().equalsIgnoreCase("zaloguj") || command.getName().equalsIgnoreCase("login")) {
             if (p == null) {
-                sender.sendMessage("§cTa komenda nie jest dostępna dla konsoli!");
+                sender.sendMessage(plugin.getLanguageManager().getWithoutPrefix("only-players"));
                 return true;
             }
 
             String pass = data.getHaslo(p.getUniqueId().toString());
             if (pass == null) {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.no-account"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("no-account"));
                 return true;
             }
             if (zalogowani.contains(p.getUniqueId())) {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.already-logged"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("already-logged"));
                 return true;
             }
 
@@ -279,17 +290,21 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                     }
 
                     finishLogin(p);
-                    p.sendTitle(c("messages.title-login"), c("messages.subtitle-login"), 10, 40, 10);
-                    p.sendMessage(AstraLogin.PREFIX + " " + c("messages.success-login"));
+                    p.sendTitle(
+                            plugin.getLanguageManager().getMessage("title-login"),
+                            plugin.getLanguageManager().getMessage("subtitle-login"),
+                            10, 40, 10
+                    );
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-login"));
                     storage.restore(p);
                 } else {
-                    p.sendMessage(AstraLogin.PREFIX + " " + c("messages.wrong-password"));
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("wrong-password"));
                     if (plugin.getConfig().getBoolean("features.max-attempts-enabled")) {
                         attemptSystem.dodajProbe(p);
                     }
                 }
             } else {
-                p.sendMessage(AstraLogin.PREFIX + " " + c("messages.usage-login"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-login"));
             }
             return true;
         }
@@ -300,7 +315,6 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
         zalogowani.add(p.getUniqueId());
         p.removePotionEffect(PotionEffectType.BLINDNESS);
         attemptSystem.resetuj(p.getUniqueId());
-        spawnManager.teleport(p, "after_login");
 
         // Pobieramy opcję z głównego configu pluginu
         boolean useLastLoc = plugin.getConfig().getBoolean("features.teleport-to-last-location", true);
@@ -348,8 +362,6 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
     }
 
     public Set<UUID> getZalogowani() { return zalogowani; }
-    public Map<UUID, Long> getSesje() { return sesje; }
-    public Map<UUID, String> getSesjeIP() { return sesjeIP; }
     public InventoryStorage getStorage() { return storage; }
     public PasswordManager getData() { return data; }
     public LoginAttemptSystem getAttemptSystem() { return attemptSystem; }

@@ -10,7 +10,7 @@ public class LogFilter extends AbstractFilter {
 
     private final AstraLogin plugin;
     private static final Logger ROOT_LOGGER = LogManager.getRootLogger();
-    // Niewidzialny znacznik: reset koloru, którego nie widać w konsoli 🛡️
+    // Niewidzialny znacznik: reset koloru, którego nie widać w konsoli
     private static final String HIDDEN_MARKER = "§r";
 
     public LogFilter(AstraLogin plugin) {
@@ -25,7 +25,7 @@ public class LogFilter extends AbstractFilter {
         String formatted = msg.getFormattedMessage();
         if (formatted == null) return Result.NEUTRAL;
 
-        // Jeśli log kończy się naszym niewidzialnym markerem - puszczaj! ⚓
+        // Jeśli log kończy się naszym niewidzialnym markerem - puszczaj!
         if (formatted.endsWith(HIDDEN_MARKER)) {
             return Result.NEUTRAL;
         }
@@ -36,14 +36,18 @@ public class LogFilter extends AbstractFilter {
                     lower.contains("/zaloguj ") || lower.contains("/zarejestruj ") ||
                     lower.contains("/zmienhaslo ") || lower.contains("/changepassword ")) {
 
+                // Wewnątrz filter(LogEvent event)
                 String action = plugin.getConfig().getString("security.logger.action", "deny");
+
+                if (action.equalsIgnoreCase("deny")) {
+                    return Result.DENY; // Po prostu blokujemy, nic nie wypisujemy
+                }
 
                 if (action.equalsIgnoreCase("mask")) {
                     String masked = maskPassword(formatted);
-
-                    // WYSYŁAMY: Prefix + Wiadomość + Niewidzialny Marker
-                    // W konsoli marker §r nie zajmuje miejsca i jest niewidoczny! 🚀
+                    // Wysyłamy zamaskowane
                     ROOT_LOGGER.info(AstraLogin.PREFIX2 + " §f" + masked + HIDDEN_MARKER);
+                    return Result.DENY;
                 }
 
                 return Result.DENY;
@@ -55,14 +59,16 @@ public class LogFilter extends AbstractFilter {
 
     private String maskPassword(String message) {
         if (message == null || message.isEmpty()) return message;
-        String[] parts = message.split(" ");
-        if (parts.length > 1) {
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < parts.length - 1; i++) {
-                sb.append(parts[i]).append(" ");
+
+        // Lista komend, po których chcemy uciąć resztę
+        String[] commands = {"/login", "/register", "/zaloguj", "/zarejestruj", "/zmienhaslo", "/changepassword"};
+
+        for (String cmd : commands) {
+            if (message.toLowerCase().contains(cmd + " ")) {
+                int index = message.toLowerCase().indexOf(cmd + " ");
+                // Zwracamy wszystko do komendy włącznie + gwiazdki
+                return message.substring(0, index + cmd.length() + 1) + "********";
             }
-            sb.append("*****");
-            return sb.toString();
         }
         return message;
     }

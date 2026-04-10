@@ -27,7 +27,7 @@ public class SpawnManager {
             try {
                 this.file.createNewFile();
             } catch (IOException e) {
-                plugin.getLogger().severe("§cNie można utworzyć pliku spawns/locations.yml!");
+                plugin.sendSpawnCreateError();
             }
         }
         this.config = YamlConfiguration.loadConfiguration(file);
@@ -124,7 +124,7 @@ public class SpawnManager {
         } catch (Exception e) {
             // Jeśli cokolwiek pójdzie nie tak przy czytaniu (np. błąd formatu), lecisz na spawn
             teleport(p, "after_login");
-            plugin.getLogger().warning("Błąd podczas odczytu pozycji dla " + p.getName());
+            plugin.sendPlayerLocationReadError(p.getName());
         }
     }
 
@@ -137,7 +137,7 @@ public class SpawnManager {
         try {
             config.save(file);
         } catch (IOException e) {
-            plugin.getLogger().severe("§cNie można zapisać pliku spawns/locations.yml!");
+            plugin.sendSpawnSaveError();
         }
     }
 }

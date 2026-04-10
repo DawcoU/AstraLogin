@@ -38,7 +38,7 @@ public class UpdateChecker {
                 }
             }
         } catch (Exception e) {
-            plugin.getLogger().warning("§cNie udało się sprawdzić aktualizacji na Modrinth");
+            plugin.sendUpdateCheckError();
         }
     }
 }
