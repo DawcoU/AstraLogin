@@ -21,6 +21,10 @@ public class LanguageManager {
         loadLanguage();
     }
 
+    public FileConfiguration getLangConfig() {
+        return langConfig;
+    }
+
     // Tworzy folder languages i domyślne pliki, jeśli ich nie ma
     private void setupFiles() {
         File langFolder = new File(plugin.getDataFolder(), "languages");

@@ -20,6 +20,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
     private LoginSystem loginSystem;
     private SpawnManager spawnManager;
     private InventoryStorage storage;
+    private PasswordManager passwordManager;
 
     public LanguageManager getLanguageManager() {
         return languageManager;
@@ -27,17 +28,24 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
-        // --- 1. INICJALIZACJA (TYLKO RAZ!) ---
-        this.languageManager = new LanguageManager(this);
-        this.inventoryStorage = new InventoryStorage(this);
-        this.storage = this.inventoryStorage;
+        // 1. NAJPIERW PLIKI (Fundament - robimy to tylko RAZ)
+        saveDefaultConfig(); // Najpierw stwórz folder, jeśli go nie ma
 
-        PasswordManager passwordManager = new PasswordManager(this);
-        IPManager ipManager = new IPManager(this);
+        FilesUpdater updater = new FilesUpdater(this);
+        updater.check(); // To wywołuje Twoje checkLanguages() i naprawia braki
+
+        // 2. TERAZ INICJALIZACJA (Wczytujemy to, co updater już naprawił)
+        this.languageManager = new LanguageManager(this);
+
+        // 3. RESZTA MANAGERÓW
+        this.inventoryStorage = new InventoryStorage(this);
         this.spawnManager = new SpawnManager(this);
 
-        // Budujemy loginSystem
-        this.loginSystem = new LoginSystem(this, passwordManager, this.inventoryStorage, ipManager, spawnManager);
+        passwordManager = new PasswordManager(this);
+        IPManager ipManager = new IPManager(this);
+
+        // Budujemy loginSystem z gotowych klocków
+        this.loginSystem = new LoginSystem(this, this.passwordManager, this.inventoryStorage, ipManager, spawnManager);
 
         // --- 2. LOGGER ---
         try {
@@ -51,13 +59,9 @@ public class AstraLogin extends JavaPlugin implements Listener {
             }
         }
 
-        // --- 3. CONFIG I FILES ---
-        saveDefaultConfig();
-        new FilesUpdater(this).check();
-
         getServer().getPluginManager().registerEvents(new LoginBlocks(this, loginSystem, this.inventoryStorage, spawnManager), this);
 
-        // --- 4. REJESTRACJA KOMEND I EVENTÓW ---
+        // --- 3. REJESTRACJA KOMEND I EVENTÓW ---
         getCommand("zarejestruj").setExecutor(loginSystem);
         getCommand("zaloguj").setExecutor(loginSystem);
         getCommand("astralogin").setExecutor(loginSystem);
@@ -67,10 +71,10 @@ public class AstraLogin extends JavaPlugin implements Listener {
         getCommand("zresetujip").setExecutor(new IPSecurity(this, ipManager));
         getServer().getPluginManager().registerEvents(loginSystem, this);
 
-        // --- 5. LOGI STARTOWE WBUDOWANE ---
+        // --- 4. LOGI STARTOWE WBUDOWANE ---
         sendStartupLogo();
 
-        // --- 6. SPRAWDZANIE NOWEJ WERSJI:
+        // --- 5. SPRAWDZANIE NOWEJ WERSJI:
         getServer().getScheduler().runTaskAsynchronously(this, () -> {
             if (getConfig().getBoolean("check-updates", true)) {
                 new UpdateChecker(this).getVersion(version -> {
@@ -81,13 +85,13 @@ public class AstraLogin extends JavaPlugin implements Listener {
                         sendVersionOk(version);
                         getLogger().info("");
                     }
-                    // Sprawdzamy, czy masz wersję wyższą niż na Modrinth (np. Twoje 2.2.0 vs 2.1.0 na stronie)
+                    // Sprawdzamy, czy masz wersję wyższą niż na Modrinth
                     else if (currentVersion.compareTo(version) > 0) {
                         sendDevNotice(currentVersion, version);
                     }
                     // Standardowa informacja o aktualizacji (Twój plugin jest starszy)
                     else {
-                        sendUpdateNotice(version);
+                        sendUpdateNotice(Bukkit.getConsoleSender(), version);
                     }
                 });
             }
@@ -198,6 +202,10 @@ public class AstraLogin extends JavaPlugin implements Listener {
         this.languageManager = languageManager;
     }
 
+    public PasswordManager getPasswordManager() {
+        return passwordManager;
+    }
+
     private void sendVersionOk(String version) {
         String lang = getConfig().getString("language", "pl");
 
@@ -209,19 +217,19 @@ public class AstraLogin extends JavaPlugin implements Listener {
         Bukkit.getConsoleSender().sendMessage(PREFIX2 + " " + msg);
     }
 
-    public void sendUpdateNotice(String version) {
+    public void sendUpdateNotice(CommandSender target, String version) {
         String lang = getConfig().getString("language", "pl");
 
         // Tłumaczenia
         String title = lang.equalsIgnoreCase("pl") ? "§eDostępna jest nowa wersja AstraLogin: §fv" : "§eA new version of AstraLogin is available: §fv";
         String download = lang.equalsIgnoreCase("pl") ? "§aPobierz: " : "§aDownload: ";
 
-        Bukkit.getConsoleSender().sendMessage("");
-        Bukkit.getConsoleSender().sendMessage("§7------------ " + PREFIX2 + " §7------------");
-        Bukkit.getConsoleSender().sendMessage(title + version);
-        Bukkit.getConsoleSender().sendMessage(download + "§f§nhttps://modrinth.com/plugin/astralogin/version/" + version);
-        Bukkit.getConsoleSender().sendMessage("§7----------------------------------------------");
-        Bukkit.getConsoleSender().sendMessage("");
+        target.sendMessage("");
+        target.sendMessage("§7------------ " + PREFIX2 + " §7------------");
+        target.sendMessage(title + version);
+        target.sendMessage(download + "§f§nhttps://modrinth.com/plugin/astralogin/version/" + version);
+        target.sendMessage("§7----------------------------------------------");
+        target.sendMessage("");
     }
 
     private void sendDevNotice(String currentVersion, String latestStable) {
@@ -247,6 +255,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
         String lang = getConfig().getString("language", "pl");
 
         // Tłumaczenia "na sztywno" w kodzie
+        String version = lang.equalsIgnoreCase("pl") ? "§6Wersja" : "§aVersion";
         String status = lang.equalsIgnoreCase("pl") ? "§aWłączony" : "§aEnabled";
         String author = lang.equalsIgnoreCase("pl") ? "§6   Autor: §e" : "§6   Author: §e";
         String statusLabel = lang.equalsIgnoreCase("pl") ? "§6   Status: " : "§6   Status: ";
@@ -254,7 +263,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
         // Wyświetlanie w konsoli
         Bukkit.getConsoleSender().sendMessage("");
         Bukkit.getConsoleSender().sendMessage("§7------------ " + PREFIX2 + " §7------------");
-        Bukkit.getConsoleSender().sendMessage("§6   AstraLogin §ev" + v);
+        Bukkit.getConsoleSender().sendMessage("§6   " + version + " §ev" + v);
         Bukkit.getConsoleSender().sendMessage(statusLabel + status);
         Bukkit.getConsoleSender().sendMessage(author + "DawcoU");
         Bukkit.getConsoleSender().sendMessage("§7----------------------------------------------");

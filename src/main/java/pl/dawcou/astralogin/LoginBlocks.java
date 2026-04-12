@@ -3,7 +3,6 @@ package pl.dawcou.astralogin;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -34,12 +33,6 @@ public class LoginBlocks implements Listener {
         this.spawnManager = spawnManager;
     }
 
-    private String c(String path) {
-        String msg = plugin.getConfig().getString(path);
-        if (msg == null) return "§cMissing message: " + path;
-        return ChatColor.translateAlternateColorCodes('&', msg);
-    }
-
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
         Player p = e.getPlayer();
@@ -66,11 +59,15 @@ public class LoginBlocks implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent e) {
         Player p = e.getPlayer();
-        UUID uuid = p.getUniqueId();
+        String uuid = p.getUniqueId().toString();
 
         // Sesja
         if (plugin.getConfig().getBoolean("features.session-enabled")) {
             if (loginSystem.getSesje().containsKey(uuid)) {
+
+                if (!plugin.getPasswordManager().maHaslo(uuid)) {
+                    return;
+                }
 
                 // --- SPRAWDZANIE IP (ZABEZPIECZENIE) ---
                 if (p.getAddress() == null) return; // Mały safe-check
@@ -131,7 +128,7 @@ public class LoginBlocks implements Listener {
                     if (!plugin.getDescription().getVersion().equals(version)) {
                         Bukkit.getScheduler().runTask(plugin, () -> {
                             // Wysyłamy powiadomienie o nowej wersji
-                            plugin.sendUpdateNotice(version);
+                            plugin.sendUpdateNotice(p, version); // p to Twój obiekt Player
                         });
                     }
                 });
@@ -163,9 +160,12 @@ public class LoginBlocks implements Listener {
                         this.cancel();
                         return;
                     }
+
                     String actionBarMsg = plugin.getLanguageManager().getMessage("actionbar-timer")
                             .replace("%time%", String.valueOf(time[0]));
                     p.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(actionBarMsg));
+
+                    time[0]--;
                 }
             }.runTaskTimer(plugin, 0L, 20L);
         }

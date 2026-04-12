@@ -9,7 +9,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
 public class FilesUpdater {
-
     private final AstraLogin plugin;
 
     public FilesUpdater(AstraLogin plugin) {
@@ -20,6 +19,7 @@ public class FilesUpdater {
         File configFile = new File(plugin.getDataFolder(), "config.yml");
         if (!configFile.exists()) return;
 
+        checkLanguages();
         FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
         InputStream defConfigStream = plugin.getResource("config.yml");
         if (defConfigStream == null) return;
@@ -81,8 +81,6 @@ public class FilesUpdater {
         if (changed) {
             try {
                 langConfig.save(langFile);
-                // Opcjonalnie: przeładuj managera języków, żeby od razu widział zmiany
-                plugin.getLanguageManager().loadLanguage();
 
                 // Możesz użyć wbudowanego loga, którego robiliśmy wcześniej:
                 plugin.getLogger().info("§e[AstraLogin] §aZaktualizowano brakujące linijki w pliku " + fileName);

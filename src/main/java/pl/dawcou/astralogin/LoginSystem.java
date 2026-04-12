@@ -1,5 +1,9 @@
 package pl.dawcou.astralogin;
 
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -136,13 +140,11 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 return true;
             }
 
-            // 1. NAJPIERW SPRAWDZASZ DŁUGOŚĆ
             if (args.length < 2) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-usage", "%cmd%", "delspawn"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-usage", "%cmd%", "setspawn"));
                 return true;
             }
 
-            // 2. DOPIERO TERAZ MOŻESZ BEZPIECZNIE POBRAĆ args[1]
             String type = args[1].toLowerCase();
 
             if (!p.hasPermission("astralogin.spawn")) {
@@ -150,9 +152,33 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 return true;
             }
 
-            // Sprawdzamy czy spawn istnieje aby nie nadpisało go
-            if (spawnManager.hasSpawn(type)) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-exists", "%type%", type));
+            boolean confirmed = (args.length > 2 && args[2].equalsIgnoreCase("confirm"));
+
+            if (spawnManager.hasSpawn(type) && !confirmed) {
+                // 1. PREFIX I KOLORY: Używamy fromLegacyText
+                String baseMsg = plugin.getLanguageManager().getWithPrefix("spawn-exists", "%type%", type);
+                BaseComponent[] baseComponent = TextComponent.fromLegacyText(baseMsg + " ");
+
+                // 2. PRZYCISK: Też z kolorami z configu
+                String btnText = plugin.getLanguageManager().getMessage("spawn-overwrite-button");
+                TextComponent confirmBtn = new TextComponent(TextComponent.fromLegacyText(btnText));
+
+                confirmBtn.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/astralogin setspawn " + type + " confirm"));
+
+                // 3. HOVER (NAPRAWA %type%): Musimy ręcznie zamienić placeholder
+                String hoverText = plugin.getLanguageManager().getMessage("spawn-overwrite-hover")
+                        .replace("%type%", type); // <-- TO TEGO BRAKOWAŁO!
+
+                confirmBtn.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText(hoverText)));
+
+                // Składamy wiadomość, żeby prefix nie był biały
+                TextComponent finalMsg = new TextComponent("");
+                for (BaseComponent bc : baseComponent) {
+                    finalMsg.addExtra(bc);
+                }
+                finalMsg.addExtra(confirmBtn);
+
+                p.spigot().sendMessage(finalMsg);
                 return true;
             }
 
@@ -171,13 +197,11 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 return true;
             }
 
-            // 1. NAJPIERW SPRAWDZASZ DŁUGOŚĆ
             if (args.length < 2) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-usage", "%cmd%", "delspawn"));
                 return true;
             }
 
-            // 2. DOPIERO TERAZ MOŻESZ BEZPIECZNIE POBRAĆ args[1]
             String type = args[1].toLowerCase();
 
             if (!p.hasPermission("astralogin.spawn")) {
@@ -185,8 +209,48 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 return true;
             }
 
-            spawnManager.delSpawn(type);
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-delete-success", "%type%", type));
+            // 1. LOGIKA POTWIERDZENIA
+            boolean confirmed = (args.length > 2 && args[2].equalsIgnoreCase("confirm"));
+
+            if (confirmed) {
+                if (spawnManager.hasSpawn(type)) {
+                    spawnManager.delSpawn(type);
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-deleted-success", "%type%", type));
+                } else {
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-does-not-exist", "%type%", type));
+                }
+                return true;
+            }
+
+            // 2. SPRAWDZAMY CZY W OGÓLE ISTNIEJE
+            if (!spawnManager.hasSpawn(type)) {
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-does-not-exist", "%type%", type));
+                return true;
+            }
+
+            // 3. POKAZYWANIE PRZYCISKU Z POPRAWNYM HOVEREM I KOLORAMI
+            String baseMsg = plugin.getLanguageManager().getWithPrefix("spawn-delete-confirm", "%type%", type);
+            BaseComponent[] message = TextComponent.fromLegacyText(baseMsg + " ");
+
+            String btnText = plugin.getLanguageManager().getMessage("spawn-delete-button");
+            TextComponent confirmBtn = new TextComponent(TextComponent.fromLegacyText(btnText));
+
+            confirmBtn.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/astralogin delspawn " + type + " confirm"));
+
+            // --- NAPRAWA HOVERA (Placeholder %type%) ---
+            String hoverText = plugin.getLanguageManager().getMessage("spawn-delete-hover")
+                    .replace("%type%", type); // To naprawia błąd ze screena!
+
+            confirmBtn.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText(hoverText)));
+
+            // Budujemy wiadomość, aby prefix nie był biały
+            TextComponent finalMsg = new TextComponent("");
+            for (BaseComponent bc : message) {
+                finalMsg.addExtra(bc);
+            }
+            finalMsg.addExtra(confirmBtn);
+
+            p.spigot().sendMessage(finalMsg);
             return true;
         }
 
@@ -356,7 +420,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
     }
 
     private String c(String path) {
-        String msg = plugin.getConfig().getString(path);
+        String msg = plugin.getLanguageManager().getLangConfig().getString(path);
         if (msg == null) return "§cMissing message: " + path;
         return org.bukkit.ChatColor.translateAlternateColorCodes('&', msg);
     }
