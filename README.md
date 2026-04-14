@@ -1,8 +1,9 @@
 # 🌌 AstraLogin
-> **Advanced and lightweight login system for Minecraft servers.**
-> Created and maintained by **DawcoU** 👨‍💻
+**A modern and lightweight login system for Minecraft servers.**
 
-AstraLogin is an advanced and lightweight authentication system designed for Survival, SMP, and RolePlay servers. It ensures full data security for players through password encryption and intelligent protection systems.
+Created and maintained by **DawcoU** 👨‍💻
+
+AstraLogin is a login plugin created for newer versions of Minecraft 1.18-1.21 ⭐ written in Java 17 and intended primarily for RPG and Survival servers.
 
 ---
 
@@ -39,5 +40,6 @@ AstraLogin is an advanced and lightweight authentication system designed for Sur
 4. Customize your messages in `config.yml`.
 
 ---
+
 ### 🌐 Support & Community
 If you need help, want to report a bug, or follow the development by **DawcoU**, join our Discord: [https://discord.gg/XcmcPMJZMT]
