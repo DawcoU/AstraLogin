@@ -40,7 +40,6 @@ messages:
   passwords-not-match: "&cPasswords do not match!"
   already-online: "&cA player with this name is already on the server!"
   admin-ip-reset-success: "&aPlayer &6%player%'s &aIP has been reset"
-  ip-lock-kick: "Your IP does not match this account!"
   anti-multiaccount-kick: "&cThe account limit for this IP has been reached!"
   usage-change-password: "&cCorrect usage: &e/changepassword <old> <new> <repeat>"
   wrong-old-password: "&cOld password is incorrect!"
@@ -58,3 +57,5 @@ messages:
   spawn-delete-confirm: "&cAre you sure you want to delete spawn &6%type%&c?"
   spawn-delete-button: "&4&l[CONFIRM DELETE]"
   spawn-delete-hover: "&aClick here to permanently remove spawn: &e%type%"
+  kick-ip-spammed: "&cToo many connection attempts detected from your IP! You have been blocked for &6%time%&cs"
+  ip-lock-kick: "Your IP does not match this account!"

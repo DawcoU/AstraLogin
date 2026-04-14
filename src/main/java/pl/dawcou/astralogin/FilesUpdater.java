@@ -39,9 +39,9 @@ public class FilesUpdater {
                 config.set("config-version", plugin.getDescription().getVersion());
                 config.save(configFile);
                 plugin.reloadConfig();
-                plugin.sendConfigUpdateNotice();
+                plugin.getNoticeManager().sendConfigUpdateNotice();
             } catch (Exception e) {
-                plugin.sendConfigErrorNotice(e.getMessage());
+                plugin.getNoticeManager().sendConfigErrorNotice(e.getMessage());
             }
         }
     }
@@ -82,10 +82,11 @@ public class FilesUpdater {
             try {
                 langConfig.save(langFile);
 
-                // Możesz użyć wbudowanego loga, którego robiliśmy wcześniej:
-                plugin.getLogger().info("§e[AstraLogin] §aZaktualizowano brakujące linijki w pliku " + fileName);
+                // Sukces
+                plugin.getNoticeManager().sendLangUpdateSuccess(fileName);
             } catch (Exception e) {
-                plugin.getLogger().severe("§cNie można było zaktualizować pliku językowego: " + e.getMessage());
+                // Błąd
+                plugin.getNoticeManager().sendLangUpdateError(fileName, e.getMessage());
             }
         }
     }

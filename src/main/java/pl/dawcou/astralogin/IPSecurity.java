@@ -39,7 +39,7 @@ public class IPSecurity implements CommandExecutor {
         String uuid = target.getUniqueId().toString();
 
         if (ipManager.getIP(uuid) == null) {
-            plugin.sendNoIPSaved(sender);
+            plugin.getNoticeManager().sendNoIPSaved(sender);
             return true;
         }
 

@@ -38,7 +38,7 @@ public class UpdateChecker {
                 }
             }
         } catch (Exception e) {
-            plugin.sendUpdateCheckError();
+            plugin.getNoticeManager().sendUpdateCheckError();
         }
     }
 }

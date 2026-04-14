@@ -98,7 +98,7 @@ public class LoginBlocks implements Listener {
                     }
                 } catch (Exception ex) {
                     sessionLimitMillis = 300000;
-                    plugin.sendInvalidSessionFormatNotice();
+                    plugin.getNoticeManager().sendInvalidSessionFormatNotice();
                 }
 
                 long lastLogout = loginSystem.getSesje().get(uuid);
@@ -128,7 +128,7 @@ public class LoginBlocks implements Listener {
                     if (!plugin.getDescription().getVersion().equals(version)) {
                         Bukkit.getScheduler().runTask(plugin, () -> {
                             // Wysyłamy powiadomienie o nowej wersji
-                            plugin.sendUpdateNotice(p, version); // p to Twój obiekt Player
+                            plugin.getNoticeManager().sendUpdateNotice(p, version); // p to Twój obiekt Player
                         });
                     }
                 });
@@ -173,25 +173,54 @@ public class LoginBlocks implements Listener {
 
     @EventHandler
     public void onPreLogin(AsyncPlayerPreLoginEvent e) {
-        String name = e.getName();
         UUID uuid = e.getUniqueId();
         String currentIP = e.getAddress().getHostAddress();
+        IPManager ipManager = plugin.getLoginSystem().getIpManager();
 
-        if (Bukkit.getPlayerExact(name) != null) {
-            e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, plugin.getLanguageManager().getMessage("already-online"));
-            return;
+        // SPRAWDZANIE CZY OPCJA JEST WŁĄCZONA W CONFIGU
+        if (plugin.getConfig().getBoolean("security.ip-security.entry-protection.enabled", true)) {
+
+            // 1. Sprawdzamy czy IP ma bana
+            if (ipManager.isIPBanned(currentIP)) {
+                long seconds = ipManager.getIPBanTimeLeft(currentIP);
+                String msg = plugin.getLanguageManager().getMessage("kick-ip-spammed")
+                        .replace("%time%", String.valueOf(seconds));
+                e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, msg);
+                return;
+            }
+
+            // 2. Dodajemy próbę wejścia
+            ipManager.addIPAttempt(currentIP);
         }
 
+        // --- 2. OCHRONA IP (IP-LOCK) ---
+        if (plugin.getConfig().getBoolean("security.ip-security.ip-lock-enabled", true)) {
+            String savedIP = ipManager.getIP(uuid.toString());
+
+            // Jeśli gracz ma zapisane IP w ips.yml, ale nowe nie przechodzi testu 2 członów:
+            if (savedIP != null && !IPSecurity.isIPSafe(savedIP, currentIP)) {
+
+                // Pobieramy czystą wiadomość o zmianie IP bez żadnych liczników prób
+                String msg = plugin.getLanguageManager().getMessage("ip-lock-kick");
+
+                e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, msg);
+                return;
+            }
+        }
+
+        // --- 3. ANTY-MULTIACCOUNT ---
         if (plugin.getConfig().getBoolean("security.anti-multiaccount.enabled", true)) {
-            String zapisaneIP = loginSystem.getIpManager().getIP(uuid.toString());
+            String zapisaneIP = ipManager.getIP(uuid.toString());
 
-            boolean isSafe = IPSecurity.isIPSafe(zapisaneIP, currentIP);
+            // Jeśli to nie jest "bezpieczne" IP tego samego gracza, sprawdzamy limit kont
+            if (zapisaneIP == null || !IPSecurity.isIPSafe(zapisaneIP, currentIP)) {
+                int limit = plugin.getConfig().getInt("security.anti-multiaccount.limit", 2);
+                int ileKont = ipManager.getIloscKontByIP(currentIP);
 
-            int limit = plugin.getConfig().getInt("security.anti-multiaccount.limit", 2);
-            int ileKont = loginSystem.getIpManager().getIloscKontByIP(currentIP);
-
-            if (!isSafe && ileKont >= limit) {
-                e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, plugin.getLanguageManager().getMessage("anti-multiaccount-kick"));
+                if (ileKont >= limit) {
+                    e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED,
+                            plugin.getLanguageManager().getMessage("anti-multiaccount-kick"));
+                }
             }
         }
     }

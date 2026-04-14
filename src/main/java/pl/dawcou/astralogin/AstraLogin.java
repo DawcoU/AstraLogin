@@ -1,7 +1,6 @@
 package pl.dawcou.astralogin;
 
 import org.bukkit.Bukkit;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -9,45 +8,54 @@ import net.md_5.bungee.api.ChatColor;
 
 import java.util.UUID;
 
+/**
+ * Główna klasa pluginu AstraLogin.
+ * Zarządza startem, wyłączaniem i komunikacją między modułami.
+ */
 public class AstraLogin extends JavaPlugin implements Listener {
 
+    // --- PREFIXY I STAŁE ---
     public static final String PREFIX = ChatColor.of("#0088FF") + "[" + ChatColor.of("#00D5FF") + "AstraLogin" + ChatColor.of("#0088FF") + "]";
-
     public static final String PREFIX2 = ("§9[§bAstraLogin§9]");
 
+    // --- INSTANCJE MANAGERÓW (POLA) ---
     private LanguageManager languageManager;
     private InventoryStorage inventoryStorage;
     private LoginSystem loginSystem;
     private SpawnManager spawnManager;
-    private InventoryStorage storage;
     private PasswordManager passwordManager;
+    private IPManager ipManager;
+    private NoticeManager noticeManager;
 
-    public LanguageManager getLanguageManager() {
-        return languageManager;
+    // --- GETTERY (Dostęp dla innych klas) ---
+    public LanguageManager getLanguageManager() { return languageManager; }
+    public PasswordManager getPasswordManager() { return passwordManager; }
+    public LoginSystem getLoginSystem() { return loginSystem; } // Kluczowe dla Twoich eventów!
+    public void setLanguageManager(LanguageManager languageManager) { this.languageManager = languageManager; }
+    public NoticeManager getNoticeManager() {
+        return noticeManager;
     }
 
     @Override
     public void onEnable() {
-        // 1. NAJPIERW PLIKI (Fundament - robimy to tylko RAZ)
-        saveDefaultConfig(); // Najpierw stwórz folder, jeśli go nie ma
+        // --- 1. SYSTEM PLIKÓW I UPDATER ---
+        saveDefaultConfig();
 
         FilesUpdater updater = new FilesUpdater(this);
-        updater.check(); // To wywołuje Twoje checkLanguages() i naprawia braki
+        updater.check();
 
-        // 2. TERAZ INICJALIZACJA (Wczytujemy to, co updater już naprawił)
+        // --- 2. INICJALIZACJA MANAGERÓW ---
         this.languageManager = new LanguageManager(this);
-
-        // 3. RESZTA MANAGERÓW
         this.inventoryStorage = new InventoryStorage(this);
         this.spawnManager = new SpawnManager(this);
+        this.passwordManager = new PasswordManager(this);
+        this.ipManager = new IPManager(this);
+        this.noticeManager = new NoticeManager(this);
 
-        passwordManager = new PasswordManager(this);
-        IPManager ipManager = new IPManager(this);
+        // Tworzenie serca pluginu - LoginSystem
+        this.loginSystem = new LoginSystem(this, this.passwordManager, this.inventoryStorage, this.ipManager, this.spawnManager);
 
-        // Budujemy loginSystem z gotowych klocków
-        this.loginSystem = new LoginSystem(this, this.passwordManager, this.inventoryStorage, ipManager, spawnManager);
-
-        // --- 2. LOGGER ---
+        // --- 3. FILTRACJA LOGÓW (UKRYWANIE HASEŁ) ---
         try {
             org.apache.logging.log4j.core.Logger rootLogger = (org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager.getRootLogger();
             rootLogger.addFilter(new LogFilter(this));
@@ -59,9 +67,13 @@ public class AstraLogin extends JavaPlugin implements Listener {
             }
         }
 
+        // --- 4. REJESTRACJA EVENTÓW I KOMEND ---
+        // Blokady świata (move, break, etc.)
         getServer().getPluginManager().registerEvents(new LoginBlocks(this, loginSystem, this.inventoryStorage, spawnManager), this);
+        // Główne eventy logowania
+        getServer().getPluginManager().registerEvents(loginSystem, this);
 
-        // --- 3. REJESTRACJA KOMEND I EVENTÓW ---
+        // Komendy
         getCommand("zarejestruj").setExecutor(loginSystem);
         getCommand("zaloguj").setExecutor(loginSystem);
         getCommand("astralogin").setExecutor(loginSystem);
@@ -69,29 +81,20 @@ public class AstraLogin extends JavaPlugin implements Listener {
         getCommand("zresetujhaslo").setExecutor(loginSystem);
         getCommand("zmienhaslo").setExecutor(loginSystem);
         getCommand("zresetujip").setExecutor(new IPSecurity(this, ipManager));
-        getServer().getPluginManager().registerEvents(loginSystem, this);
 
-        // --- 4. LOGI STARTOWE WBUDOWANE ---
-        sendStartupLogo();
+        // --- 5. LOGO STARTOWE I SPRAWDZANIE WERSJI ---
+        noticeManager.sendStartupLogo();
 
-        // --- 5. SPRAWDZANIE NOWEJ WERSJI:
         getServer().getScheduler().runTaskAsynchronously(this, () -> {
             if (getConfig().getBoolean("check-updates", true)) {
                 new UpdateChecker(this).getVersion(version -> {
                     String currentVersion = this.getDescription().getVersion();
-
                     if (currentVersion.equals(version)) {
-                        getLogger().info("");
-                        sendVersionOk(version);
-                        getLogger().info("");
-                    }
-                    // Sprawdzamy, czy masz wersję wyższą niż na Modrinth
-                    else if (currentVersion.compareTo(version) > 0) {
-                        sendDevNotice(currentVersion, version);
-                    }
-                    // Standardowa informacja o aktualizacji (Twój plugin jest starszy)
-                    else {
-                        sendUpdateNotice(Bukkit.getConsoleSender(), version);
+                        noticeManager.sendVersionOk(version);
+                    } else if (currentVersion.compareTo(version) > 0) {
+                        noticeManager.sendDevNotice(currentVersion, version);
+                    } else {
+                        noticeManager.sendUpdateNotice(Bukkit.getConsoleSender(), version);
                     }
                 });
             }
@@ -100,189 +103,17 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        // 1. Przechodzimy przez wszystkich graczy online w momencie wyłączenia
+        // --- RATOWANIE DANYCH GRACZY PRZED WYŁĄCZENIEM ---
         for (Player p : Bukkit.getOnlinePlayers()) {
             UUID uuid = p.getUniqueId();
 
-            // 2. Jeśli był zalogowany, ratujemy jego pozycję!
             if (loginSystem.getZalogowani().contains(uuid)) {
                 spawnManager.saveLastLocation(p);
-            }
-
-            // 3. Jeśli nie był zalogowany, oddajemy mu itemy, żeby nie zniknęły po usunięciu pliku
-            if (!loginSystem.getZalogowani().contains(uuid)) {
-                storage.restore(p);
+            } else {
+                // Jeśli nie był zalogowany, oddajemy mu itemy, żeby nie "zniknęły"
+                inventoryStorage.restore(p);
             }
         }
-
-        // 2. Odpalamy Logi Wyłączania
-        sendShutdownLogo();
-    }
-
-    // Metody Językowe dla innych klas
-
-    public void sendConfigUpdateNotice() {
-        String lang = getConfig().getString("language", "pl");
-
-        String msg = lang.equalsIgnoreCase("pl")
-                ? "§aPomyślnie dopisano brakujące linijki do configu"
-                : "§aSuccessfully added missing lines to the config";
-
-        Bukkit.getConsoleSender().sendMessage(PREFIX2 + " " + msg);
-    }
-
-    public void sendConfigErrorNotice(String error) {
-        String lang = getConfig().getString("language", "pl");
-
-        String msg = lang.equalsIgnoreCase("pl")
-                ? "§cBłąd podczas zapisu configu: "
-                : "§cError while saving config: ";
-
-        Bukkit.getConsoleSender().sendMessage(PREFIX2 + " " + msg + error);
-    }
-
-    public void sendInvalidSessionFormatNotice() {
-        String lang = getConfig().getString("language", "pl");
-        String msg = lang.equalsIgnoreCase("pl")
-                ? "§cNieprawidłowy format session-time! Używam domyślnych 5 minut."
-                : "§cInvalid session-time format! Using default 5 minutes.";
-        getLogger().warning(msg);
-    }
-
-    // 1. Błąd tworzenia pliku lokalizacji
-    public void sendSpawnCreateError() {
-        String lang = getConfig().getString("language", "pl");
-        String msg = lang.equalsIgnoreCase("pl")
-                ? "§cNie można utworzyć pliku spawns/locations.yml!"
-                : "§cCould not create spawns/locations.yml file!";
-        getLogger().severe(msg);
-    }
-
-    // 2. Błąd odczytu pozycji gracza
-    public void sendPlayerLocationReadError(String playerName) {
-        String lang = getConfig().getString("language", "pl");
-        String msg = lang.equalsIgnoreCase("pl")
-                ? "Błąd podczas odczytu pozycji dla " + playerName
-                : "Error while reading location for " + playerName;
-        getLogger().warning(msg);
-    }
-
-    // 3. Błąd zapisu pliku lokalizacji
-    public void sendSpawnSaveError() {
-        String lang = getConfig().getString("language", "pl");
-        String msg = lang.equalsIgnoreCase("pl")
-                ? "§cNie można zapisać pliku spawns/locations.yml!"
-                : "§cCould not save spawns/locations.yml file!";
-        getLogger().severe(msg);
-    }
-
-    // 4. Błąd sprawdzania aktualizacji
-    public void sendUpdateCheckError() {
-        String lang = getConfig().getString("language", "pl");
-        String msg = lang.equalsIgnoreCase("pl")
-                ? "§cNie udało się sprawdzić aktualizacji na Modrinth"
-                : "§cFailed to check for updates on Modrinth";
-        getLogger().warning(msg);
-    }
-
-    public void sendNoIPSaved(CommandSender sender) {
-        // Sprawdzamy język z configu (domyślnie polski)
-        String lang = getConfig().getString("language", "pl");
-
-        // Wybieramy odpowiednią wersję tekstu
-        String msg = lang.equalsIgnoreCase("pl")
-                ? "§cTen gracz nie ma zapisanego adresu IP!"
-                : "§cThis player does not have a saved IP address!";
-
-        // Wysyłamy z prefixem
-        sender.sendMessage(PREFIX + " " + msg);
-    }
-
-    public void setLanguageManager(LanguageManager languageManager) {
-        this.languageManager = languageManager;
-    }
-
-    public PasswordManager getPasswordManager() {
-        return passwordManager;
-    }
-
-    private void sendVersionOk(String version) {
-        String lang = getConfig().getString("language", "pl");
-
-        // Szybkie tłumaczenie w jednej linii
-        String msg = lang.equalsIgnoreCase("pl")
-                ? "§aAstraLogin jest aktualny §f(§ev" + version + "§f)"
-                : "§aAstraLogin is up to date §f(§ev" + version + "§f)";
-
-        Bukkit.getConsoleSender().sendMessage(PREFIX2 + " " + msg);
-    }
-
-    public void sendUpdateNotice(CommandSender target, String version) {
-        String lang = getConfig().getString("language", "pl");
-
-        // Tłumaczenia
-        String title = lang.equalsIgnoreCase("pl") ? "§eDostępna jest nowa wersja AstraLogin: §fv" : "§eA new version of AstraLogin is available: §fv";
-        String download = lang.equalsIgnoreCase("pl") ? "§aPobierz: " : "§aDownload: ";
-
-        target.sendMessage("");
-        target.sendMessage("§7------------ " + PREFIX2 + " §7------------");
-        target.sendMessage(title + version);
-        target.sendMessage(download + "§f§nhttps://modrinth.com/plugin/astralogin/version/" + version);
-        target.sendMessage("§7----------------------------------------------");
-        target.sendMessage("");
-    }
-
-    private void sendDevNotice(String currentVersion, String latestStable) {
-        String lang = getConfig().getString("language", "pl");
-
-        // Tłumaczenia
-        String devTitle = lang.equalsIgnoreCase("pl") ? "§bUżywasz wersji testowej (Development): §f§nv" : "§bYou are using a Development version: §f§nv";
-        String stableInfo = lang.equalsIgnoreCase("pl") ? "§eNa Modrinth najnowsza stabilna to: §fv" : "§eThe latest stable on Modrinth is: §fv";
-        String warning = lang.equalsIgnoreCase("pl") ? "§bUważaj na błędy, kod jest w fazie rozwoju!" : "§bWatch out for bugs, the code is in development!";
-
-        Bukkit.getConsoleSender().sendMessage("");
-        Bukkit.getConsoleSender().sendMessage("§7------------ " + PREFIX2 + " §7------------");
-        Bukkit.getConsoleSender().sendMessage(devTitle + currentVersion);
-        Bukkit.getConsoleSender().sendMessage(stableInfo + latestStable);
-        Bukkit.getConsoleSender().sendMessage(warning);
-        Bukkit.getConsoleSender().sendMessage("§7----------------------------------------------");
-        Bukkit.getConsoleSender().sendMessage("");
-    }
-
-    private void sendStartupLogo() {
-        String v = getDescription().getVersion();
-        // Pobieramy język bezpośrednio z configu, żeby wiedzieć co wyświetlić
-        String lang = getConfig().getString("language", "pl");
-
-        // Tłumaczenia "na sztywno" w kodzie
-        String version = lang.equalsIgnoreCase("pl") ? "§6Wersja" : "§aVersion";
-        String status = lang.equalsIgnoreCase("pl") ? "§aWłączony" : "§aEnabled";
-        String author = lang.equalsIgnoreCase("pl") ? "§6   Autor: §e" : "§6   Author: §e";
-        String statusLabel = lang.equalsIgnoreCase("pl") ? "§6   Status: " : "§6   Status: ";
-
-        // Wyświetlanie w konsoli
-        Bukkit.getConsoleSender().sendMessage("");
-        Bukkit.getConsoleSender().sendMessage("§7------------ " + PREFIX2 + " §7------------");
-        Bukkit.getConsoleSender().sendMessage("§6   " + version + " §ev" + v);
-        Bukkit.getConsoleSender().sendMessage(statusLabel + status);
-        Bukkit.getConsoleSender().sendMessage(author + "DawcoU");
-        Bukkit.getConsoleSender().sendMessage("§7----------------------------------------------");
-        Bukkit.getConsoleSender().sendMessage("");
-    }
-
-    private void sendShutdownLogo() {
-        // Pobieramy język z configu
-        String lang = getConfig().getString("language", "pl");
-
-        // Tłumaczenia statusu i pożegnania
-        String status = lang.equalsIgnoreCase("pl") ? "§cWyłączony" : "§cDisabled";
-        String farewell = lang.equalsIgnoreCase("pl") ? "§eDo zobaczenia! :D" : "§eSee you! :D";
-
-        // Wyświetlanie w konsoli
-        Bukkit.getConsoleSender().sendMessage("");
-        Bukkit.getConsoleSender().sendMessage("§7------------ §4[§cAstraLogin§4] §7---------");
-        Bukkit.getConsoleSender().sendMessage("§6   Status: " + status + " §7- " + farewell);
-        Bukkit.getConsoleSender().sendMessage("§7----------------------------------------------");
-        Bukkit.getConsoleSender().sendMessage("");
+        noticeManager.sendShutdownLogo();
     }
 }

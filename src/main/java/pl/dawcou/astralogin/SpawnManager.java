@@ -27,7 +27,7 @@ public class SpawnManager {
             try {
                 this.file.createNewFile();
             } catch (IOException e) {
-                plugin.sendSpawnCreateError();
+                plugin.getNoticeManager().sendSpawnCreateError();
             }
         }
         this.config = YamlConfiguration.loadConfiguration(file);
@@ -124,7 +124,7 @@ public class SpawnManager {
         } catch (Exception e) {
             // Jeśli cokolwiek pójdzie nie tak przy czytaniu (np. błąd formatu), lecisz na spawn
             teleport(p, "after_login");
-            plugin.sendPlayerLocationReadError(p.getName());
+            plugin.getNoticeManager().sendPlayerLocationReadError(p.getName());
         }
     }
 
@@ -137,7 +137,7 @@ public class SpawnManager {
         try {
             config.save(file);
         } catch (IOException e) {
-            plugin.sendSpawnSaveError();
+            plugin.getNoticeManager().sendSpawnSaveError();
         }
     }
 }

@@ -1,21 +1,35 @@
-# +---------------------------------------------------------------------------+
-# |                         AstraLogin - Modern Auth System                   |
-# +---------------------------------------------------------------------------+
+# +--------------------------------------------------------------------------------------------+
+# |                     AstraLogin - Configuration file - Modern Auth System                   |
+# +--------------------------------------------------------------------------------------------+
 
-# --- System Settings ---
-# DO NOT change this value. It is used to track config compatibility.
+# ===============================
+#          MAIN SETTINGS
+# ===============================
+
+# DO NOT change this value
 config-version: 3.0.0
 
 # Wybierz język pluginu (Dostępne: pl, en)
 # Select the plugin language (Available: pl, en)
 language: pl
 
+# Should the plugin check for newer versions of the plugin?
 check-updates: true
 
-# --- Security & Logging ---
+# ========================================
+#          IP Protection & Security
+# ========================================
 security:
-  # IP-Lock: Prevents login if the player's IP address has changed.
-  ip-lock-enabled: true
+  ip-security:
+    # IP-Lock: Prevents login if the player's IP address has changed.
+    ip-lock-enabled: true
+
+    # Protection against spam entering the server (e.g. bots/attacks)
+    entry-protection:
+      enabled: true        # Should this protection be enabled?
+      max-attempts: 5      # Number of entries
+      within-seconds: 120  # In what time (120s = 2 minutes)
+      ban-time-minutes: 10 # How many minutes does it ban an IP for after exceeding the limit
 
   anti-multiaccount:
     enabled: true
@@ -28,7 +42,9 @@ security:
     # "deny" - completely removes the line from the logs
     action: "deny"
 
-# --- Login Features ---
+# =================================
+#          LOGIN FEATURES
+# =================================
 features:
   # Enable or disable the login countdown timer.
   login-time-enabled: true
@@ -46,7 +62,9 @@ features:
   # After logging in, teleports the player to their last location, ignoring the spawn after logging in.
   teleport-to-last-location: true
 
-# --- Password Requirements ---
+# ========================================
+#          Password Requirements
+# ========================================
 requirements:
   # Minimum number of characters in a password
   min-password-length: 6
@@ -55,7 +73,9 @@ requirements:
 
   max-password-length: 16
 
-# --- Visual Effects ---
+# =========================
+#          VISUALS
+# =========================
 visuals:
   # Apply blindness effect to unauthenticated players.
   use-blindness: true

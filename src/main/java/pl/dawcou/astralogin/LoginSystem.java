@@ -257,11 +257,11 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
         if (command.getName().equalsIgnoreCase("astralogin") || command.getName().equalsIgnoreCase("al")) {
             if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
                 if (!sender.hasPermission("astralogin.reload")) {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
+                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
                     return true;
                 }
                 plugin.reloadConfig();
-                plugin.setLanguageManager(new LanguageManager(plugin));
+                plugin.setLanguageManager(new LanguageManager(plugin)); // To wymaga metody w AstraLogin
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reload-success"));
                 return true;
             }
@@ -290,7 +290,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
 
             if (args.length == 2) {
                 if (!args[0].equals(args[1])) {
-                    p.sendMessage(AstraLogin.PREFIX + " " + c("messages.passwords-not-match"));
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("passwords-not-match"));
                     return true;
                 }
 
@@ -306,18 +306,32 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                     return true;
                 }
 
+                // --- PRZYGOTOWANIE DANYCH DO ASYNC ---
                 String ip = p.getAddress().getAddress().getHostAddress();
-                data.zapiszHaslo(p.getUniqueId().toString(), HashPassword.hash(args[0]));
-                ipManager.zapiszIP(p.getUniqueId().toString(), ip);
+                String passwordToHash = args[0];
+                String uuid = p.getUniqueId().toString();
 
-                finishLogin(p);
-                p.sendTitle(
-                        plugin.getLanguageManager().getMessage("title-register"),
-                        plugin.getLanguageManager().getMessage("subtitle-register"),
-                        10, 40, 10
-                );
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-register"));
-                storage.restore(p);
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    // 1. Hashujemy (ciężkie dla CPU)
+                    String hashedPass = HashPassword.hash(passwordToHash);
+
+                    // 2. Zapisujemy dane (operacje na plikach - IO)
+                    data.zapiszHaslo(uuid, hashedPass);
+                    ipManager.zapiszIP(uuid, ip);
+
+                    // 3. Wracamy na główny wątek (Sync)
+                    Bukkit.getScheduler().runTask(plugin, () -> {
+                        finishLogin(p);
+                        p.sendTitle(
+                                plugin.getLanguageManager().getMessage("title-register"),
+                                plugin.getLanguageManager().getMessage("subtitle-register"),
+                                10, 40, 10
+                        );
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-register"));
+                        storage.restore(p);
+                    });
+                });
+
             } else {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-register"));
             }
@@ -330,43 +344,51 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 return true;
             }
 
-            String pass = data.getHaslo(p.getUniqueId().toString());
+            String uuid = p.getUniqueId().toString();
+            String pass = data.getHaslo(uuid);
+
             if (pass == null) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("no-account"));
                 return true;
             }
+
             if (zalogowani.contains(p.getUniqueId())) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("already-logged"));
                 return true;
             }
 
             if (args.length == 1) {
-                if (HashPassword.verify(args[0], pass)) {
+                String inputPassword = args[0];
+                String currentIP = p.getAddress().getAddress().getHostAddress();
 
-                    // Sprawdzamy czy gracz ma przypisane IP
-                    if (ipManager.getIP(p.getUniqueId().toString()) == null) {
-                        // Pobieramy aktualne IP gracza
-                        String currentIP = p.getAddress().getAddress().getHostAddress();
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    if (HashPassword.verify(inputPassword, pass)) {
 
-                        // ZAPISUJEMY używając poprawnej nazwy zmiennej: currentIP
-                        ipManager.zapiszIP(p.getUniqueId().toString(), currentIP);
+                        if (ipManager.getIP(uuid) == null) {
+                            ipManager.zapiszIP(uuid, currentIP);
+                        }
 
+                        Bukkit.getScheduler().runTask(plugin, () -> {
+                            finishLogin(p);
+                            p.sendTitle(
+                                    plugin.getLanguageManager().getMessage("title-login"),
+                                    plugin.getLanguageManager().getMessage("subtitle-login"),
+                                    10, 40, 10
+                            );
+                            p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-login"));
+                            storage.restore(p);
+                        });
+
+                    } else {
+                        Bukkit.getScheduler().runTask(plugin, () -> {
+                            p.sendMessage(plugin.getLanguageManager().getWithPrefix("wrong-password"));
+
+                            if (plugin.getConfig().getBoolean("features.max-attempts-enabled")) {
+                                attemptSystem.dodajProbe(p);
+                            }
+                        });
                     }
-
-                    finishLogin(p);
-                    p.sendTitle(
-                            plugin.getLanguageManager().getMessage("title-login"),
-                            plugin.getLanguageManager().getMessage("subtitle-login"),
-                            10, 40, 10
-                    );
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-login"));
-                    storage.restore(p);
-                } else {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("wrong-password"));
-                    if (plugin.getConfig().getBoolean("features.max-attempts-enabled")) {
-                        attemptSystem.dodajProbe(p);
-                    }
-                }
+                });
             } else {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-login"));
             }
@@ -376,9 +398,13 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
     }
 
     public void finishLogin(Player p) {
-        zalogowani.add(p.getUniqueId());
+        UUID uuid = p.getUniqueId();
+
+        zalogowani.add(uuid);
         p.removePotionEffect(PotionEffectType.BLINDNESS);
-        attemptSystem.resetuj(p.getUniqueId());
+
+        // Czyścimy próby
+        attemptSystem.resetuj(uuid);
 
         // Pobieramy opcję z głównego configu pluginu
         boolean useLastLoc = plugin.getConfig().getBoolean("features.teleport-to-last-location", true);
@@ -419,11 +445,13 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 .collect(java.util.stream.Collectors.toList());
     }
 
-    private String c(String path) {
-        String msg = plugin.getLanguageManager().getLangConfig().getString(path);
-        if (msg == null) return "§cMissing message: " + path;
-        return org.bukkit.ChatColor.translateAlternateColorCodes('&', msg);
-    }
+    // Metoda pomocnicza obecnie zbędna ale zostawiona na potrzebę
+
+    //private String c(String path) {
+        //String msg = plugin.getLanguageManager().getLangConfig().getString(path);
+        //if (msg == null) return "§cMissing message: " + path;
+        //return org.bukkit.ChatColor.translateAlternateColorCodes('&', msg);
+    //}
 
     public Set<UUID> getZalogowani() { return zalogowani; }
     public InventoryStorage getStorage() { return storage; }

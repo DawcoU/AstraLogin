@@ -19,7 +19,7 @@ public class LoginAttemptSystem {
 
         if (aktualne >= max) {
             resetuj(p.getUniqueId());
-            p.kickPlayer(c("messages.kick-max-attempts"));
+            p.kickPlayer(plugin.getLanguageManager().getMessage("kick-max-attempts"));
         } else {
             proby.put(p.getUniqueId(), aktualne);
         }
@@ -27,10 +27,5 @@ public class LoginAttemptSystem {
 
     public void resetuj(UUID uuid) {
         proby.remove(uuid);
-    }
-
-    private String c(String path) {
-        String s = plugin.getConfig().getString(path);
-        return s != null ? s.replace("&", "§") : "§cMissing: " + path;
     }
 }
