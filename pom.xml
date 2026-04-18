@@ -6,7 +6,7 @@
 
     <groupId>pl.dawcou</groupId>
     <artifactId>AstraLogin</artifactId>
-    <version>3.0.0-Pre3</version>
+    <version>3.0.0</version>
     <packaging>jar</packaging>
 
     <name>AstraLogin</name>

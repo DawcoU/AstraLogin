@@ -6,7 +6,6 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Player;
 
 public class IPSecurity implements CommandExecutor {
 
@@ -21,16 +20,15 @@ public class IPSecurity implements CommandExecutor {
     // --- KOMENDA: /zresetujip ---
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        Player p = (Player) sender;
-        FileConfiguration config = plugin.getConfig();
-
+        // Sprawdzamy permisję (bezpieczne dla gracza i konsoli)
         if (!sender.hasPermission("astralogin.resetip")) {
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
             return true;
         }
 
+        // Sprawdzamy argumenty
         if (args.length != 1) {
-            sender.sendMessage(AstraLogin.PREFIX + " " + c(config, "messages.usage-reset-ip"));
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-reset-ip"));
             return true;
         }
 
@@ -38,17 +36,21 @@ public class IPSecurity implements CommandExecutor {
         OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
         String uuid = target.getUniqueId().toString();
 
+        // Sprawdzamy czy IP w ogóle istnieje
         if (ipManager.getIP(uuid) == null) {
+            // Tutaj używamy tej wbudowanej, bo to błąd systemowy
             plugin.getNoticeManager().sendNoIPSaved(sender);
             return true;
         }
 
+        // Usuwamy IP
         ipManager.usunIP(uuid);
 
-        String successMsg = c(config, "messages.admin-ip-reset-success")
+        // Pobieramy wiadomość z messages.yml i podmieniamy %player%
+        String successMsg = plugin.getLanguageManager().getWithPrefix("admin-ip-reset-success")
                 .replace("%player%", args[0]);
 
-        sender.sendMessage(AstraLogin.PREFIX + " " + successMsg);
+        sender.sendMessage(successMsg);
         return true;
     }
 

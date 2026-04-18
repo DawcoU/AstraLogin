@@ -124,7 +124,7 @@ public class NoticeManager {
         String status = getLang().equalsIgnoreCase("pl") ? "§cWyłączony" : "§cDisabled";
         String farewell = getLang().equalsIgnoreCase("pl") ? "§eDo zobaczenia! :D" : "§eSee you! :D";
         Bukkit.getConsoleSender().sendMessage("");
-        Bukkit.getConsoleSender().sendMessage("§7------------ §4[§cAstraLogin§4] §7---------");
+        Bukkit.getConsoleSender().sendMessage("§7------------ " + PREFIX2 + " §7---------");
         Bukkit.getConsoleSender().sendMessage("§6   Status: " + status + " §7- " + farewell);
         Bukkit.getConsoleSender().sendMessage("§7----------------------------------------------");
         Bukkit.getConsoleSender().sendMessage("");

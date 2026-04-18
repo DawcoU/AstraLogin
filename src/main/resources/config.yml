@@ -28,7 +28,7 @@ security:
     entry-protection:
       enabled: true        # Should this protection be enabled?
       max-attempts: 5      # Number of entries
-      within-seconds: 120  # In what time (120s = 2 minutes)
+      within-seconds: 60  # In what time (e.g. 120s = 2 minutes)
       ban-time-minutes: 10 # How many minutes does it ban an IP for after exceeding the limit
 
   anti-multiaccount:
