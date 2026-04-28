@@ -38,19 +38,19 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
-        // --- 1. SYSTEM PLIKÓW I UPDATER ---
-        saveDefaultConfig();
-
-        FilesUpdater updater = new FilesUpdater(this);
-        updater.check();
-
-        // --- 2. INICJALIZACJA MANAGERÓW ---
+        // --- 1. NAJPIERW WSZYSTKIE MANAGERY (Narzędzia) ---
+        this.noticeManager = new NoticeManager(this);
         this.languageManager = new LanguageManager(this);
         this.inventoryStorage = new InventoryStorage(this);
         this.spawnManager = new SpawnManager(this);
         this.passwordManager = new PasswordManager(this);
         this.ipManager = new IPManager(this);
-        this.noticeManager = new NoticeManager(this);
+
+        // --- 2. POTEM OPERACJE NA PLIKACH I LOGIKA ---
+        saveDefaultConfig();
+
+        FilesUpdater updater = new FilesUpdater(this);
+        updater.check();
 
         // Tworzenie serca pluginu - LoginSystem
         this.loginSystem = new LoginSystem(this, this.passwordManager, this.inventoryStorage, this.ipManager, this.spawnManager);
