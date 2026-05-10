@@ -46,7 +46,7 @@ public class LogFilter extends AbstractFilter {
                 if (action.equalsIgnoreCase("mask")) {
                     String masked = maskPassword(formatted);
                     // Wysyłamy zamaskowane
-                    ROOT_LOGGER.info(AstraLogin.PREFIX2 + " §f" + masked + HIDDEN_MARKER);
+                    ROOT_LOGGER.info("§f" + masked + HIDDEN_MARKER);
                     return Result.DENY;
                 }
 

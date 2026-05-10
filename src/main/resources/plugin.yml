@@ -2,6 +2,7 @@ name: AstraLogin
 version: '${project.version}'
 main: pl.dawcou.astralogin.AstraLogin
 api-version: '1.18'
+load: POSTWORLD
 
 commands:
   astralogin:

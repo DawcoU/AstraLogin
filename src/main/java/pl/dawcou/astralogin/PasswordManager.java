@@ -2,6 +2,8 @@ package pl.dawcou.astralogin;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.mindrot.jbcrypt.BCrypt;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -47,5 +49,24 @@ public class PasswordManager {
     public void usunKonto(String uuid) {
         config.set("players." + uuid, null);
         try { config.save(file); } catch (IOException e) { e.printStackTrace(); }
+    }
+
+    // Używamy przy /register
+    public static String hashPassword(String password) {
+        try {
+            return BCrypt.hashpw(password, BCrypt.gensalt(10));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // Używamy przy /login
+    public static boolean verifyPassword(String password, String hashed) {
+        try {
+            if (hashed == null || !hashed.startsWith("$2a$")) return false;
+            return BCrypt.checkpw(password, hashed);
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

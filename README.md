@@ -3,22 +3,31 @@
 
 Created and maintained by **DawcoU** 👨‍💻
 
-AstraLogin is a login plugin created for newer versions of Minecraft 1.18-1.21 ⭐ written in Java 17 and intended primarily for RPG and Survival servers.
+AstraLogin is a modern, high-performance login plugin built specifically for newer Minecraft versions (1.18 - 1.20+).
+Developed in Java 17 and leveraging the Paper API for maximum efficiency, it is the perfect choice for Survival, RPG, and SMP servers.
 
 ---
-
 ### 🚀 Key Features
-* **Security:** Password hashing using the SHA-256 algorithm (no plain text in files).
-* **Equipment Protection:** Hiding player inventory when logging in
-* **Location Protection:** Teleporting the player to the location set by the admin and teleporting after logging in to the last location or spawn
-* **Session:** You return without logging in after leaving for a while
-* **Inventory Storage:** Safely hides player inventory and armor until login (Single-file storage). 📦
-* **HEX Colors:** Full support for HEX colors in the prefix and all messages. ✨
-* **Auto-Updater:** Automatically updates the configuration file when the plugin version changes. 🛠️
-* **Update Notifications:** Admin notifications about new versions available on Modrinth.
-* **Brute-Force Protection:** Automatically kicks players after exceeding failed login attempts.
-* **Blindness Effect:** Keeps unauthorized players in total darkness until they log in. 🌑
-* **Session System:** Allows players to rejoin without re-typing their password (IP-based).
+
+* **Advanced Security:** Password hashing using the **BCrypt** algorithm, ensuring no plain text is ever stored and protecting against dictionary attacks. 🛡️
+* **Smart Brute-Force Protection:**
+* Automatically kicks players after exceeding failed login attempts.
+* **Margin of Error:** Configure extra "mercy" chances (margin) before a final action is taken.
+* **Temporary IP Ban:** If the limit is reached, the user's IP is temporarily banned in RAM to prevent further attacks without bloating your database.
+
+* **Session System:** Allows players to rejoin without re-typing their password within a configurable time limit (IP-based). 🕒
+* **Equipment Protection:** Complete concealment of player inventory and armor during the login process to prevent exploits.
+* **Location Protection:** Teleports unauthorized players to a secure location (or spawn) and restores their previous position only after successful login.
+* **Inventory Storage:** Safely caches player items in a single-file system until they are authorized. 📦
+* **Visual Effects:**
+* **Blindness Effect:** Keeps unauthorized players in total darkness. 🌑
+* **HEX Colors:** Full support for modern HEX color codes in the prefix and all messages. ✨
+
+* **Admin Utilities:**
+* **Auto-Updater:** Configuration files automatically update when you install a newer plugin version. 🛠️
+* **Update Notifications:** Notifies admins when a new version is available on Modrinth.
+
+---
 
 ### 🛠️ Commands & Permissions
 | Command | Description | Permission |

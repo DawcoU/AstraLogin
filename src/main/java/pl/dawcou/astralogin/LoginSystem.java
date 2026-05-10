@@ -27,7 +27,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
     private final AstraLogin plugin;
     private final InventoryStorage storage;
     private final IPManager ipManager;
-    private final LoginAttemptSystem attemptSystem;
+    private final AttemptManager attemptManager;
     private final SpawnManager spawnManager;
 
     private final Set<UUID> zalogowani = new HashSet<>();
@@ -48,7 +48,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
         this.storage = storage;
         this.ipManager = ipManager;
         this.spawnManager = spawnManager;
-        this.attemptSystem = new LoginAttemptSystem(plugin);
+        this.attemptManager = new AttemptManager(plugin);
     }
 
     @Override
@@ -75,7 +75,10 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             ipManager.usunIP(target.getUniqueId().toString());
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("admin-reset-success", "%player%", args[0]));
             if (target.isOnline() && target.getPlayer() != null) {
+                Player targetP = target.getPlayer();
                 zalogowani.remove(target.getUniqueId());
+
+                ipManager.resetIPAttempts(targetP.getAddress().getAddress().getHostAddress());
                 target.getPlayer().kickPlayer(plugin.getLanguageManager().getMessage("player-reset-kick"));
             }
             return true;
@@ -83,7 +86,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
 
         if (command.getName().equalsIgnoreCase("zmienhaslo")) {
             if (p == null) {
-                sender.sendMessage(plugin.getLanguageManager().getWithoutPrefix("only-players"));
+                sender.sendMessage(plugin.getLanguageManager().getMessage("only-players"));
                 return true;
             }
 
@@ -97,7 +100,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             String nowe2 = args[2];
 
             // 1. SZYBKI CHECK: Czy nowe hasło jest takie samo jak stare (tekstowo)?
-            // Robimy to ZANIM odpalimy BCrypta, żeby nie marnować zasobów.
+            // Robimy to ZANIM odpalimy BCrypta, żeby nie marnować zasobów
             if (stareWpisane.equals(nowe1)) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-is-identical"));
                 return true;
@@ -105,8 +108,12 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
 
             // 2. Najpierw sprawdzamy stare hasło (POPRAWNIE - metodą verify)
             String obecneHasloWPliku = data.getHaslo(p.getUniqueId().toString());
-            if (obecneHasloWPliku == null || !HashPassword.verify(stareWpisane, obecneHasloWPliku)) {
+            if (obecneHasloWPliku == null || !PasswordManager.verifyPassword(stareWpisane, obecneHasloWPliku)) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("wrong-old-password"));
+
+                if (plugin.getConfig().getInt("features.attempts.max", 3) > 0) {
+                    attemptManager.dodajProbe(p);
+                }
                 return true;
             }
 
@@ -120,13 +127,17 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             int min = plugin.getConfig().getInt("requirements.min-password-length");
             int max = plugin.getConfig().getInt("requirements.max-password-length");
 
-            if (nowe1.length() < min || nowe1.length() > max) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-too-short-or-long"));
+            if (nowe1.length() < min) {
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-too-short").replace("%min%", String.valueOf(min)));
+                return true;
+            }
+            if (nowe1.length() > max) {
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-too-long").replace("%max%", String.valueOf(max)));
                 return true;
             }
 
             // 5. HASZUJEMY RAZ I ZAPISUJEMY (Nowe hasło, nie stare!)
-            String noweHasloHash = HashPassword.hash(nowe1);
+            String noweHasloHash = PasswordManager.hashPassword(nowe1);
             data.zapiszHaslo(p.getUniqueId().toString(), noweHasloHash);
 
             zalogowani.remove(p.getUniqueId());
@@ -136,7 +147,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
 
         if (args.length > 0 && args[0].equalsIgnoreCase("setspawn")) {
             if (p == null) {
-                sender.sendMessage(plugin.getLanguageManager().getWithoutPrefix("only-players"));
+                sender.sendMessage(plugin.getLanguageManager().getMessage("only-players"));
                 return true;
             }
 
@@ -193,7 +204,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
 
         if (args.length > 0 && args[0].equalsIgnoreCase("delspawn")) {
             if (p == null) {
-                sender.sendMessage(plugin.getLanguageManager().getWithoutPrefix("only-players"));
+                sender.sendMessage(plugin.getLanguageManager().getMessage("only-players"));
                 return true;
             }
 
@@ -279,7 +290,12 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
 
         if (command.getName().equalsIgnoreCase("zarejestruj") || command.getName().equalsIgnoreCase("register")) {
             if (p == null) {
-                sender.sendMessage(plugin.getLanguageManager().getWithoutPrefix("only-players"));
+                sender.sendMessage(plugin.getLanguageManager().getMessage("only-players"));
+                return true;
+            }
+
+            if (zalogowani.contains(p.getUniqueId())) {
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("already-logged"));
                 return true;
             }
 
@@ -311,16 +327,18 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 String passwordToHash = args[0];
                 String uuid = p.getUniqueId().toString();
 
-                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
                     // 1. Hashujemy (ciężkie dla CPU)
-                    String hashedPass = HashPassword.hash(passwordToHash);
+                    String hashedPass = PasswordManager.hashPassword(passwordToHash);
 
                     // 2. Zapisujemy dane (operacje na plikach - IO)
                     data.zapiszHaslo(uuid, hashedPass);
                     ipManager.zapiszIP(uuid, ip);
 
                     // 3. Wracamy na główny wątek (Sync)
-                    Bukkit.getScheduler().runTask(plugin, () -> {
+                    p.getScheduler().run(plugin, synctask -> {
+                        if (!p.isOnline()) return;
+
                         finishLogin(p);
                         p.sendTitle(
                                 plugin.getLanguageManager().getMessage("title-register"),
@@ -329,7 +347,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                         );
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-register"));
                         storage.restore(p);
-                    });
+                    }, null);
                 });
 
             } else {
@@ -340,7 +358,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
 
         if (command.getName().equalsIgnoreCase("zaloguj") || command.getName().equalsIgnoreCase("login")) {
             if (p == null) {
-                sender.sendMessage(plugin.getLanguageManager().getWithoutPrefix("only-players"));
+                sender.sendMessage(plugin.getLanguageManager().getMessage("only-players"));
                 return true;
             }
 
@@ -361,14 +379,16 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 String inputPassword = args[0];
                 String currentIP = p.getAddress().getAddress().getHostAddress();
 
-                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                    if (HashPassword.verify(inputPassword, pass)) {
+                plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
+                    if (PasswordManager.verifyPassword(inputPassword, pass)) {
 
                         if (ipManager.getIP(uuid) == null) {
                             ipManager.zapiszIP(uuid, currentIP);
                         }
 
-                        Bukkit.getScheduler().runTask(plugin, () -> {
+                        p.getScheduler().run(plugin, synctask -> {
+                            if (!p.isOnline()) return;
+
                             finishLogin(p);
                             p.sendTitle(
                                     plugin.getLanguageManager().getMessage("title-login"),
@@ -377,16 +397,17 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                             );
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-login"));
                             storage.restore(p);
-                        });
+                        }, null);
 
                     } else {
-                        Bukkit.getScheduler().runTask(plugin, () -> {
+                        p.getScheduler().run(plugin, synctask -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("wrong-password"));
 
-                            if (plugin.getConfig().getBoolean("features.max-attempts-enabled")) {
-                                attemptSystem.dodajProbe(p);
+                            // Sprawdzamy nową ścieżkę w configu
+                            if (plugin.getConfig().getInt("features.attempts.max", 3) > 0) {
+                                attemptManager.dodajProbe(p);
                             }
-                        });
+                        }, null);
                     }
                 });
             } else {
@@ -399,12 +420,17 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
 
     public void finishLogin(Player p) {
         UUID uuid = p.getUniqueId();
+        String ip = p.getAddress().getAddress().getHostAddress();
 
         zalogowani.add(uuid);
+        sesje.remove(uuid);
+        sesjeIP.remove(uuid);
+
         p.removePotionEffect(PotionEffectType.BLINDNESS);
 
         // Czyścimy próby
-        attemptSystem.resetuj(uuid);
+        attemptManager.clearAttempts(uuid);
+        plugin.getIPManager().resetIPAttempts(ip);
 
         // Pobieramy opcję z głównego configu pluginu
         boolean useLastLoc = plugin.getConfig().getBoolean("features.teleport-to-last-location", true);
@@ -445,17 +471,9 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 .collect(java.util.stream.Collectors.toList());
     }
 
-    // Metoda pomocnicza obecnie zbędna ale zostawiona na potrzebę
-
-    //private String c(String path) {
-        //String msg = plugin.getLanguageManager().getLangConfig().getString(path);
-        //if (msg == null) return "§cMissing message: " + path;
-        //return org.bukkit.ChatColor.translateAlternateColorCodes('&', msg);
-    //}
-
     public Set<UUID> getZalogowani() { return zalogowani; }
     public InventoryStorage getStorage() { return storage; }
     public PasswordManager getData() { return data; }
-    public LoginAttemptSystem getAttemptSystem() { return attemptSystem; }
+    public AttemptManager getAttemptManager() { return attemptManager; }
     public IPManager getIpManager() { return this.ipManager; }
 }

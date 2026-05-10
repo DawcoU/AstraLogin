@@ -1,6 +1,7 @@
 package pl.dawcou.astralogin;
 
 import org.bukkit.ChatColor;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -12,27 +13,54 @@ import java.util.Map;
 public class LanguageManager {
 
     private final JavaPlugin plugin;
-    private FileConfiguration langConfig;
-    private final Map<String, String> messageCache = new HashMap<>();
+    private final Map<String, String> messages = new HashMap<>();
 
     public LanguageManager(JavaPlugin plugin) {
         this.plugin = plugin;
-        setupFiles();
-        loadLanguage();
+        setupFiles(); // Najpierw upewniamy się, że pliki są na dysku
+        reload();     // Potem ładujemy je do RAMu
     }
 
-    public FileConfiguration getLangConfig() {
-        return langConfig;
-    }
+    public void reload() {
+        // 1. Czyścimy mapę, żeby nie dublować przy przeładowaniu
+        messages.clear();
 
-    // Tworzy folder languages i domyślne pliki, jeśli ich nie ma
-    private void setupFiles() {
-        File langFolder = new File(plugin.getDataFolder(), "languages");
-        if (!langFolder.exists()) {
-            langFolder.mkdirs();
+        String lang = plugin.getConfig().getString("language", "pl");
+        File langFile = new File(plugin.getDataFolder(), "languages/" + lang + ".yml");
+
+        if (!langFile.exists()) {
+            langFile = new File(plugin.getDataFolder(), "languages/pl.yml");
         }
 
-        // Lista plików do wypakowania z resources
+        FileConfiguration langConfig = YamlConfiguration.loadConfiguration(langFile);
+
+        // 2. Pobieramy sekcję "messages" z pliku YAML
+        ConfigurationSection msgSection = langConfig.getConfigurationSection("messages");
+
+        if (msgSection != null) {
+            // Przechodzimy po wszystkich kluczach wewnątrz sekcji messages:
+            for (String key : msgSection.getKeys(false)) {
+                String msg = msgSection.getString(key);
+                if (msg != null) {
+                    // Wrzucamy do mapy pod samym kluczem (np. "copy-success")
+                    // Dzięki temu getMessage("copy-success") to znajdzie!
+                    messages.put(key, ChatColor.translateAlternateColorCodes('&', msg));
+                }
+            }
+        } else {
+            // Jeśli plik nie ma sekcji "messages:", czytamy wszystko z głównego poziomu
+            for (String key : langConfig.getKeys(false)) {
+                if (langConfig.isString(key)) {
+                    messages.put(key, ChatColor.translateAlternateColorCodes('&', langConfig.getString(key)));
+                }
+            }
+        }
+    }
+
+    private void setupFiles() {
+        File langFolder = new File(plugin.getDataFolder(), "languages");
+        if (!langFolder.exists()) langFolder.mkdirs();
+
         String[] defaultLangs = {"pl.yml", "en.yml"};
         for (String langFile : defaultLangs) {
             File file = new File(langFolder, langFile);
@@ -42,65 +70,16 @@ public class LanguageManager {
         }
     }
 
-    // Ładuje wybrany język z config.yml
-    public void loadLanguage() {
-        String lang = plugin.getConfig().getString("language", "pl");
-        File file = new File(plugin.getDataFolder(), "languages/" + lang + ".yml");
-
-        if (!file.exists()) {
-            // Pobieramy język z configu, żeby wiedzieć, co wywalić w logach
-            String currentLang = plugin.getConfig().getString("language", "pl");
-
-            // Jeśli config mówi po polsku, dajemy polskie ostrzeżenie, w przeciwnym razie angielskie
-            if (currentLang.equalsIgnoreCase("pl")) {
-                plugin.getLogger().warning("§cPlik językowy '" + currentLang + ".yml' nie istnieje! §6Ładowanie domyślnego pliku pl.yml");
-            } else {
-                plugin.getLogger().warning("§cLanguage file '" + currentLang + ".yml' does not exist! §6Loading default file pl.yml");
-            }
-
-            // Ustawiamy plik na domyślny pl.yml
-            file = new File(plugin.getDataFolder(), "languages/pl.yml");
-        }
-
-        langConfig = YamlConfiguration.loadConfiguration(file);
-
-        // Czyścimy cache przy przeładowaniu
-        messageCache.clear();
-    }
-
-    // Główna metoda do pobierania wiadomości
+    // Pobiera czystą wiadomość z mapy
     public String getMessage(String path) {
-        // 1. Sprawdzamy czy już to mamy w pamięci
-        if (messageCache.containsKey(path)) {
-            return messageCache.get(path);
-        }
-
-        // 2. Pobieramy z pliku
-        String rawMessage = langConfig.getString("messages." + path);
-
-        if (rawMessage == null) {
-            return "§cNo message found: " + path;
-        }
-
-        // 3. Formatuje kolory
-        String formatted = ChatColor.translateAlternateColorCodes('&', rawMessage);
-
-        // 4. KLUCZOWE: Zapisujemy do cache, żeby przy następnym razu nie szukać w pliku!
-        messageCache.put(path, formatted);
-
-        return formatted;
+        return messages.getOrDefault(path, "§cMissing string: " + path);
     }
 
-    public String getWithoutPrefix(String path) {
-        return getMessage(path);
-    }
-
-    // Metoda, która automatycznie dokleja PREFIX z głównej klasy
     public String getWithPrefix(String path) {
         return AstraLogin.PREFIX + " " + getMessage(path);
     }
 
-    // Metoda dla jednego placeholdera (najczęstszy przypadek)
+    // Metoda z placeholderem (np. do {COUNT})
     public String getWithPrefix(String path, String placeholder, String value) {
         String msg = getMessage(path).replace(placeholder, value);
         return AstraLogin.PREFIX + " " + msg;

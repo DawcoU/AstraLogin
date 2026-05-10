@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 public class IPManager {
 
@@ -17,6 +16,7 @@ public class IPManager {
     // Mapy do ochrony przed spamem wejść (IP-Spam)
     private final Map<String, Integer> ipAttempts = new HashMap<>();
     private final Map<String, Long> ipBans = new HashMap<>();
+    private final HashMap<String, String> banReasons = new HashMap<>();
 
     public IPManager(AstraLogin plugin) {
         this.plugin = plugin;
@@ -73,20 +73,43 @@ public class IPManager {
         if (!ipBans.containsKey(ip)) return false;
         if (System.currentTimeMillis() > ipBans.get(ip)) {
             ipBans.remove(ip);
+            banReasons.remove(ip);
             ipAttempts.remove(ip);
             return false;
         }
         return true;
     }
 
+    public String getBanReason(String ip) {
+        return banReasons.getOrDefault(ip, "UNKNOWN");
+    }
+
+    public void banIPWithMillis(String ip, long durationMillis, String reason) {
+        ipBans.put(ip, System.currentTimeMillis() + durationMillis);
+        banReasons.put(ip, reason);
+    }
+
     public void addIPAttempt(String ip) {
+        // 1. Ścieżka do configu (upewnij się, że w config.yml masz takie same nazwy!)
+        String path = "security.ip-security.entry-protection.";
+
+        int max = plugin.getConfig().getInt(path + "max-attempts", 5);
+        String timeStr = plugin.getConfig().getString(path + "tempban-time", "10 minutes");
+
+        // 2. Liczymy próbę
         int current = ipAttempts.getOrDefault(ip, 0) + 1;
         ipAttempts.put(ip, current);
 
-        int max = plugin.getConfig().getInt("security.ip-spam.max-attempts", 5);
+        // 3. Sprawdzamy limit
         if (current >= max) {
-            long banTimeMinutes = plugin.getConfig().getLong("security.ip-spam.ban-minutes", 15);
-            ipBans.put(ip, System.currentTimeMillis() + (banTimeMinutes * 60000L));
+            // Zamieniamy tekst typu "10 minutes" na milisekundy
+            long banMillis = plugin.getAttemptManager().parseTime(timeStr);
+
+            // Nakładamy bana (używamy Twojej metody z IPManagera)
+            banIPWithMillis(ip, banMillis, "SPAM");
+
+            // CZYŚCIMY próby, żeby po odbanowaniu licznik startował od zera!
+            ipAttempts.remove(ip);
         }
     }
 
@@ -98,5 +121,6 @@ public class IPManager {
     public void resetIPAttempts(String ip) {
         ipAttempts.remove(ip);
         ipBans.remove(ip);
+        banReasons.remove(ip);
     }
 }

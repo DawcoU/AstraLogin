@@ -1,5 +1,6 @@
 package pl.dawcou.astralogin;
 
+import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 
@@ -29,11 +30,6 @@ public class NoticeManager {
     public void sendConfigErrorNotice(String error) {
         String msg = getLang().equalsIgnoreCase("pl") ? "§cBłąd podczas zapisu configu: " : "§cError while saving config: ";
         Bukkit.getConsoleSender().sendMessage(PREFIX2 + " " + msg + error);
-    }
-
-    public void sendInvalidSessionFormatNotice() {
-        String msg = getLang().equalsIgnoreCase("pl") ? "§cNieprawidłowy format session-time! Używam domyślnych 5 minut." : "§cInvalid session-time format! Using default 5 minutes.";
-        plugin.getLogger().warning(msg);
     }
 
     public void sendSpawnCreateError() {
@@ -66,18 +62,52 @@ public class NoticeManager {
         Bukkit.getConsoleSender().sendMessage(PREFIX2 + " " + msg);
     }
 
+    public void sendLoggerSuccess() {
+        String msg = getLang().equalsIgnoreCase("pl") ?
+                "§aFiltr haseł został pomyślnie aktywowany" :
+                "§aPassword filter has been successfully activated";
+        plugin.getLogger().info(msg);
+    }
+
+    public void sendLoggerError(Exception e) {
+        String errorMsg;
+
+        if (getLang().equalsIgnoreCase("pl")) {
+            errorMsg = "§4KRYTYCZNY BŁĄD: §cNie udało się aktywować filtra logów! Hasła mogą być widoczne w konsoli Błąd: " + e.getMessage();
+        } else {
+            errorMsg = "§4CRITICAL ERROR: §cFailed to activate log filter! Passwords may be visible in console Error: " + e.getMessage();
+        }
+
+        // Używamy severe, bo to poważna sprawa dotycząca bezpieczeństwa
+        plugin.getLogger().severe(ChatColor.stripColor(errorMsg));
+    }
+
+    public void sendSessionSaveError(Exception e) {
+        String msg = getLang().equalsIgnoreCase("pl") ?
+                "§cNie udało się zapisać sesji do pliku! Błąd: " :
+                "§cCould not save sessions to file! Error: ";
+        plugin.getLogger().severe(msg + e.getMessage());
+    }
+
+    public void sendSessionsLoaded(int count) {
+        String msg = getLang().equalsIgnoreCase("pl") ?
+                "§eWczytano §6" + count + " §eaktywnych sesji z pliku" :
+                "§eLoaded §6" + count + " §eactive sessions from file";
+        plugin.getLogger().info(msg);
+    }
+
     public void sendLangUpdateSuccess(String fileName) {
         String msg = getLang().equalsIgnoreCase("pl") ?
-                "§aZaktualizowano brakujące linijki w pliku" :
-                "§aSuccessfully updated missing lines in file";
-        plugin.getLogger().info(msg + fileName);
+                "§aDodano brakujące linijki w pliku językowym:" :
+                "§aAdded missing lines in the language file" ;
+        Bukkit.getConsoleSender().sendMessage(PREFIX2 + " " + msg + " §e" + fileName);
     }
 
     public void sendLangUpdateError(String fileName, String error) {
         String msg = getLang().equalsIgnoreCase("pl") ?
-                "§cNie można było zaktualizować pliku językowego (" + fileName + "): " :
-                "§cCould not update language file (" + fileName + "): ";
-        plugin.getLogger().severe(msg + error);
+                "§cNie udało się zaktualizować pliku językowego (" + fileName + "):" :
+                "§cFailed to update language file (" + fileName + "): ";
+        plugin.getLogger().severe(msg + " " + error);
     }
 
     public void sendUpdateNotice(CommandSender target, String version) {

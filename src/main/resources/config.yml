@@ -7,7 +7,7 @@
 # ===============================
 
 # DO NOT change this value
-config-version: 3.0.0
+config-version: 3.1.0
 
 # Wybierz język pluginu (Dostępne: pl, en)
 # Select the plugin language (Available: pl, en)
@@ -27,9 +27,9 @@ security:
     # Protection against spam entering the server (e.g. bots/attacks)
     entry-protection:
       enabled: true        # Should this protection be enabled?
-      max-attempts: 5      # Number of entries
+      max-attempts: 10      # Number of entries
       within-seconds: 60  # In what time (e.g. 120s = 2 minutes)
-      ban-time-minutes: 10 # How many minutes does it ban an IP for after exceeding the limit
+      tempban-time: "30 minutes" # How many minutes does it ban an IP for after exceeding the limit
 
   anti-multiaccount:
     enabled: true
@@ -40,24 +40,30 @@ security:
     # Available options:
     # "mask" - masks the password with asterisks
     # "deny" - completely removes the line from the logs
-    action: "deny"
+    action: "mask"
 
 # =================================
 #          LOGIN FEATURES
 # =================================
 features:
+  attempts:
+    # Maximum number of login attempts before action is taken
+    max: 3
+    # 0 = Ban immediately after exceeding max attempts
+    # 1 = One additional "margin" chance (kick) before the final ban
+    margin: 2
+    # Temporary ban duration (format: "number unit", e.g., "5 minutes", "1 hour")
+    # This ban is stored in RAM and will reset after a server restart.
+    tempban-time: "15 minutes"
+
   # Enable or disable the login countdown timer.
   login-time-enabled: true
-  login-time-limit: 60 # Time in seconds
-
-  # Enable or disable maximum login attempts.
-  max-attempts-enabled: true
-  max-login-attempts: 3
+  login-time-limit: 90 # Time in seconds
 
   # Session duration. Examples: "5 minutes", "30 seconds", "1 hour"
   # Default is "5 minutes" if not specified correctly.
   session-enabled: true
-  session-time: "5 minutes"
+  session-time: "15 minutes"
 
   # After logging in, teleports the player to their last location, ignoring the spawn after logging in.
   teleport-to-last-location: true
