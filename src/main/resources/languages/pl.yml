@@ -41,11 +41,11 @@ messages:
   kick-max-attempts: "&cZbyt wiele nieudanych prób logowania! Pozostałe próby: &6%remaining%"
   kick-max-attempts-ban: "&cZbyt wiele nieudanych prób! Zostałeś zbanowany na &6%time%"
   anti-multiaccount-kick: "&cNa tym IP już nie może zarejestrować się więcej kont!"
-  kick-ip-spammed: "&cWykryto zbyt dużo prób połączenia z Twojego IP! Zostałeś zablokowany na &6%time%&cs"
-  ip-lock-kick: "Twoje IP nie zgadza się z tym kontem!"
+  kick-ip-spammed: "&cWykryto zbyt dużo prób połączenia z Twojego IP! Zostałeś zablokowany na &6%time%"
+  ip-lock-kick: "&cTwoje IP nie zgadza się z tym kontem!"
 
   # --- Sesje i UI ---
-  actionbar-timer: "&eCzas &6%time%s &ena zalogowanie!"
+  timer-message: "&eZaloguj się w ciągu &6%time%s&e!"
   title-login: "&a&lZALOGOWANO"
   subtitle-login: "&7Witaj z powrotem!"
   title-register: "&a&lZAREJESTROWANO"
@@ -53,12 +53,13 @@ messages:
   session-restored: "&eSesja aktywna &aZalogowano automatycznie"
 
   # --- Komendy Administracyjne ---
-  usage-reset: "&cPoprawne użycie: &e/zresetujhaslo <gracz>"
+  usage-reset-password: "&cPoprawne użycie: &e/zresetujhaslo <gracz>"
   usage-reset-ip: "&cPoprawne użycie: &e/zresetujip <gracz>"
-  no-account-reset: "&cTen gracz nie ma konta!"
-  admin-reset-success: "&aKonto gracza &6%player% &azostało usunięte"
-  admin-ip-reset-success: "&aIP gracza &6%player% &azostało zresetowane"
-  player-reset-kick: "&cTwoje hasło zostało zresetowane przez administratora!"
+  no-account-reset: "&cTen gracz nie ma zarejestrowanego hasła!"
+  admin-reset-password-success: "&aHasło gracza &6%player% &azostało zresetowane"
+  admin-reset-ip-success: "&aIP gracza &6%player% &azostało zresetowane"
+  player-reset-password-kick: "&cTwoje hasło zostało zresetowane przez administratora!"
+  player-reset-ip-kick: "&cTwój adres IP został zresetowany przez administratora!"
 
   # --- System Spawnu ---
   spawn-set-success: "&aPomyślnie ustawiono lokalizację dla: &e%type%"

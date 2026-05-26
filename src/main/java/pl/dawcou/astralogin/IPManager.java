@@ -10,7 +10,7 @@ import java.util.Map;
 public class IPManager {
 
     private final File file;
-    private final FileConfiguration config;
+    private FileConfiguration config;
     private final AstraLogin plugin;
 
     // Mapy do ochrony przed spamem wejść (IP-Spam)
@@ -90,7 +90,6 @@ public class IPManager {
     }
 
     public void addIPAttempt(String ip) {
-        // 1. Ścieżka do configu (upewnij się, że w config.yml masz takie same nazwy!)
         String path = "security.ip-security.entry-protection.";
 
         int max = plugin.getConfig().getInt(path + "max-attempts", 5);
@@ -115,12 +114,22 @@ public class IPManager {
 
     public long getIPBanTimeLeft(String ip) {
         if (!ipBans.containsKey(ip)) return 0;
-        return (ipBans.get(ip) - System.currentTimeMillis()) / 1000;
+        long timeLeft = (ipBans.get(ip) - System.currentTimeMillis()) / 1000;
+        return Math.max(0, timeLeft); // Jeśli wyjdzie na minusie, zwróci po prostu 0!
     }
 
     public void resetIPAttempts(String ip) {
         ipAttempts.remove(ip);
         ipBans.remove(ip);
         banReasons.remove(ip);
+    }
+
+    public void reload() {
+        // Ponownie ładujemy plik z dysku do pamięci RAM, żeby widzieć zmiany z konwertera!
+        try {
+            this.config = YamlConfiguration.loadConfiguration(file);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

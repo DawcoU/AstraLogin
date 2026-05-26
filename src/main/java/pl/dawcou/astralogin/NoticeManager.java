@@ -12,7 +12,6 @@ public class NoticeManager {
 
     public NoticeManager(AstraLogin plugin) {
         this.plugin = plugin;
-        // Pobieramy prefixy z głównej klasy (upewnij się, że są tam publiczne)
         this.PREFIX = AstraLogin.PREFIX;
         this.PREFIX2 = AstraLogin.PREFIX2;
     }
@@ -82,6 +81,13 @@ public class NoticeManager {
         plugin.getLogger().severe(ChatColor.stripColor(errorMsg));
     }
 
+    public void sendLogSaveError(String fileName) {
+        String msg = getLang().equalsIgnoreCase("pl") ?
+                "§cNie udało się zapisać logu bezpieczeństwa do pliku: §e" + fileName :
+                "§cFailed to save security log to file: §e" + fileName;
+        plugin.getLogger().severe(msg);
+    }
+
     public void sendSessionSaveError(Exception e) {
         String msg = getLang().equalsIgnoreCase("pl") ?
                 "§cNie udało się zapisać sesji do pliku! Błąd: " :
@@ -122,7 +128,7 @@ public class NoticeManager {
     }
 
     public void sendDevNotice(String currentVersion, String latestStable) {
-        String devTitle = getLang().equalsIgnoreCase("pl") ? "§bUżywasz wersji testowej (Development): §f§nv" : "§bYou are using a Development version: §f§nv";
+        String devTitle = getLang().equalsIgnoreCase("pl") ? "§bUżywasz wersji testowej: §f§nv" : "§bYou are using a Development version: §f§nv";
         String stableInfo = getLang().equalsIgnoreCase("pl") ? "§eNa Modrinth najnowsza stabilna to: §fv" : "§eThe latest stable on Modrinth is: §fv";
         String warning = getLang().equalsIgnoreCase("pl") ? "§bUważaj na błędy, kod jest w fazie rozwoju!" : "§bWatch out for bugs, the code is in development!";
         Bukkit.getConsoleSender().sendMessage("");
@@ -130,29 +136,36 @@ public class NoticeManager {
         Bukkit.getConsoleSender().sendMessage(devTitle + currentVersion);
         Bukkit.getConsoleSender().sendMessage(stableInfo + latestStable);
         Bukkit.getConsoleSender().sendMessage(warning);
-        Bukkit.getConsoleSender().sendMessage("§7----------------------------------------------");
+        Bukkit.getConsoleSender().sendMessage("§7-------------------------------------------");
         Bukkit.getConsoleSender().sendMessage("");
     }
 
     public void sendStartupLogo() {
         String v = plugin.getDescription().getVersion();
-        String version = getLang().equalsIgnoreCase("pl") ? "§6Wersja" : "§aVersion";
+        String version = getLang().equalsIgnoreCase("pl") ? "   §6Wersja" : "   §aVersion";
         String status = getLang().equalsIgnoreCase("pl") ? "§aWłączony" : "§aEnabled";
-        String author = getLang().equalsIgnoreCase("pl") ? "§6   Autor: §e" : "§6   Author: §e";
-        String statusLabel = getLang().equalsIgnoreCase("pl") ? "§6   Status: " : "§6   Status: ";
+        String author = getLang().equalsIgnoreCase("pl") ? "   §6Autor: §e" : "   §6Author: §e";
+        String statusLabel = getLang().equalsIgnoreCase("pl") ? "   §6Status: " : "   §6Status: ";
+
+        // Krótka, profesjonalna prośba o opinię (Review)
+        String review = getLang().equalsIgnoreCase("pl")
+                ? "§bPodoba się plugin? Zostaw opinię na Discord'zie!"
+                : "§bLike the plugin? Leave a review on Discord!";
 
         Bukkit.getConsoleSender().sendMessage("");
         Bukkit.getConsoleSender().sendMessage("§7------------ " + PREFIX2 + " §7------------");
-        Bukkit.getConsoleSender().sendMessage("§6   " + version + " §ev" + v);
+        Bukkit.getConsoleSender().sendMessage("§6" + version + " §ev" + v);
         Bukkit.getConsoleSender().sendMessage(statusLabel + status);
         Bukkit.getConsoleSender().sendMessage(author + "DawcoU");
-        Bukkit.getConsoleSender().sendMessage("§7----------------------------------------------");
+        Bukkit.getConsoleSender().sendMessage("");
+        Bukkit.getConsoleSender().sendMessage(review);
+        Bukkit.getConsoleSender().sendMessage("§7-------------------------------------------");
         Bukkit.getConsoleSender().sendMessage("");
     }
 
     public void sendShutdownLogo() {
         String status = getLang().equalsIgnoreCase("pl") ? "§cWyłączony" : "§cDisabled";
-        String farewell = getLang().equalsIgnoreCase("pl") ? "§eDo zobaczenia! :D" : "§eSee you! :D";
+        String farewell = getLang().equalsIgnoreCase("pl") ? "§eDziękujemy, że z nas korzystasz! Do zobaczenia!" : "§eThanks for choosing us! See you next time!";
         Bukkit.getConsoleSender().sendMessage("");
         Bukkit.getConsoleSender().sendMessage("§7------------ " + PREFIX2 + " §7---------");
         Bukkit.getConsoleSender().sendMessage("§6   Status: " + status + " §7- " + farewell);

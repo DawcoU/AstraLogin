@@ -41,11 +41,11 @@ messages:
   kick-max-attempts: "&cToo many failed login attempts! Remaining attempts: &6%remaining%"
   kick-max-attempts-ban: "&cToo many failed attempts! You are banned for &6%time%"
   anti-multiaccount-kick: "&cThe account limit for this IP has been reached!"
-  kick-ip-spammed: "&cToo many connection attempts detected from your IP! You have been blocked for &6%time%&cs"
-  ip-lock-kick: "Your IP does not match this account!"
+  kick-ip-spammed: "&cToo many connection attempts detected from your IP! You have been blocked for &6%time%"
+  ip-lock-kick: "&cYour IP does not match this account!"
 
   # --- Sessions & UI ---
-  actionbar-timer: "&eTime &6%time%s &eleft to log in!"
+  timer-message: "&ePlease log in in &6%time%s&e!"
   title-login: "&a&lLOGGED IN"
   subtitle-login: "&7Welcome back!"
   title-register: "&a&lREGISTERED"
@@ -53,12 +53,13 @@ messages:
   session-restored: "&eSession active &aLogged in automatically"
 
   # --- Admin Commands ---
-  usage-reset: "&cCorrect usage: &e/resetpassword <player>"
+  usage-reset-password: "&cCorrect usage: &e/resetpassword <player>"
   usage-reset-ip: "&cCorrect usage: &e/resetip <player>"
-  no-account-reset: "&cThis player does not have an account!"
-  admin-reset-success: "&aPlayer &6%player%'s &aaccount has been deleted"
-  admin-ip-reset-success: "&aPlayer &6%player%'s &aIP has been reset"
-  player-reset-kick: "&cYour password has been reset by an administrator!"
+  no-account-reset: "&cThis player has no registered password!"
+  admin-reset-password-success: "&aPlayer &6%player%'s password has been reset"
+  admin-reset-ip-success: "&aPlayer &6%player%'s IP has been reset"
+  player-reset-password-kick: "&cYour password has been reset by the administrator!"
+  player-reset-ip-kick: "&cYour IP address has been reset by the administrator!"
 
   # --- Spawn System ---
   spawn-set-success: "&aSuccessfully set location for: &e%type%"

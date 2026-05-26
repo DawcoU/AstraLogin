@@ -14,9 +14,9 @@ commands:
   zresetujip:
     aliases: [resetip]
   zaloguj:
-    aliases: [login]
+    aliases: [login, l]
   zarejestruj:
-    aliases: [register]
+    aliases: [register, reg]
 
 permissions:
   astralogin.reload:

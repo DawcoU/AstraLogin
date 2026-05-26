@@ -27,7 +27,7 @@ public class SessionManager {
     public void saveSessionsToConfig() {
         sessionConfig.set("sessions", null);
         long now = System.currentTimeMillis();
-        long limit = parseSessionTime(plugin.getConfig().getString("features.session-time", "15 minutes"));
+        long limit = parseSessionTime(plugin.getConfig().getString("features.session.session-time", "15 minutes"));
 
         plugin.getLoginSystem().getSesje().forEach((uuid, timestamp) -> {
             // ZAPISUJEMY TYLKO SESJE, KTÓRE NIE WYGASŁY!
@@ -54,7 +54,7 @@ public class SessionManager {
         if (!sessionConfig.contains("sessions")) return;
 
         // 1. Pobieramy limit czasu sesji z głównego configu AstraLogin
-        long sessionLimit = parseSessionTime(plugin.getConfig().getString("features.session-time", "5 minutes"));
+        long sessionLimit = parseSessionTime(plugin.getConfig().getString("features.session.session-time", "5 minutes"));
         long now = System.currentTimeMillis();
         int count = 0;
 

@@ -1,5 +1,6 @@
 package pl.dawcou.astralogin;
 
+import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
@@ -19,7 +20,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
     // --- INSTANCJE MANAGERÓW (POLA) ---
     private LanguageManager languageManager;
-    private InventoryStorage inventoryStorage;
+    private InventoryManager inventoryManager;
     private LoginSystem loginSystem;
     private SpawnManager spawnManager;
     private PasswordManager passwordManager;
@@ -27,6 +28,8 @@ public class AstraLogin extends JavaPlugin implements Listener {
     private NoticeManager noticeManager;
     private SessionManager sessionManager;
     private AttemptManager attemptManager;
+    private FilesConverter filesConverter;
+    private LogManager logManager;
 
     // --- GETTERY (Dostęp dla innych klas) ---
     public LanguageManager getLanguageManager() { return languageManager; }
@@ -40,29 +43,44 @@ public class AstraLogin extends JavaPlugin implements Listener {
     public SpawnManager getSpawnManager() { return this.spawnManager; }
     public SessionManager getSessionManager() { return this.sessionManager; }
     public AttemptManager getAttemptManager() { return this.attemptManager; }
+    public FilesConverter getFilesConverter() { return this.filesConverter; }
+    public LogManager getLogManager() { return this.logManager; }
 
     @Override
     public void onEnable() {
-        // --- 1. NAJPIERW WSZYSTKIE MANAGERY (Narzędzia) ---
+        // 1. Pliki na dysk
+        saveDefaultConfig();
+
+        int pluginId = 31501;
+        new Metrics(this, pluginId);
+
+        // Ładujemy zakres sprawdzania IP z configu prosto do klasy IPSecurity przy starcie serwera
+        IPSecurity.ipCheckOctets = this.getConfig().getInt("security.ip-security.ip-check-octets", 4);
+
+        // 2. Migracje na plikach (Dysk)
+        new FilesConverter(this).runAllMigrations();
+
+        // 3. Odpalamy managery (One tworzą puste szablony lub czytają pliki)
         this.noticeManager = new NoticeManager(this);
         this.languageManager = new LanguageManager(this);
-        this.inventoryStorage = new InventoryStorage(this);
+        this.inventoryManager = new InventoryManager(this);
         this.spawnManager = new SpawnManager(this);
         this.passwordManager = new PasswordManager(this);
         this.ipManager = new IPManager(this);
         this.sessionManager = new SessionManager(this);
         this.attemptManager = new AttemptManager(this);
 
-        // --- 2. POTEM OPERACJE NA PLIKACH I LOGIKA ---
-        saveDefaultConfig();
+        this.passwordManager.reload();
+        this.ipManager.reload();
+        this.logManager = new LogManager(this);
 
+        // 4. Aktualizacje i przeładowanie języków
         FilesUpdater updater = new FilesUpdater(this);
         updater.check();
-
         this.languageManager.reload();
 
         // Tworzenie serca pluginu - LoginSystem
-        this.loginSystem = new LoginSystem(this, this.passwordManager, this.inventoryStorage, this.ipManager, this.spawnManager);
+        this.loginSystem = new LoginSystem(this, this.passwordManager, this.inventoryManager, this.ipManager, this.spawnManager);
 
         // --- 3. FILTRACJA LOGÓW (UKRYWANIE HASEŁ) ---
         try {
@@ -78,7 +96,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
         }
 
         // --- 4. REJESTRACJA EVENTÓW I KOMEND ---
-        // Ten zajmuje się Join, Quit i PreLogin (Twoje sesje tam są)
+        // Ten zajmuje się Join, Quit i PreLogin
         getServer().getPluginManager().registerEvents(new LoginListeners(this), this);
 
         // Ten zajmuje się blokowaniem niszczenia bloków, ruchu itp. dla niezalogowanych
@@ -95,9 +113,6 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
         this.sessionManager.loadSessionsFromConfig();
 
-        // --- 5. LOGO STARTOWE I SPRAWDZANIE WERSJI ---
-        noticeManager.sendStartupLogo();
-
         // Zapisuj sesje co 10 minut (asynchronicznie, żeby nie lagować głównego wątku)
         getServer().getAsyncScheduler().runAtFixedRate(this, task -> {
             if (this.sessionManager != null) {
@@ -106,10 +121,19 @@ public class AstraLogin extends JavaPlugin implements Listener {
             }
         }, 10, 10, java.util.concurrent.TimeUnit.MINUTES);
 
+        // --- 5. LOGO STARTOWE I SPRAWDZANIE WERSJI ---
+        // Odpalamy scheduler asynchroniczny, który najpierw sprawdzi internet, a na koniec wypluje logo i status wersji!
         this.getServer().getAsyncScheduler().runNow(this, task -> {
-            if (getConfig().getBoolean("check-updates", true)) {
+
+            // Najpierw sprawdzamy aktualizacje, jeśli opcja jest włączona
+            if (getConfig().getBoolean("settings.check-updates", true)) {
                 new UpdateChecker(this).getVersion(version -> {
                     String currentVersion = this.getDescription().getVersion();
+
+                    // 1. NAJPIERW DRUKUJEMY LOGO (Zawsze jako pierwsze, niezależnie od wyniku sieci)
+                    noticeManager.sendStartupLogo();
+
+                    // 2. ZARAZ POD LOGO DORZUCAMY INFO O WERSJI
                     if (currentVersion.equals(version)) {
                         noticeManager.sendVersionOk(version);
                     } else if (currentVersion.compareTo(version) > 0) {
@@ -118,6 +142,9 @@ public class AstraLogin extends JavaPlugin implements Listener {
                         noticeManager.sendUpdateNotice(Bukkit.getConsoleSender(), version);
                     }
                 });
+            } else {
+                // Jeśli admin wyłączył sprawdzanie aktualizacji, po prostu drukujemy samo logo!
+                noticeManager.sendStartupLogo();
             }
         });
     }
@@ -130,12 +157,19 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
             if (loginSystem.getZalogowani().contains(uuid)) {
                 spawnManager.saveLastLocation(p);
+
+                if (getConfig().getBoolean("features.session.session-enabled")) {
+                    loginSystem.getSesje().put(uuid, System.currentTimeMillis());
+                    loginSystem.getSesjeIP().put(uuid, p.getAddress().getAddress().getHostAddress());
+                }
+
             } else {
                 // Jeśli nie był zalogowany, oddajemy mu itemy, żeby nie "zniknęły"
-                inventoryStorage.restore(p);
+                inventoryManager.restore(p);
             }
         }
 
+        // Teraz wywołujemy zapis – mapa w RAM-ie jest już pełna graczy online!
         if (this.sessionManager != null) {
             this.sessionManager.saveSessionsToConfig();
         }

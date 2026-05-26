@@ -25,7 +25,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
 
     private final PasswordManager data;
     private final AstraLogin plugin;
-    private final InventoryStorage storage;
+    private final InventoryManager storage;
     private final IPManager ipManager;
     private final AttemptManager attemptManager;
     private final SpawnManager spawnManager;
@@ -42,7 +42,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
         return sesjeIP;
     }
 
-    public LoginSystem(AstraLogin plugin, PasswordManager data, InventoryStorage storage, IPManager ipManager, SpawnManager spawnManager) {
+    public LoginSystem(AstraLogin plugin, PasswordManager data, InventoryManager storage, IPManager ipManager, SpawnManager spawnManager) {
         this.plugin = plugin;
         this.data = data;
         this.storage = storage;
@@ -62,7 +62,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 return true;
             }
             if (args.length < 1) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-reset"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-reset-password"));
                 return true;
             }
             @SuppressWarnings("deprecation")
@@ -73,13 +73,21 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             }
             data.usunKonto(target.getUniqueId().toString());
             ipManager.usunIP(target.getUniqueId().toString());
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("admin-reset-success", "%player%", args[0]));
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("admin-reset-password-success", "%player%", args[0]));
+
+            String adminName = sender.getName();
+            // Pobieramy nick gracza, któremu resetujemy hasło
+            String targetName = target.getName() != null ? target.getName() : args[0];
+
+            // Zapisujemy czyste, profesjonalne info do pliku logów
+            plugin.getLogManager().log("Admin " + adminName + " reset password for player " + targetName);
+
             if (target.isOnline() && target.getPlayer() != null) {
                 Player targetP = target.getPlayer();
                 zalogowani.remove(target.getUniqueId());
 
                 ipManager.resetIPAttempts(targetP.getAddress().getAddress().getHostAddress());
-                target.getPlayer().kickPlayer(plugin.getLanguageManager().getMessage("player-reset-kick"));
+                target.getPlayer().kickPlayer(plugin.getLanguageManager().getMessage("player-reset-password-kick"));
             }
             return true;
         }
@@ -124,8 +132,19 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             }
 
             // 4. Sprawdzamy długość
-            int min = plugin.getConfig().getInt("requirements.min-password-length");
-            int max = plugin.getConfig().getInt("requirements.max-password-length");
+            // Pobieramy min z configu, ale Math.max pilnuje, żeby wartość NIGDY nie była mniejsza niż 5
+            int min = plugin.getConfig().getInt("features.password.min-password-length");
+            min = Math.max(5, min);
+
+            // Pobieramy max z configu, ale Math.min pilnuje, żeby wartość NIGDY nie przekroczyła 32
+            int max = plugin.getConfig().getInt("features.password.max-password-length");
+            max = Math.min(32, max);
+
+            // Dodatkowe zabezpieczenie: gdyby admin w configu ustawił min większe niż max (np. min: 20, max: 10)
+            if (min > max) {
+                min = 6;
+                max = 24;
+            }
 
             if (nowe1.length() < min) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-too-short").replace("%min%", String.valueOf(min)));
@@ -142,6 +161,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
 
             zalogowani.remove(p.getUniqueId());
             p.kickPlayer(plugin.getLanguageManager().getMessage("success-change-password"));
+            plugin.getLogManager().log("Player " + p.getName() + " Changed his password");
             return true;
         }
 
@@ -248,9 +268,8 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
 
             confirmBtn.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/astralogin delspawn " + type + " confirm"));
 
-            // --- NAPRAWA HOVERA (Placeholder %type%) ---
             String hoverText = plugin.getLanguageManager().getMessage("spawn-delete-hover")
-                    .replace("%type%", type); // To naprawia błąd ze screena!
+                    .replace("%type%", type);
 
             confirmBtn.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText(hoverText)));
 
@@ -272,7 +291,8 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                     return true;
                 }
                 plugin.reloadConfig();
-                plugin.setLanguageManager(new LanguageManager(plugin)); // To wymaga metody w AstraLogin
+                IPSecurity.ipCheckOctets = plugin.getConfig().getInt("security.ip-security.ip-check-octets", 4);
+                plugin.setLanguageManager(new LanguageManager(plugin));
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reload-success"));
                 return true;
             }
@@ -288,7 +308,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             }
         }
 
-        if (command.getName().equalsIgnoreCase("zarejestruj") || command.getName().equalsIgnoreCase("register")) {
+        if (command.getName().equalsIgnoreCase("zarejestruj") || command.getName().equalsIgnoreCase("register") || command.getName().equalsIgnoreCase("reg")) {
             if (p == null) {
                 sender.sendMessage(plugin.getLanguageManager().getMessage("only-players"));
                 return true;
@@ -310,8 +330,19 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                     return true;
                 }
 
-                int min = plugin.getConfig().getInt("requirements.min-password-length");
-                int max = plugin.getConfig().getInt("requirements.max-password-length");
+                // Pobieramy min z configu, ale Math.max pilnuje, żeby wartość NIGDY nie była mniejsza niż 5
+                int min = plugin.getConfig().getInt("features.password.min-password-length");
+                min = Math.max(5, min);
+
+                // Pobieramy max z configu, ale Math.min pilnuje, żeby wartość NIGDY nie przekroczyła 32
+                int max = plugin.getConfig().getInt("features.password.max-password-length");
+                max = Math.min(32, max);
+
+                // Dodatkowe zabezpieczenie: gdyby admin w configu ustawił min większe niż max (np. min: 20, max: 10)
+                if (min > max) {
+                    min = 6;
+                    max = 24;
+                }
 
                 if (args[0].length() < min) {
                     p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-too-short", "%min%", String.valueOf(min)));
@@ -347,6 +378,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                         );
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-register"));
                         storage.restore(p);
+                        plugin.getLogManager().log("Player " + p.getName() + " Registered");
                     }, null);
                 });
 
@@ -356,7 +388,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             return true;
         }
 
-        if (command.getName().equalsIgnoreCase("zaloguj") || command.getName().equalsIgnoreCase("login")) {
+        if (command.getName().equalsIgnoreCase("zaloguj") || command.getName().equalsIgnoreCase("login") || command.getName().equalsIgnoreCase("l")) {
             if (p == null) {
                 sender.sendMessage(plugin.getLanguageManager().getMessage("only-players"));
                 return true;
@@ -397,11 +429,13 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                             );
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-login"));
                             storage.restore(p);
+                            plugin.getLogManager().log("Player " + p.getName() + " logged in");
                         }, null);
 
                     } else {
                         p.getScheduler().run(plugin, synctask -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("wrong-password"));
+                            plugin.getLogManager().log("Player " + p.getName() + " entered the wrong password");
 
                             // Sprawdzamy nową ścieżkę w configu
                             if (plugin.getConfig().getInt("features.attempts.max", 3) > 0) {
@@ -432,8 +466,13 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
         attemptManager.clearAttempts(uuid);
         plugin.getIPManager().resetIPAttempts(ip);
 
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            // Teraz wszyscy na serwerze znowu widzą tego gracza
+            online.showPlayer(plugin, p);
+        }
+
         // Pobieramy opcję z głównego configu pluginu
-        boolean useLastLoc = plugin.getConfig().getBoolean("features.teleport-to-last-location", true);
+        boolean useLastLoc = plugin.getConfig().getBoolean("features.spawns.teleport-to-last-location", true);
 
         if (useLastLoc) {
             // Używamy nowej metody, którą dopisaliśmy do SpawnManagera
@@ -472,7 +511,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
     }
 
     public Set<UUID> getZalogowani() { return zalogowani; }
-    public InventoryStorage getStorage() { return storage; }
+    public InventoryManager getStorage() { return storage; }
     public PasswordManager getData() { return data; }
     public AttemptManager getAttemptManager() { return attemptManager; }
     public IPManager getIpManager() { return this.ipManager; }

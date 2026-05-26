@@ -25,7 +25,7 @@ public class LanguageManager {
         // 1. Czyścimy mapę, żeby nie dublować przy przeładowaniu
         messages.clear();
 
-        String lang = plugin.getConfig().getString("language", "pl");
+        String lang = plugin.getConfig().getString("settings.language", "pl");
         File langFile = new File(plugin.getDataFolder(), "languages/" + lang + ".yml");
 
         if (!langFile.exists()) {

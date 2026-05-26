@@ -19,7 +19,6 @@ public class LoginBlocks implements Listener {
 
     public LoginBlocks(AstraLogin plugin) {
         this.plugin = plugin;
-        // Ale ze środka pluginu wyciąga sobie LoginSystem!
         this.loginSystem = plugin.getLoginSystem();
     }
 
@@ -32,8 +31,8 @@ public class LoginBlocks implements Listener {
             // Wyciągamy samą komendę (pierwsze słowo)
             String cmd = e.getMessage().split(" ")[0].toLowerCase();
 
-            if (cmd.equals("/login") || cmd.equals("/zaloguj") ||
-                    cmd.equals("/register") || cmd.equals("/zarejestruj")) {
+            if (cmd.equals("/login") || cmd.equals("/l") || cmd.equals("/zaloguj") ||
+                    cmd.equals("/register") || cmd.equals("/reg") || cmd.equals("/zarejestruj")) {
                 return;
             }
 

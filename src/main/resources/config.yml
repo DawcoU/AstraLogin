@@ -2,19 +2,19 @@
 # |                     AstraLogin - Configuration file - Modern Auth System                   |
 # +--------------------------------------------------------------------------------------------+
 
-# ===============================
-#          MAIN SETTINGS
-# ===============================
+# =========================================
+#             General Settings
+# =========================================
+settings:
+  # Wybierz język pluginu (Dostępne: pl, en)
+  # Select the plugin language (Available: pl, en)
+  language: pl
 
-# DO NOT change this value
-config-version: 3.1.0
+  # Should the plugin check for newer versions of the plugin?
+  check-updates: true
 
-# Wybierz język pluginu (Dostępne: pl, en)
-# Select the plugin language (Available: pl, en)
-language: pl
-
-# Should the plugin check for newer versions of the plugin?
-check-updates: true
+  # Should the plugin save events (logins, registrations, etc.) to .log files?
+  file-logging: true
 
 # ========================================
 #          IP Protection & Security
@@ -22,7 +22,14 @@ check-updates: true
 security:
   ip-security:
     # IP-Lock: Prevents login if the player's IP address has changed.
-    ip-lock-enabled: true
+    enabled: true
+
+    # How many parts (octets) of the IPv4 address should the protection check when verifying the session/IP?
+    # 4 = Full IP checking (strict, secure, but fails with dynamic IP)
+    # 3 = Checks 3 parts (e.g., 46.205.197.X)
+    # 2 = Checks 2 parts (e.g., 46.205.X.X - recommended for dynamic IPs in Poland)
+    # 1 = Checks only 1 part (e.g., 46.X.X.X - very loose)
+    ip-check-octets: 2
 
     # Protection against spam entering the server (e.g. bots/attacks)
     entry-protection:
@@ -56,28 +63,48 @@ features:
     # This ban is stored in RAM and will reset after a server restart.
     tempban-time: "15 minutes"
 
-  # Enable or disable the login countdown timer.
-  login-time-enabled: true
-  login-time-limit: 90 # Time in seconds
+  timer:
+    # Enable or disable the login timer
+    login-time-enabled: true
 
-  # Session duration. Examples: "5 minutes", "30 seconds", "1 hour"
-  # Default is "5 minutes" if not specified correctly.
-  session-enabled: true
-  session-time: "15 minutes"
+    # Set your login time
+    login-time-limit: 90 # Time in seconds
 
-  # After logging in, teleports the player to their last location, ignoring the spawn after logging in.
-  teleport-to-last-location: true
+    # Should the login time be displayed on the boss bar?
+    use-bossbar: true
 
-# ========================================
-#          Password Requirements
-# ========================================
-requirements:
-  # Minimum number of characters in a password
-  min-password-length: 6
+    # Colors: BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
+    bossbar-color: "RED"
 
-  # Maximum number of characters in a password
+    # Styles: PROGRESS, NOTCHED_6, NOTCHED_10, NOTCHED_12, NOTCHED_20
+    bossbar-style: "PROGRESS"
 
-  max-password-length: 16
+  session:
+    # Should Sessions be enabled?
+    enabled: true
+
+    # Session duration. Examples: "5 minutes", "30 seconds", "1 hour"
+    # Default is "5 minutes" if not specified correctly.
+    session-time: "15 minutes"
+
+  spawns:
+    # After logging in, teleports the player to their last location, ignoring the spawn after logging in.
+    teleport-to-last-location: true
+
+  inventory:
+    # Should player inventories be saved?
+    enabled: true
+
+    # Should the player's gamemode be saved?
+    save-gamemode: true
+
+  password:
+    # Minimum number of characters in a password
+    min-password-length: 6
+
+    # Maximum number of characters in a password
+
+    max-password-length: 24
 
 # =========================
 #          VISUALS
@@ -85,3 +112,6 @@ requirements:
 visuals:
   # Apply blindness effect to unauthenticated players.
   use-blindness: true
+
+  # Hides players who are not logged in
+  hide-unlogged-players: true

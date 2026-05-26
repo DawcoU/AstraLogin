@@ -10,7 +10,7 @@ import java.io.IOException;
 public class PasswordManager {
 
     private final File file;
-    private final FileConfiguration config;
+    private FileConfiguration config;
 
     public PasswordManager(AstraLogin plugin) {
         // 1. Tworzymy główny folder pluginu (AstraLogin)
@@ -34,21 +34,29 @@ public class PasswordManager {
     }
 
     public void zapiszHaslo(String uuid, String haslo) {
-        config.set("players." + uuid, haslo);
+        config.set("passwords." + uuid, haslo);
         try { config.save(file); } catch (IOException e) { e.printStackTrace(); }
     }
 
     public String getHaslo(String uuid) {
-        return config.getString("players." + uuid);
+        return config.getString("passwords." + uuid);
     }
 
     public boolean maHaslo(String uuid) {
-        return config.contains("players." + uuid);
+        return config.contains("passwords." + uuid);
     }
 
     public void usunKonto(String uuid) {
-        config.set("players." + uuid, null);
+        config.set("passwords." + uuid, null);
         try { config.save(file); } catch (IOException e) { e.printStackTrace(); }
+    }
+
+    public void reload() {
+        try {
+            this.config = YamlConfiguration.loadConfiguration(file);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     // Używamy przy /register

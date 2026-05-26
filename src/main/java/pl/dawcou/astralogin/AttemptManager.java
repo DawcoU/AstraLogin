@@ -31,6 +31,9 @@ public class AttemptManager {
             long banMillis = parseTime(timeStr);
             plugin.getIPManager().banIPWithMillis(ip, banMillis, "PASSWORD");
 
+            // Ban za próbę włamania / wielokrotne złe hasło
+            plugin.getLogManager().log("Player " + p.getName() + " (" + ip + ") was IP banned for " + timeStr + ". Reason: Too many failed login attempts");
+
             String msg = plugin.getLanguageManager().getMessage("kick-max-attempts-ban")
                     .replace("%time%", timeStr);
             p.kickPlayer(msg);
@@ -39,6 +42,10 @@ public class AttemptManager {
         // 2. POTEM KICK (wyrzuca równe max i każdy błąd marginesu aż do bana)
         if (aktualne >= max) {
             int remaining = threshold - aktualne;
+
+            // Kick za błędne hasło (wskazujemy ile prób zostało do całkowitego bana)
+            plugin.getLogManager().log("Player " + p.getName() + " (" + ip + ") was kicked for incorrect password. Attempts: " + aktualne + "/" + threshold + " until IP ban");
+
             String msg = plugin.getLanguageManager().getMessage("kick-max-attempts")
                     .replace("%remaining%", String.valueOf(remaining));
 

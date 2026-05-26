@@ -1,7 +1,8 @@
 package pl.dawcou.astralogin;
 
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
+import net.kyori.adventure.bossbar.BossBar;
+import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -36,10 +37,15 @@ public class LoginListeners implements Listener {
         if (loginSystem.getZalogowani().contains(uuid)) {
             spawnManager.saveLastLocation(p);
 
-            if (plugin.getConfig().getBoolean("features.session-enabled")) {
+            if (plugin.getConfig().getBoolean("features.session.enabled")) {
                 loginSystem.getSesje().put(uuid, System.currentTimeMillis());
                 loginSystem.getSesjeIP().put(uuid, p.getAddress().getAddress().getHostAddress());
             }
+        }
+
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            // "Odkrywamy" go dla wszystkich, żeby silnik wyczyścił stan ukrycia
+            online.showPlayer(plugin, p);
         }
 
         loginSystem.getZalogowani().remove(uuid);
@@ -51,7 +57,7 @@ public class LoginListeners implements Listener {
         UUID uuid = p.getUniqueId();
 
         // Update Checker
-        if (plugin.getConfig().getBoolean("check-updates", true) && p.hasPermission("astralogin.update")) {
+        if (plugin.getConfig().getBoolean("settings.check-updates", true) && p.hasPermission("astralogin.update")) {
             plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
                 new UpdateChecker(plugin).getVersion(version -> {
                     if (!plugin.getDescription().getVersion().equals(version)) {
@@ -65,7 +71,7 @@ public class LoginListeners implements Listener {
         }
 
         // --- LOGIKA SESJI ---
-        if (plugin.getConfig().getBoolean("features.session-enabled")) {
+        if (plugin.getConfig().getBoolean("features.session.enabled")) {
             if (loginSystem.getSesje().containsKey(uuid)) {
 
                 if (!plugin.getPasswordManager().maHaslo(uuid.toString())) {
@@ -80,7 +86,7 @@ public class LoginListeners implements Listener {
                     loginSystem.getSesje().remove(uuid);
                     loginSystem.getSesjeIP().remove(uuid);
                 } else {
-                    String timeRaw = plugin.getConfig().getString("features.session-time", "5 minutes").toLowerCase();
+                    String timeRaw = plugin.getConfig().getString("features.session.session-time", "5 minutes").toLowerCase();
                     long sessionLimitMillis = SessionManager.parseSessionTime(timeRaw);
                     long lastLogout = loginSystem.getSesje().get(uuid);
 
@@ -88,12 +94,20 @@ public class LoginListeners implements Listener {
                         loginSystem.finishLogin(p);
 
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("session-restored"));
+                        plugin.getLogManager().log("Player " + p.getName() + " had an active session");
+
                         return; // Sesja przywrócona, kończymy onJoin
                     } else {
                         loginSystem.getSesje().remove(uuid);
                         loginSystem.getSesjeIP().remove(uuid);
                     }
                 }
+            }
+        }
+
+        if (plugin.getConfig().getBoolean("visuals.hide-unlogged-players")) {
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                online.hidePlayer(plugin, p);
             }
         }
 
@@ -113,24 +127,72 @@ public class LoginListeners implements Listener {
         }
 
         // Timer logowania
-        if (plugin.getConfig().getBoolean("features.login-time-enabled")) {
-            final int[] time = {plugin.getConfig().getInt("features.login-time-limit")};
+        if (plugin.getConfig().getBoolean("features.timer.login-time-enabled")) {
+            final int maxTime = plugin.getConfig().getInt("features.timer.login-time-limit");
+            final int[] time = {maxTime};
+
+            // Pobieranie ustawień z nowej ścieżki features.timer
+            boolean useBossBar = plugin.getConfig().getBoolean("features.timer.use-bossbar", true);
+
+            BossBar.Color color;
+            try {
+                color = BossBar.Color.valueOf(plugin.getConfig().getString("features.timer.bossbar-color", "RED").toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                color = BossBar.Color.RED;
+            }
+
+            BossBar.Overlay overlay;
+            try {
+                overlay = BossBar.Overlay.valueOf(plugin.getConfig().getString("features.timer.bossbar-style", "PROGRESS").toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                overlay = BossBar.Overlay.PROGRESS;
+            }
+
+            // Inicjalizacja BossBaru (Adventure API)
+            final BossBar bossBar = BossBar.bossBar(
+                    Component.empty(),
+                    1.0f,
+                    color,
+                    overlay
+            );
+
+            if (useBossBar) p.showBossBar(bossBar);
+
             new BukkitRunnable() {
                 @Override
                 public void run() {
+                    // Sprzątanie
                     if (!p.isOnline() || loginSystem.getZalogowani().contains(p.getUniqueId())) {
-                        this.cancel();
-                        return;
-                    }
-                    if (time[0] <= 0) {
-                        p.kickPlayer(plugin.getLanguageManager().getMessage("kick-timeout"));
+                        if (useBossBar) p.hideBossBar(bossBar);
                         this.cancel();
                         return;
                     }
 
-                    String actionBarMsg = plugin.getLanguageManager().getMessage("actionbar-timer")
+                    // Kick
+                    if (time[0] <= 0) {
+                        if (useBossBar) p.hideBossBar(bossBar);
+                        p.kick(Component.text(plugin.getLanguageManager().getMessage("kick-timeout")));
+                        this.cancel();
+                        plugin.getLogManager().log("Player " + p.getName() + " Was kicked for exceeding the login timeout");
+                        return;
+                    }
+
+                    // Przygotowanie wiadomości
+                    String rawMsg = plugin.getLanguageManager().getMessage("timer-message")
                             .replace("%time%", String.valueOf(time[0]));
-                    p.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(actionBarMsg));
+                    Component message = Component.text(rawMsg);
+
+                    // LOGIKA WYBORU: BossBar ALBO ActionBar
+                    if (useBossBar) {
+                        float progress = (float) time[0] / maxTime;
+                        bossBar.progress(Math.max(0.0f, Math.min(1.0f, progress)));
+                        bossBar.name(message);
+                        // Wyświetlamy BossBar (tylko jeśli gracz jeszcze go nie widzi, choć showBossBar jest bezpieczne)
+                        p.showBossBar(bossBar);
+                    } else {
+                        // Jeśli BossBar wyłączony, lejemy info na ActionBar
+                        p.sendActionBar(message);
+                    }
 
                     time[0]--;
                 }
@@ -143,6 +205,7 @@ public class LoginListeners implements Listener {
         UUID uuid = e.getUniqueId();
         String currentIP = e.getAddress().getHostAddress();
         IPManager ipManager = loginSystem.getIpManager();
+        String playerName = e.getName();
 
         // 1. JEDYNE SPRAWDZENIE BANA
         if (ipManager.isIPBanned(currentIP)) {
@@ -160,6 +223,9 @@ public class LoginListeners implements Listener {
                         .replace("%time%", timeFormatted);
             }
 
+            // Ktoś z banem na IP próbuje się wbić
+            plugin.getLogManager().log("Player " + playerName + " (" + currentIP + ") tried to connect but is IP banned. Reason: " + reason);
+
             e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, msg);
             return;
         }
@@ -169,10 +235,15 @@ public class LoginListeners implements Listener {
             ipManager.addIPAttempt(currentIP);
         }
 
-        if (plugin.getConfig().getBoolean("security.ip-security.ip-lock-enabled", true)) {
+        if (plugin.getConfig().getBoolean("security.ip-security.enabled", true)) {
             String savedIP = ipManager.getIP(uuid.toString());
-            if (savedIP != null && !IPSecurity.isIPSafe(savedIP, currentIP)) {
+            // Metoda przyjmuje znowu 2 argumenty, bo sama wie ile członów sprawdzać!
+            if (savedIP != null && !IPSecurity.CheckIP(savedIP, currentIP)) {
                 String msg = plugin.getLanguageManager().getMessage("ip-lock-kick");
+
+                // Ktoś zna hasło/wchodzi na konto, ale IP się nie zgadza z zapisanym
+                plugin.getLogManager().log("Player " + playerName + " was blocked by IP-Lock. Current IP: " + currentIP + ", Saved IP: " + savedIP);
+
                 e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, msg);
                 return;
             }
@@ -180,13 +251,18 @@ public class LoginListeners implements Listener {
 
         if (plugin.getConfig().getBoolean("security.anti-multiaccount.enabled", true)) {
             String zapisaneIP = ipManager.getIP(uuid.toString());
-            if (zapisaneIP == null || !IPSecurity.isIPSafe(zapisaneIP, currentIP)) {
+            // Tutaj tak samo – czysto i bez śmiecenia dodatkowymi parametrami
+            if (zapisaneIP == null || !IPSecurity.CheckIP(zapisaneIP, currentIP)) {
                 int limit = plugin.getConfig().getInt("security.anti-multiaccount.limit", 2);
                 int ileKont = ipManager.getIloscKontByIP(currentIP);
 
                 if (ileKont >= limit) {
+                    // Przekroczenie limitu kont na jednym IP
+                    plugin.getLogManager().log("Player " + playerName + " (" + currentIP + ") was blocked by Anti-MultiAccount. Limit: " + limit + ", Current: " + ileKont);
+
                     e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED,
                             plugin.getLanguageManager().getMessage("anti-multiaccount-kick"));
+                    return;
                 }
             }
         }
