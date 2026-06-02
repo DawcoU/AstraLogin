@@ -5,7 +5,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
-import net.md_5.bungee.api.ChatColor;
+
 import java.util.UUID;
 
 /**
@@ -15,13 +15,15 @@ import java.util.UUID;
 public class AstraLogin extends JavaPlugin implements Listener {
 
     // --- PREFIXY I STAŁE ---
-    public static final String PREFIX = ChatColor.of("#0088FF") + "[" + ChatColor.of("#00D5FF") + "AstraLogin" + ChatColor.of("#0088FF") + "]";
+    public static final String PREFIX = "<gradient:#0055FF:#33CCFF:#33CCFF:#33CCFF:#0055FF>[AstraLogin]</gradient>";
     public static final String PREFIX2 = ("§9[§bAstraLogin§9]");
 
     // --- INSTANCJE MANAGERÓW (POLA) ---
+    private static AstraLogin instance;
     private LanguageManager languageManager;
     private InventoryManager inventoryManager;
     private LoginSystem loginSystem;
+    private LoginListeners loginListeners;
     private SpawnManager spawnManager;
     private PasswordManager passwordManager;
     private IPManager ipManager;
@@ -30,6 +32,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
     private AttemptManager attemptManager;
     private FilesConverter filesConverter;
     private LogManager logManager;
+    private AccountDataManager accountDataManager;
 
     // --- GETTERY (Dostęp dla innych klas) ---
     public LanguageManager getLanguageManager() { return languageManager; }
@@ -40,47 +43,54 @@ public class AstraLogin extends JavaPlugin implements Listener {
     public NoticeManager getNoticeManager() {
         return noticeManager;
     }
+    public InventoryManager getInventoryManager() { return this.inventoryManager; }
     public SpawnManager getSpawnManager() { return this.spawnManager; }
     public SessionManager getSessionManager() { return this.sessionManager; }
     public AttemptManager getAttemptManager() { return this.attemptManager; }
     public FilesConverter getFilesConverter() { return this.filesConverter; }
     public LogManager getLogManager() { return this.logManager; }
+    public AccountDataManager getAccountDataManager() { return this.accountDataManager; }
+    public static AstraLogin getInstance() {
+        return instance;
+    }
 
     @Override
     public void onEnable() {
         // 1. Pliki na dysk
+        instance = this;
         saveDefaultConfig();
 
         int pluginId = 31501;
         new Metrics(this, pluginId);
 
-        // Ładujemy zakres sprawdzania IP z configu prosto do klasy IPSecurity przy starcie serwera
         IPSecurity.ipCheckOctets = this.getConfig().getInt("security.ip-security.ip-check-octets", 4);
 
-        // 2. Migracje na plikach (Dysk)
+        // 2. Migracje danych (Muszą wykonać się przed jakimkolwiek odczytem przez managery)
         new FilesConverter(this).runAllMigrations();
 
-        // 3. Odpalamy managery (One tworzą puste szablony lub czytają pliki)
         this.noticeManager = new NoticeManager(this);
+
+        FilesUpdater updater = new FilesUpdater(this);
+        updater.check();
+
+        // 3. Infrastruktura diagnostyczna i językowa
+        this.logManager = new LogManager(this);
         this.languageManager = new LanguageManager(this);
+        this.languageManager.reload(); // Ładujemy języki od razu, aby komunikaty były dostępne
+
+        // 4. Inicjalizacja managerów logicznych
+        this.accountDataManager = new AccountDataManager(this);
         this.inventoryManager = new InventoryManager(this);
         this.spawnManager = new SpawnManager(this);
         this.passwordManager = new PasswordManager(this);
         this.ipManager = new IPManager(this);
         this.sessionManager = new SessionManager(this);
         this.attemptManager = new AttemptManager(this);
+        this.loginListeners = new LoginListeners(this);
 
+        // 5. Wczytywanie baz danych i cache
         this.passwordManager.reload();
         this.ipManager.reload();
-        this.logManager = new LogManager(this);
-
-        // 4. Aktualizacje i przeładowanie języków
-        FilesUpdater updater = new FilesUpdater(this);
-        updater.check();
-        this.languageManager.reload();
-
-        // Tworzenie serca pluginu - LoginSystem
-        this.loginSystem = new LoginSystem(this, this.passwordManager, this.inventoryManager, this.ipManager, this.spawnManager);
 
         // --- 3. FILTRACJA LOGÓW (UKRYWANIE HASEŁ) ---
         try {
@@ -95,9 +105,12 @@ public class AstraLogin extends JavaPlugin implements Listener {
             noticeManager.sendLoggerError(e);
         }
 
+        // Tworzenie serca pluginu - LoginSystem
+        this.loginSystem = new LoginSystem(this, this.passwordManager, this.inventoryManager, this.ipManager, this.spawnManager);
+
         // --- 4. REJESTRACJA EVENTÓW I KOMEND ---
         // Ten zajmuje się Join, Quit i PreLogin
-        getServer().getPluginManager().registerEvents(new LoginListeners(this), this);
+        getServer().getPluginManager().registerEvents(this.loginListeners, this);
 
         // Ten zajmuje się blokowaniem niszczenia bloków, ruchu itp. dla niezalogowanych
         getServer().getPluginManager().registerEvents(new LoginBlocks(this), this);
@@ -110,6 +123,9 @@ public class AstraLogin extends JavaPlugin implements Listener {
         getCommand("zresetujhaslo").setExecutor(loginSystem);
         getCommand("zmienhaslo").setExecutor(loginSystem);
         getCommand("zresetujip").setExecutor(new IPSecurity(this, ipManager));
+        getCommand("konto").setExecutor(new AccountManager(this));
+        getCommand("zresetujkonto").setExecutor(new AccountManager(this));
+        getCommand("listaip").setExecutor(new AccountManager(this));
 
         this.sessionManager.loadSessionsFromConfig();
 
@@ -117,7 +133,6 @@ public class AstraLogin extends JavaPlugin implements Listener {
         getServer().getAsyncScheduler().runAtFixedRate(this, task -> {
             if (this.sessionManager != null) {
                 this.sessionManager.saveSessionsToConfig();
-                // Opcjonalnie: getLogger().info("Automatycznie zapisano sesje AstraLogin.");
             }
         }, 10, 10, java.util.concurrent.TimeUnit.MINUTES);
 
@@ -151,29 +166,16 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        // --- RATOWANIE DANYCH GRACZY PRZED WYŁĄCZENIEM ---
+        // DEBUG: Sprawdźmy co żyje
+        if (this.loginListeners == null) {
+            getLogger().severe("UWAGA: loginListeners jest NULL w onDisable! Szukaj błędu w onEnable!");
+            return;
+        }
+
+
         for (Player p : Bukkit.getOnlinePlayers()) {
-            UUID uuid = p.getUniqueId();
-
-            if (loginSystem.getZalogowani().contains(uuid)) {
-                spawnManager.saveLastLocation(p);
-
-                if (getConfig().getBoolean("features.session.session-enabled")) {
-                    loginSystem.getSesje().put(uuid, System.currentTimeMillis());
-                    loginSystem.getSesjeIP().put(uuid, p.getAddress().getAddress().getHostAddress());
-                }
-
-            } else {
-                // Jeśli nie był zalogowany, oddajemy mu itemy, żeby nie "zniknęły"
-                inventoryManager.restore(p);
-            }
+            this.loginListeners.handleQuit(p);
         }
-
-        // Teraz wywołujemy zapis – mapa w RAM-ie jest już pełna graczy online!
-        if (this.sessionManager != null) {
-            this.sessionManager.saveSessionsToConfig();
-        }
-
         noticeManager.sendShutdownLogo();
     }
 }

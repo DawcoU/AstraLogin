@@ -9,135 +9,201 @@ import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class SpawnManager {
 
     private final AstraLogin plugin;
-    private final File file;
-    private FileConfiguration config;
+
+    // Plik 1: Globalne spawny serwera (w podfolderze global_data)
+    private final File spawnsFile;
+    private FileConfiguration spawnsConfig;
+
+    // Plik 2: Ostatnie lokalizacje graczy (w podfolderze playerdata)
+    private final File playerDataFile;
+    private FileConfiguration playerDataConfig;
+
+    // Szybki Cache w RAM-ie zapewniający natychmiastowy dostęp bez czytania dysku
+    private final Map<String, Location> spawnsCache = new HashMap<>();
+    private final Map<String, Location> lastLocationsCache = new HashMap<>();
 
     public SpawnManager(AstraLogin plugin) {
         this.plugin = plugin;
-        // Tworzymy folder 'spawns' i plik 'locations.yml'
-        File dir = new File(plugin.getDataFolder(), "spawns");
-        if (!dir.exists()) dir.mkdirs();
 
-        this.file = new File(dir, "locations.yml");
-        if (!this.file.exists()) {
+        // 1. Inicjalizacja globalnego folderu i pliku ze spawnami (AstraLogin/global_data/spawns.yml)
+        File globalDir = new File(plugin.getDataFolder(), "global_data");
+        if (!globalDir.exists()) {
+            globalDir.mkdirs();
+        }
+
+        this.spawnsFile = new File(globalDir, "spawns.yml");
+        if (!this.spawnsFile.exists()) {
             try {
-                this.file.createNewFile();
+                this.spawnsFile.createNewFile();
             } catch (IOException e) {
+                e.printStackTrace();
                 plugin.getNoticeManager().sendSpawnCreateError();
             }
         }
-        this.config = YamlConfiguration.loadConfiguration(file);
+
+        // 2. Inicjalizacja pliku z danymi graczy (AstraLogin/player_data/locations_data.yml)
+        File dataDir = new File(plugin.getDataFolder(), "player_data");
+        if (!dataDir.exists()) {
+            dataDir.mkdirs();
+        }
+
+        this.playerDataFile = new File(dataDir, "locations_data.yml");
+        if (!this.playerDataFile.exists()) {
+            try {
+                this.playerDataFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // Ładujemy konfiguracje i odpalamy cache
+        reload();
     }
+
+    // --- SEKCJA SPAWNÓW SERWEROWYCH (global_data/spawns.yml) ---
 
     public void setSpawn(String type, Player p) {
         Location loc = p.getLocation();
+        spawnsCache.put(type, loc); // Zapis do RAM-u
+
         String path = "spawns." + type;
-
-        config.set(path + ".world", loc.getWorld().getName());
-        config.set(path + ".x", loc.getX());
-        config.set(path + ".y", loc.getY());
-        config.set(path + ".z", loc.getZ());
-        config.set(path + ".yaw", loc.getYaw());
-        config.set(path + ".pitch", loc.getPitch());
-
-        save();
+        serializeLocation(spawnsConfig, path, loc);
+        saveSpawns();
     }
 
     public void delSpawn(String type) {
-        config.set("spawns." + type, null);
-        save();
+        spawnsCache.remove(type); // Czyszczenie z RAM-u
+        spawnsConfig.set("spawns." + type, null);
+        saveSpawns();
     }
 
     public void teleport(Player p, String type) {
-        String path = "spawns." + type;
-        if (!config.contains(path)) return; // Brak spawna? Zostawiamy gracza w spokoju.
-
-        String worldName = config.getString(path + ".world");
-        World world = Bukkit.getWorld(worldName);
-        if (world == null) return;
-
-        Location loc = new Location(
-                world,
-                config.getDouble(path + ".x"),
-                config.getDouble(path + ".y"),
-                config.getDouble(path + ".z"),
-                (float) config.getDouble(path + ".yaw"),
-                (float) config.getDouble(path + ".pitch")
-        );
+        Location loc = spawnsCache.get(type); // Pobieranie z RAM-u w czasie O(1)
+        if (loc == null) return;
         p.teleport(loc);
     }
 
+    public boolean hasSpawn(String type) {
+        return spawnsCache.containsKey(type); // Błyskawiczne sprawdzenie w RAM-ie
+    }
+
+    // --- SEKCJA LOKALIZACJI GRACZY (playerdata/locations_data.yml) ---
+
     public void saveLastLocation(Player p) {
         Location loc = p.getLocation();
-        // KONIECZNIE dodaj .toString(), żeby ścieżka była czystym tekstem
         String uuid = p.getUniqueId().toString();
+
+        lastLocationsCache.put(uuid, loc); // Zapis do RAM-u
+
         String path = "last_locations." + uuid;
-
-        config.set(path + ".world", loc.getWorld().getName());
-        config.set(path + ".x", loc.getX());
-        config.set(path + ".y", loc.getY());
-        config.set(path + ".z", loc.getZ());
-        config.set(path + ".yaw", (double) loc.getYaw()); // Rzutujemy na double dla świętego spokoju
-        config.set(path + ".pitch", (double) loc.getPitch());
-
-        save();
+        serializeLocation(playerDataConfig, path, loc);
+        savePlayerData();
     }
 
     public void teleportToLastLocation(Player p) {
         String uuid = p.getUniqueId().toString();
-        String path = "last_locations." + uuid;
+        Location loc = lastLocationsCache.get(uuid); // Wyciągamy z RAM-u
 
-        if (!config.contains(path)) {
+        if (loc == null) {
             teleport(p, "after_login");
             return;
         }
 
         try {
-            String worldName = config.getString(path + ".world");
-            if (worldName == null) {
-                teleport(p, "after_login");
-                return;
-            }
-
-            World world = Bukkit.getWorld(worldName);
-            if (world == null) {
-                teleport(p, "after_login");
-                return;
-            }
-
-            // Pobieramy kordy - ważne, żeby użyć getDouble
-            double x = config.getDouble(path + ".x");
-            double y = config.getDouble(path + ".y");
-            double z = config.getDouble(path + ".z");
-            float yaw = (float) config.getDouble(path + ".yaw");
-            float pitch = (float) config.getDouble(path + ".pitch");
-
-            Location loc = new Location(world, x, y, z, yaw, pitch);
-
-            // Finalny teleport
             p.teleport(loc);
-
         } catch (Exception e) {
-            // Jeśli cokolwiek pójdzie nie tak przy czytaniu (np. błąd formatu), lecisz na spawn
+            e.printStackTrace(); // Czerwona ściana tekstu w razie awarii świata
             teleport(p, "after_login");
             plugin.getNoticeManager().sendPlayerLocationReadError(p.getName());
         }
     }
 
-    public boolean hasSpawn(String type) {
-        // Sprawdzamy czy w pliku locations.yml (lub mapie) istnieje dany klucz
-        return config.contains("spawns." + type);
+    // --- METODY POMOCNICZE (CZYSZCZENIE I OPTYMALIZACJA KODU) ---
+
+    public void reload() {
+        // Ładowanie plików z dysku
+        this.spawnsConfig = YamlConfiguration.loadConfiguration(spawnsFile);
+        this.playerDataConfig = YamlConfiguration.loadConfiguration(playerDataFile);
+
+        // Czyszczenie starego cache
+        this.spawnsCache.clear();
+        this.lastLocationsCache.clear();
+
+        // Przebudowanie Cache dla spawnów serwera
+        if (spawnsConfig.getConfigurationSection("spawns") != null) {
+            for (String type : spawnsConfig.getConfigurationSection("spawns").getKeys(false)) {
+                Location loc = deserializeLocation(spawnsConfig, "spawns." + type);
+                if (loc != null) spawnsCache.put(type, loc);
+            }
+        }
+
+        // Przebudowanie Cache dla lokalizacji graczy
+        if (playerDataConfig.getConfigurationSection("last_locations") != null) {
+            for (String uuid : playerDataConfig.getConfigurationSection("last_locations").getKeys(false)) {
+                Location loc = deserializeLocation(playerDataConfig, "last_locations." + uuid);
+                if (loc != null) lastLocationsCache.put(uuid, loc);
+            }
+        }
     }
 
-    private void save() {
+    private void serializeLocation(FileConfiguration config, String path, Location loc) {
+        config.set(path + ".world", loc.getWorld().getName());
+        config.set(path + ".x", loc.getX());
+        config.set(path + ".y", loc.getY());
+        config.set(path + ".z", loc.getZ());
+        config.set(path + ".yaw", (double) loc.getYaw());
+        config.set(path + ".pitch", (double) loc.getPitch());
+    }
+
+    private Location deserializeLocation(FileConfiguration config, String path) {
+        String worldName = config.getString(path + ".world");
+        if (worldName == null) return null;
+
+        World world = Bukkit.getWorld(worldName);
+        if (world == null) return null; // Jeśli świat nie jest załadowany, ignorujemy
+
+        double x = config.getDouble(path + ".x");
+        double y = config.getDouble(path + ".y");
+        double z = config.getDouble(path + ".z");
+        float yaw = (float) config.getDouble(path + ".yaw");
+        float pitch = (float) config.getDouble(path + ".pitch");
+
+        return new Location(world, x, y, z, yaw, pitch);
+    }
+
+    private void saveSpawns() {
         try {
-            config.save(file);
+            spawnsConfig.save(spawnsFile);
         } catch (IOException e) {
             plugin.getNoticeManager().sendSpawnSaveError();
+        }
+    }
+
+    private void savePlayerData() {
+        try {
+            playerDataConfig.save(playerDataFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void deletePlayerSpawn(String uuidString) {
+        // 1. Bezkompromisowe czyszczenie z pamięci RAM (Cache)
+        this.lastLocationsCache.remove(uuidString);
+
+        // 2. Czyszczenie sekcji z pliku konfiguracyjnego
+        String path = "last_locations." + uuidString;
+        if (this.playerDataConfig.contains(path)) {
+            this.playerDataConfig.set(path, null);
+
+            // 3. Zapisujemy zaktualizowany plik na dysku
+            savePlayerData();
         }
     }
 }

@@ -61,6 +61,31 @@ messages:
   player-reset-password-kick: "&cTwoje hasło zostało zresetowane przez administratora!"
   player-reset-ip-kick: "&cTwój adres IP został zresetowany przez administratora!"
 
+  # Komenda /konto (/account)
+  account-usage: "§cPoprawne użycie: &e/konto <nick>"
+  account-not-found: "§cGracz &6%target% &cnigdy nie zarejestrował się na serwerze"
+  account-stats-header: "§8--- §6Statystyki konta: §e%target% §8---"
+  account-stats-uuid: "§7UUID: §f%uuid%"
+  account-stats-ip: "§7Ostatnie IP: §f%ip%"
+  account-stats-reg-date: "§7Data rejestracji: §f%register_date%"
+  account-stats-login-date: "§7Ostatnie logowanie: §f%login_date%"
+  account-stats-status: "§7Status rejestracji: %status%"
+  account-status-active: "§aZarejestrowany"
+  account-status-waiting: "§eOczekuje na ponowną rejestrację (Zresetowany)"
+  account-stats-footer: "§8--------------------------------"
+
+  # Komenda /listaip
+  listaip-generating: "&7Ładowanie Listy IP..."
+  listaip-empty: "&cBaza danych adresów IP jest pusta"
+  listaip-header: "§8--- §6Rejestr Zajętych IP §8---"
+  listaip-format: "§e{ip} §b(§6Kont: {count}§b) §7-> §a{players}"
+  listaip-footer: "§8------------------------------------------------"
+
+  # Komenda /zresetujkonto
+  usage-purge-account: "§cPoprawne użycie: &e/zresetujkonto <nick>"
+  admin-purge-success: "§aPomyślnie usunięto WSZYSTKIE dane konta gracza §e%player%"
+  player-purge-kick: "§cTwoje konto zostało całkowicie usunięte z bazy danych serwera przez administratora"
+
   # --- System Spawnu ---
   spawn-set-success: "&aPomyślnie ustawiono lokalizację dla: &e%type%"
   spawn-deleted-success: "&aUsunięto lokalizację spawna: &e%type%"

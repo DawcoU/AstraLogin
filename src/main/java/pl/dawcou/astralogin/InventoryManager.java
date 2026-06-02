@@ -11,13 +11,13 @@ import java.io.IOException;
 public class InventoryManager {
 
     private final File file;
-    private FileConfiguration config;
+    private final FileConfiguration config;
     private final AstraLogin plugin;
 
     public InventoryManager(AstraLogin plugin) {
         this.plugin = plugin;
 
-        File dataFolder = new File(plugin.getDataFolder(), "playerdata");
+        File dataFolder = new File(plugin.getDataFolder(), "player_data");
         if (!dataFolder.exists()) {
             dataFolder.mkdirs();
         }
@@ -46,24 +46,29 @@ public class InventoryManager {
             return; // Opcja jest wyłączona, a gracz nie miał zapisu? Wychodzimy! Nie dotykamy jego EQ ani GM.
         }
 
-        // Zapisujemy KAŻDY slot z osobna, żeby Bukkit się nie pogubił
+        // KROK 1: Zapisujemy KAŻDY slot z osobna z prefiksem 'inventory', żeby Bukkit się nie pogubił
         ItemStack[] inv = p.getInventory().getContents();
         for (int i = 0; i < inv.length; i++) {
-            if (inv[i] != null) config.set(uuid + ".inv." + i, inv[i]);
+            if (inv[i] != null) {
+                config.set("inventory." + uuid + ".inv." + i, inv[i]);
+            }
         }
 
+        // KROK 2: Zapisujemy zbroję do nowej sekcji inventory
         ItemStack[] armor = p.getInventory().getArmorContents();
         for (int i = 0; i < armor.length; i++) {
-            if (armor[i] != null) config.set(uuid + ".arm." + i, armor[i]);
+            if (armor[i] != null) {
+                config.set("inventory." + uuid + ".arm." + i, armor[i]);
+            }
         }
 
-        // KROK 3: Opcjonalne zapisywanie GameMode
+        // KROK 3: Opcjonalne zapisywanie GameMode w tym samym formacie
         boolean saveGamemode = plugin.getConfig().getBoolean("features.inventory.save-gamemode", true);
         if (saveGamemode) {
-            config.set(uuid + ".gamemode", p.getGameMode().name());
+            config.set("inventory." + uuid + ".gamemode", p.getGameMode().name());
         }
 
-        save(); // Zapisujemy plik cache (inventory_cache.yml)
+        save(); // Zapisujemy plik
 
         // Czyszczenie po pomyślnym zapisie
         p.getInventory().clear();
@@ -77,16 +82,15 @@ public class InventoryManager {
     public void restore(Player p) {
         String uuid = p.getUniqueId().toString();
 
-        // KLUCZOWE: Sprawdzamy tylko, czy gracz MA dane w pliku cache.
-        // Nie interesuje nas tutaj config. Jeśli dane tam są, to znaczy, że musimy je oddać!
-        if (!config.contains(uuid)) return;
+        // KLUCZOWE: Sprawdzamy nowy format z prefiksem 'inventory.'
+        if (!config.contains("inventory." + uuid)) return;
 
-        // Przywracamy EQ (36 slotów + dodatkowe)
+        // Przywracamy EQ (Wspólniona ścieżka z inventory.)
         ItemStack[] inv = new ItemStack[p.getInventory().getSize()];
-        if (config.getConfigurationSection(uuid + ".inv") != null) {
-            for (String key : config.getConfigurationSection(uuid + ".inv").getKeys(false)) {
+        if (config.getConfigurationSection("inventory." + uuid + ".inv") != null) {
+            for (String key : config.getConfigurationSection("inventory." + uuid + ".inv").getKeys(false)) {
                 int slot = Integer.parseInt(key);
-                ItemStack item = config.getItemStack(uuid + ".inv." + key);
+                ItemStack item = config.getItemStack("inventory." + uuid + ".inv." + key);
 
                 if (item != null) {
                     inv[slot] = item;
@@ -95,12 +99,12 @@ public class InventoryManager {
         }
         p.getInventory().setContents(inv);
 
-        // Przywracamy Armor
+        // Przywracamy Armor (Wspólniona ścieżka z inventory.)
         ItemStack[] armor = new ItemStack[4];
-        if (config.getConfigurationSection(uuid + ".arm") != null) {
-            for (String key : config.getConfigurationSection(uuid + ".arm").getKeys(false)) {
+        if (config.getConfigurationSection("inventory." + uuid + ".arm") != null) {
+            for (String key : config.getConfigurationSection("inventory." + uuid + ".arm").getKeys(false)) {
                 int slot = Integer.parseInt(key);
-                ItemStack item = config.getItemStack(uuid + ".arm." + key);
+                ItemStack item = config.getItemStack("inventory." + uuid + ".arm." + key);
 
                 if (item != null) {
                     armor[slot] = item;
@@ -109,11 +113,9 @@ public class InventoryManager {
         }
         p.getInventory().setArmorContents(armor);
 
-        // KROK 4: Przywracamy GameMode Inteligentnie
-        // Zamiast ślepego sprawdzania configu, patrzymy czy klucz ".gamemode" w ogóle istnieje w pliku gracza.
-        // Dzięki temu, jeśli funkcja była wyłączona podczas zapisu, nie nadpiszemy graczowi jego trybu.
-        if (config.contains(uuid + ".gamemode")) {
-            String gmName = config.getString(uuid + ".gamemode", "SURVIVAL");
+        // KROK 4: Przywracamy GameMode Inteligentnie (Wspólniona ścieżka z inventory.)
+        if (config.contains("inventory." + uuid + ".gamemode")) {
+            String gmName = config.getString("inventory." + uuid + ".gamemode", "SURVIVAL");
             try {
                 GameMode gm = GameMode.valueOf(gmName);
                 p.setGameMode(gm);
@@ -122,9 +124,16 @@ public class InventoryManager {
             }
         }
 
-        // Czyszczenie danych po przywróceniu
-        config.set(uuid, null);
+        // Czyszczenie danych po przywróceniu z poprawnego klucza
+        config.set("inventory." + uuid, null);
         save();
+    }
+
+    public void deleteInventoryCache(String uuidString) {
+        if (config.contains("inventory." + uuidString)) {
+            config.set("inventory." + uuidString, null);
+            save();
+        }
     }
 
     private void save() {

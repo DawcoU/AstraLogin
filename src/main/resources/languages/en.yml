@@ -61,6 +61,31 @@ messages:
   player-reset-password-kick: "&cYour password has been reset by the administrator!"
   player-reset-ip-kick: "&cYour IP address has been reset by the administrator!"
 
+  # /account Command
+  account-usage: "§cCorrect usage: &e/account <nick>"
+  account-not-found: "§cPlayer &6%target% &cnever registered on the server"
+  account-stats-header: "§8--- §6Account statistics: §e%target% §8---"
+  account-stats-uuid: "§7UUID: §f%uuid%"
+  account-stats-ip: "§7Last IP: §f%ip%"
+  account-stats-reg-date: "§7Registration date: §f%register_date%"
+  account-stats-login-date: "§7Last login: §f%login_date%"
+  account-stats-status: "§7Registration status: %status%"
+  account-status-active: "§aRegistered"
+  account-status-waiting: "§eWaiting for re-registration (Reset)"
+  account-stats-footer: "§8--------------------------------"
+
+  # /listaip command
+  listaip-generating: "&7Loading IP List..."
+  listaip-empty: "&cIP address database is empty"
+  listaip-header: "§8--- §6Used IP Register §8---"
+  listaip-format: "§e{ip} §b(§6Accounts: {count}§b) §7-> §a{players}"
+  listaip-footer: "§8------------------------------------------------"
+
+  # /resetaccount command
+  usage-purge-account: "§cCorrect usage: &e/resetaccount <nickname>"
+  admin-purge-success: "§aSuccessfully deleted ALL account data for player §e%player%"
+  player-purge-kick: "§cYour account has been completely removed from the server database by the administrator"
+
   # --- Spawn System ---
   spawn-set-success: "&aSuccessfully set location for: &e%type%"
   spawn-deleted-success: "&aSpawn location removed: &e%type%"

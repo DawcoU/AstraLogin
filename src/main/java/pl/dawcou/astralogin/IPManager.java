@@ -9,54 +9,73 @@ import java.util.Map;
 
 public class IPManager {
 
+    private final AstraLogin plugin;
     private final File file;
     private FileConfiguration config;
-    private final AstraLogin plugin;
 
-    // Mapy do ochrony przed spamem wejść (IP-Spam)
+    // Potężna optymalizacja: gotowe mapy do sprawdzania IP i ilości kont
+    private final Map<String, String> uuidToIpCache = new HashMap<>();
+    private final Map<String, Integer> ipCountCache = new HashMap<>();
+
+    // Mapy ochrony IP-Spam
     private final Map<String, Integer> ipAttempts = new HashMap<>();
     private final Map<String, Long> ipBans = new HashMap<>();
-    private final HashMap<String, String> banReasons = new HashMap<>();
+    private final Map<String, String> banReasons = new HashMap<>();
+
+    public Map<String, String> getUuidToIpCache() {
+        return this.uuidToIpCache;
+    }
 
     public IPManager(AstraLogin plugin) {
         this.plugin = plugin;
-        if (!plugin.getDataFolder().exists()) plugin.getDataFolder().mkdir();
 
-        File dataDir = new File(plugin.getDataFolder(), "playerdata");
-        if (!dataDir.exists()) dataDir.mkdir();
+        File dataDir = new File(plugin.getDataFolder(), "player_data");
+        if (!dataDir.exists()) {
+            dataDir.mkdirs();
+        }
 
         this.file = new File(dataDir, "ips.yml");
         if (!file.exists()) {
-            try { file.createNewFile(); } catch (IOException e) { e.printStackTrace(); }
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-        this.config = YamlConfiguration.loadConfiguration(file);
+
+        reload();
     }
 
-    // --- TWOJE METODY (ZOSTAWIONE I NIETKNIĘTE) ---
+    public void saveIP(String uuid, String ip) {
+        // Jeśli gracz zmienia IP, zmniejszamy licznik starego IP
+        String oldIp = uuidToIpCache.get(uuid);
+        if (oldIp != null && ipCountCache.containsKey(oldIp)) {
+            ipCountCache.put(oldIp, Math.max(0, ipCountCache.get(oldIp) - 1));
+        }
 
-    public void zapiszIP(String uuid, String ip) {
+        // Aktualizujemy cache nowymi danymi
+        uuidToIpCache.put(uuid, ip);
+        ipCountCache.put(ip, ipCountCache.getOrDefault(ip, 0) + 1);
+
         config.set("ips." + uuid, ip);
         save();
     }
 
     public String getIP(String uuid) {
-        return config.getString("ips." + uuid);
+        return uuidToIpCache.get(uuid); // Błyskawiczne pobieranie z RAM-u
     }
 
-    public void usunIP(String uuid) {
+    public void deleteIP(String uuid) {
+        String ip = uuidToIpCache.remove(uuid);
+        if (ip != null && ipCountCache.containsKey(ip)) {
+            ipCountCache.put(ip, Math.max(0, ipCountCache.get(ip) - 1));
+        }
         config.set("ips." + uuid, null);
         save();
     }
 
-    public int getIloscKontByIP(String ip) {
-        if (config.getConfigurationSection("ips") == null) return 0;
-        int count = 0;
-        for (String key : config.getConfigurationSection("ips").getKeys(false)) {
-            if (ip.equals(config.getString("ips." + key))) {
-                count++;
-            }
-        }
-        return count;
+    public int getNumberOfAccountsByIP(String ip) {
+        return ipCountCache.getOrDefault(ip, 0);
     }
 
     private void save() {
@@ -67,7 +86,7 @@ public class IPManager {
         }
     }
 
-    // --- NOWA OCHRONA IP (BOTY / SPAM WEJŚĆ) ---
+    // --- OCHRONA IP ---
 
     public boolean isIPBanned(String ip) {
         if (!ipBans.containsKey(ip)) return false;
@@ -95,19 +114,12 @@ public class IPManager {
         int max = plugin.getConfig().getInt(path + "max-attempts", 5);
         String timeStr = plugin.getConfig().getString(path + "tempban-time", "10 minutes");
 
-        // 2. Liczymy próbę
         int current = ipAttempts.getOrDefault(ip, 0) + 1;
         ipAttempts.put(ip, current);
 
-        // 3. Sprawdzamy limit
         if (current >= max) {
-            // Zamieniamy tekst typu "10 minutes" na milisekundy
-            long banMillis = plugin.getAttemptManager().parseTime(timeStr);
-
-            // Nakładamy bana (używamy Twojej metody z IPManagera)
+            long banMillis = LoginUtils.parseTime(timeStr, 600000L);
             banIPWithMillis(ip, banMillis, "SPAM");
-
-            // CZYŚCIMY próby, żeby po odbanowaniu licznik startował od zera!
             ipAttempts.remove(ip);
         }
     }
@@ -115,7 +127,7 @@ public class IPManager {
     public long getIPBanTimeLeft(String ip) {
         if (!ipBans.containsKey(ip)) return 0;
         long timeLeft = (ipBans.get(ip) - System.currentTimeMillis()) / 1000;
-        return Math.max(0, timeLeft); // Jeśli wyjdzie na minusie, zwróci po prostu 0!
+        return Math.max(0, timeLeft);
     }
 
     public void resetIPAttempts(String ip) {
@@ -125,11 +137,20 @@ public class IPManager {
     }
 
     public void reload() {
-        // Ponownie ładujemy plik z dysku do pamięci RAM, żeby widzieć zmiany z konwertera!
-        try {
-            this.config = YamlConfiguration.loadConfiguration(file);
-        } catch (Exception e) {
-            e.printStackTrace();
+        this.config = YamlConfiguration.loadConfiguration(file);
+
+        this.uuidToIpCache.clear();
+        this.ipCountCache.clear();
+
+        // Przebudowanie całego cache w RAM-ie przy przeładowaniu
+        if (config.getConfigurationSection("ips") != null) {
+            for (String key : config.getConfigurationSection("ips").getKeys(false)) {
+                String ip = config.getString("ips." + key);
+                if (ip != null) {
+                    this.uuidToIpCache.put(key, ip);
+                    this.ipCountCache.put(ip, this.ipCountCache.getOrDefault(ip, 0) + 1);
+                }
+            }
         }
     }
 }

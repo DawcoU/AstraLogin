@@ -28,7 +28,7 @@ public class AttemptManager {
         // 1. NAJPIERW SPRAWDZAMY BANA (bo to najważniejsze)
         if (aktualne >= threshold) {
             clearAttempts(p.getUniqueId());
-            long banMillis = parseTime(timeStr);
+            long banMillis = LoginUtils.parseTime(timeStr, 300000L); // 300000L to 5 minut jako default
             plugin.getIPManager().banIPWithMillis(ip, banMillis, "PASSWORD");
 
             // Ban za próbę włamania / wielokrotne złe hasło
@@ -36,7 +36,7 @@ public class AttemptManager {
 
             String msg = plugin.getLanguageManager().getMessage("kick-max-attempts-ban")
                     .replace("%time%", timeStr);
-            p.kickPlayer(msg);
+            p.kick(net.kyori.adventure.text.Component.text(msg));
             return;
         }
         // 2. POTEM KICK (wyrzuca równe max i każdy błąd marginesu aż do bana)
@@ -49,7 +49,7 @@ public class AttemptManager {
             String msg = plugin.getLanguageManager().getMessage("kick-max-attempts")
                     .replace("%remaining%", String.valueOf(remaining));
 
-            p.kickPlayer(msg);
+            p.kick(net.kyori.adventure.text.Component.text(msg));
             return;
         }
     }
@@ -57,22 +57,5 @@ public class AttemptManager {
     // Call this method in your LoginListener when password is correct!
     public void clearAttempts(UUID uuid) {
         proby.remove(uuid);
-    }
-
-    public long parseTime(String input) {
-        try {
-            String[] parts = input.split(" ");
-            long value = Long.parseLong(parts[0]);
-            String unit = parts[1].toLowerCase();
-
-            return switch (unit) {
-                case "seconds", "second" -> value * 1000L;
-                case "minutes", "minute" -> value * 60000L;
-                case "hours", "hour" -> value * 3600000L;
-                default -> value * 60000L;
-            };
-        } catch (Exception e) {
-            return 300000L;
-        }
     }
 }

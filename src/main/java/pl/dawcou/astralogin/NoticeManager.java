@@ -78,7 +78,9 @@ public class NoticeManager {
         }
 
         // Używamy severe, bo to poważna sprawa dotycząca bezpieczeństwa
-        plugin.getLogger().severe(ChatColor.stripColor(errorMsg));
+        plugin.getLogger().severe(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(
+                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(errorMsg)
+        ));
     }
 
     public void sendLogSaveError(String fileName) {
@@ -93,6 +95,14 @@ public class NoticeManager {
                 "§cNie udało się zapisać sesji do pliku! Błąd: " :
                 "§cCould not save sessions to file! Error: ";
         plugin.getLogger().severe(msg + e.getMessage());
+    }
+
+    public void sendInvalidUUIDError(Exception e) {
+        String msg = getLang().equalsIgnoreCase("pl") ?
+                "Nie udało się usunąć sesji. Błędny format UUID! Błąd: " :
+                "Failed to delete session. Incorrect UUID format! Error: ";
+
+        plugin.getLogger().warning(msg + e.getMessage());
     }
 
     public void sendSessionsLoaded(int count) {
@@ -147,7 +157,6 @@ public class NoticeManager {
         String author = getLang().equalsIgnoreCase("pl") ? "   §6Autor: §e" : "   §6Author: §e";
         String statusLabel = getLang().equalsIgnoreCase("pl") ? "   §6Status: " : "   §6Status: ";
 
-        // Krótka, profesjonalna prośba o opinię (Review)
         String review = getLang().equalsIgnoreCase("pl")
                 ? "§bPodoba się plugin? Zostaw opinię na Discord'zie!"
                 : "§bLike the plugin? Leave a review on Discord!";

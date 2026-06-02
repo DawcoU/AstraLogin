@@ -1,5 +1,5 @@
 name: AstraLogin
-version: '${project.version}'
+version: '${version}'
 main: pl.dawcou.astralogin.AstraLogin
 api-version: '1.18'
 load: POSTWORLD
@@ -17,6 +17,12 @@ commands:
     aliases: [login, l]
   zarejestruj:
     aliases: [register, reg]
+  konto:
+    aliases: [account]
+  zresetujkonto:
+    aliases: [resetaccount]
+  listaip:
+    aliases: [iplist]
 
 permissions:
   astralogin.reload:
@@ -28,4 +34,10 @@ permissions:
   astralogin.resetpassword:
     default: op
   astralogin.resetip:
+    default: op
+  astralogin.resetaccount:
+    default: op
+  astralogin.account:
+    default: op
+  astralogin.iplist:
     default: op

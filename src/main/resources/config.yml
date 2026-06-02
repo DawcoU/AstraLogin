@@ -16,9 +16,9 @@ settings:
   # Should the plugin save events (logins, registrations, etc.) to .log files?
   file-logging: true
 
-# ========================================
-#          IP Protection & Security
-# ========================================
+# =====================================
+#           Security Settings
+# =====================================
 security:
   ip-security:
     # IP-Lock: Prevents login if the player's IP address has changed.
@@ -48,6 +48,14 @@ security:
     # "mask" - masks the password with asterisks
     # "deny" - completely removes the line from the logs
     action: "mask"
+
+  bcrypt:
+    # The cost factor for the BCrypt algorithm.
+    # Determines the number of iterations for password hashing.
+    # Recommended range: 10-12 (Optimal balance between security and performance).
+    # WARNING: Values above 14 may cause severe lag or server crashes on shared hosting.
+    # Default value: 10
+    cost: 12
 
 # =================================
 #          LOGIN FEATURES

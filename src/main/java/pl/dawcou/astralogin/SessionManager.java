@@ -1,9 +1,12 @@
 package pl.dawcou.astralogin;
 
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class SessionManager {
@@ -12,10 +15,21 @@ public class SessionManager {
     private final File sessionFile;
     private FileConfiguration sessionConfig;
 
+    // Jedyne, uniwersalne mapy sesji w całym pluginie
+    private final Map<UUID, Long> sesje = new HashMap<>();
+    private final Map<UUID, String> sesjeIP = new HashMap<>();
+
+    public Map<UUID, Long> getSesje() {
+        return this.sesje;
+    }
+
+    public Map<UUID, String> getSesjeIP() {
+        return this.sesjeIP;
+    }
+
     public SessionManager(AstraLogin plugin) {
         this.plugin = plugin;
-        // Tworzymy ścieżkę do folderu playerdata
-        File dataDir = new File(plugin.getDataFolder(), "playerdata");
+        File dataDir = new File(plugin.getDataFolder(), "player_data");
         if (!dataDir.exists()) {
             dataDir.mkdirs();
         }
@@ -23,19 +37,16 @@ public class SessionManager {
         this.sessionConfig = YamlConfiguration.loadConfiguration(sessionFile);
     }
 
-    // --- ZAPISYWANIE SESJI DO PLIKU ---
     public void saveSessionsToConfig() {
         sessionConfig.set("sessions", null);
         long now = System.currentTimeMillis();
-        long limit = parseSessionTime(plugin.getConfig().getString("features.session.session-time", "15 minutes"));
+        long limit = getSessionLimitMillis();
 
-        plugin.getLoginSystem().getSesje().forEach((uuid, timestamp) -> {
-            // ZAPISUJEMY TYLKO SESJE, KTÓRE NIE WYGASŁY!
+        this.sesje.forEach((uuid, timestamp) -> {
             if (now - timestamp < limit) {
-                String path = "sessions." + uuid.toString();
+                String path = "sessions." + uuid;
                 sessionConfig.set(path + ".timestamp", timestamp);
-                String ip = plugin.getLoginSystem().getSesjeIP().get(uuid);
-                sessionConfig.set(path + ".ip", ip);
+                sessionConfig.set(path + ".ip", this.sesjeIP.get(uuid));
             }
         });
 
@@ -46,51 +57,83 @@ public class SessionManager {
         }
     }
 
-    // --- WCZYTYWANIE SESJI Z PLIKU ---
     public void loadSessionsFromConfig() {
         if (!sessionFile.exists()) return;
 
         sessionConfig = YamlConfiguration.loadConfiguration(sessionFile);
-        if (!sessionConfig.contains("sessions")) return;
+        ConfigurationSection section = sessionConfig.getConfigurationSection("sessions");
+        if (section == null) return;
 
-        // 1. Pobieramy limit czasu sesji z głównego configu AstraLogin
-        long sessionLimit = parseSessionTime(plugin.getConfig().getString("features.session.session-time", "5 minutes"));
+        long sessionLimit = getSessionLimitMillis();
         long now = System.currentTimeMillis();
         int count = 0;
 
-        for (String uuidStr : sessionConfig.getConfigurationSection("sessions").getKeys(false)) {
+        // Czyszczenie starych danych w pamięci na wypadek reloadu pluginu
+        this.sesje.clear();
+        this.sesjeIP.clear();
+
+        for (String uuidStr : section.getKeys(false)) {
             try {
                 UUID uuid = UUID.fromString(uuidStr);
                 long timestamp = sessionConfig.getLong("sessions." + uuidStr + ".timestamp");
                 String ip = sessionConfig.getString("sessions." + uuidStr + ".ip");
 
-                // 2. KLUCZOWY WARUNEK: Sprawdzamy czy sesja jest jeszcze ważna
                 if (now - timestamp < sessionLimit) {
-                    // Sesja jest świeża -> wczytujemy do RAMu
-                    plugin.getLoginSystem().getSesje().put(uuid, timestamp);
-                    plugin.getLoginSystem().getSesjeIP().put(uuid, ip);
+                    this.sesje.put(uuid, timestamp);
+                    this.sesjeIP.put(uuid, ip);
                     count++;
                 }
             } catch (IllegalArgumentException e) {
-                // Uszkodzony UUID w pliku
+                // Ignorowanie uszkodzonych rekordów UUID
             }
         }
 
-        // Teraz komunikat pokaże tylko te faktycznie aktywne sesje!
         if (count > 0) {
             plugin.getNoticeManager().sendSessionsLoaded(count);
         }
     }
 
-    public static long parseSessionTime(String timeRaw) {
+    public long getSessionLimitMillis() {
+        String timeStr = plugin.getConfig().getString("features.session.session-time", "15 minutes");
+        return LoginUtils.parseTime(timeStr, 900000L);
+    }
+
+    /**
+     * Główna metoda usuwająca sesję na podstawie obiektu UUID.
+     * Idealna do użycia w finishLogin i eventach w grze!
+     */
+    public void deleteSession(UUID uuid) {
+        if (uuid == null) {
+            return;
+        }
+
+        // 1. Czyszczenie z lokalnej pamięci RAM
+        this.sesje.remove(uuid);
+        this.sesjeIP.remove(uuid);
+
+        // 2. Czyszczenie z pliku YML
+        String path = "sessions." + uuid.toString();
+        if (sessionConfig.contains(path)) {
+            sessionConfig.set(path, null);
+
+            try {
+                sessionConfig.save(sessionFile);
+            } catch (IOException e) {
+                plugin.getNoticeManager().sendSessionSaveError(e);
+            }
+        }
+    }
+
+    public void DeleteSession(String uuidString) {
+        if (uuidString == null || uuidString.isEmpty()) {
+            return;
+        }
+
         try {
-            String[] parts = timeRaw.split(" ");
-            long value = Long.parseLong(parts[0]);
-            if (parts.length > 1 && parts[1].startsWith("hour")) return value * 3600000;
-            if (parts.length > 1 && parts[1].startsWith("second")) return value * 1000;
-            return value * 60000;
-        } catch (Exception ex) {
-            return 300000;
+            UUID uuidObiekt = UUID.fromString(uuidString);
+            deleteSession(uuidObiekt); // Wywołujemy główną logikę powyżej
+        } catch (IllegalArgumentException e) {
+            plugin.getNoticeManager().sendInvalidUUIDError(e);
         }
     }
 }

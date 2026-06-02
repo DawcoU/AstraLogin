@@ -51,11 +51,11 @@ public class LoginBlocks implements Listener {
 
     @EventHandler
     public void onMove(PlayerMoveEvent e) {
-        // Sprawdzamy, czy gracz faktycznie zmienił blok (X, Y lub Z)
-        if (e.getFrom().getBlockX() == e.getTo().getBlockX() &&
-                e.getFrom().getBlockZ() == e.getTo().getBlockZ() &&
-                e.getFrom().getBlockY() == e.getTo().getBlockY()) {
-            return;
+        // Pobieramy dokładne współrzędne (Double)
+        if (e.getFrom().getX() == e.getTo().getX() &&
+                e.getFrom().getY() == e.getTo().getY() &&
+                e.getFrom().getZ() == e.getTo().getZ()) {
+            return; // Jeśli zmienił tylko kierunek patrzenia (myszkę), pozwól mu na to
         }
 
         if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {

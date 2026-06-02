@@ -1,6 +1,8 @@
 package pl.dawcou.astralogin;
 
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -14,6 +16,7 @@ public class LanguageManager {
 
     private final JavaPlugin plugin;
     private final Map<String, String> messages = new HashMap<>();
+    private final MiniMessage miniMessage = MiniMessage.builder().strict(false).build();
 
     public LanguageManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -22,7 +25,7 @@ public class LanguageManager {
     }
 
     public void reload() {
-        // 1. Czyścimy mapę, żeby nie dublować przy przeładowaniu
+        // Czyścimy mapę, żeby nie dublować przy przeładowaniu
         messages.clear();
 
         String lang = plugin.getConfig().getString("settings.language", "pl");
@@ -34,24 +37,21 @@ public class LanguageManager {
 
         FileConfiguration langConfig = YamlConfiguration.loadConfiguration(langFile);
 
-        // 2. Pobieramy sekcję "messages" z pliku YAML
+        // Pobieramy sekcję "messages" z pliku YAML
         ConfigurationSection msgSection = langConfig.getConfigurationSection("messages");
 
         if (msgSection != null) {
-            // Przechodzimy po wszystkich kluczach wewnątrz sekcji messages:
             for (String key : msgSection.getKeys(false)) {
                 String msg = msgSection.getString(key);
                 if (msg != null) {
-                    // Wrzucamy do mapy pod samym kluczem (np. "copy-success")
-                    // Dzięki temu getMessage("copy-success") to znajdzie!
-                    messages.put(key, ChatColor.translateAlternateColorCodes('&', msg));
+                    messages.put(key, parseToLegacy(msg));
                 }
             }
         } else {
             // Jeśli plik nie ma sekcji "messages:", czytamy wszystko z głównego poziomu
             for (String key : langConfig.getKeys(false)) {
                 if (langConfig.isString(key)) {
-                    messages.put(key, ChatColor.translateAlternateColorCodes('&', langConfig.getString(key)));
+                    messages.put(key, parseToLegacy(langConfig.getString(key)));
                 }
             }
         }
@@ -70,18 +70,48 @@ public class LanguageManager {
         }
     }
 
-    // Pobiera czystą wiadomość z mapy
+    /**
+     * Główny parser: Zamienia tagi MiniMessage (gradienty, hexy) oraz stare kody '&'
+     * na tradycyjny format kolorów (§), zwracany jako zwykły String.
+     */
+    private String parseToLegacy(String text) {
+        if (text == null) return "";
+
+        // 1. Jeśli linijka ma tagi MiniMessage (gradienty, hexy itp.)
+        if (text.contains("<") && text.contains(">")) {
+            try {
+                // Podmieniamy ewentualne '&' na '§', żeby ujednolicić format przed parsowaniem
+                String prepared = text.replace("&", "§");
+
+                // MiniMessage bezpiecznie przetwarza tu gradienty i kolory HEX na Komponent
+                Component parsed = miniMessage.deserialize(prepared);
+
+                // Serializujemy komponent z powrotem do Stringa z gęsto rozsianymi znakami '§'
+                // Dzięki temu silnik Minecrafta przeczyta gradient ze zwykłego Stringa!
+                return LegacyComponentSerializer.legacySection().serialize(parsed);
+            } catch (Exception e) {
+                // Awaryjny ratunek w razie złej składni w pliku konfiguracyjnym
+                return text.replace("&", "§");
+            }
+        }
+
+        // 2. Jeśli linijka NIE MA tagów MiniMessage, traktujemy ją w 100% klasycznie
+        return text.replace("&", "§");
+    }
+
+    // Pobiera czystą wiadomość z mapy (jako String)
     public String getMessage(String path) {
         return messages.getOrDefault(path, "§cMissing string: " + path);
     }
 
+    // Pobiera wiadomość z prefixem (jako String)
     public String getWithPrefix(String path) {
-        return AstraLogin.PREFIX + " " + getMessage(path);
+        return parseToLegacy(AstraLogin.PREFIX) + " " + getMessage(path);
     }
 
-    // Metoda z placeholderem (np. do {COUNT})
+    // Metoda z placeholderem (np. do {COUNT} lub %type%)
     public String getWithPrefix(String path, String placeholder, String value) {
         String msg = getMessage(path).replace(placeholder, value);
-        return AstraLogin.PREFIX + " " + msg;
+        return parseToLegacy(AstraLogin.PREFIX) + " " + msg;
     }
 }

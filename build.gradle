@@ -1,0 +1,48 @@
+plugins {
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group = 'pl.dawcou'
+version = '3.3.0'
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.papermc.io/repository/maven-public/' }
+}
+
+dependencies {
+    // API serwera (zawsze provided)
+    compileOnly 'io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT'
+
+    // Log4j (zawsze provided, bo Paper to posiada)
+    compileOnly 'org.apache.logging.log4j:log4j-api:2.20.0'
+    compileOnly 'org.apache.logging.log4j:log4j-core:2.20.0'
+
+    // Biblioteki do załączenia w środku (shadow)
+    shadow 'org.mindrot:jbcrypt:0.4'
+    shadow 'org.bstats:bstats-bukkit:3.2.1'
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(17)
+}
+
+processResources {
+    filteringCharset = 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand(version: project.version)
+    }
+}
+
+shadowJar {
+    archiveClassifier.set('')
+    // Dodajemy konfigurację shadow, żeby wciągnęło zależności
+    configurations = [project.configurations.shadow]
+
+    // Relokacja
+    relocate 'org.bstats', 'pl.dawcou.astralogin.bstats'
+    relocate 'org.mindrot.jbcrypt', 'pl.dawcou.astralogin.jbcrypt'
+}
+
+tasks.build.dependsOn shadowJar

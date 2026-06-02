@@ -6,23 +6,24 @@ import org.mindrot.jbcrypt.BCrypt;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class PasswordManager {
 
     private final File file;
     private FileConfiguration config;
 
+    // Cache w RAM-ie zapewniający natychmiastowy dostęp do haseł
+    private final Map<String, String> passwordCache = new HashMap<>();
+
     public PasswordManager(AstraLogin plugin) {
-        // 1. Tworzymy główny folder pluginu (AstraLogin)
-        if (!plugin.getDataFolder().exists()) plugin.getDataFolder().mkdir();
+        File dataDir = new File(plugin.getDataFolder(), "player_data");
+        if (!dataDir.exists()) {
+            dataDir.mkdirs();
+        }
 
-        // 2. Tworzymy folder 'playerdata' wewnątrz folderu pluginu
-        File dataDir = new File(plugin.getDataFolder(), "playerdata");
-        if (!dataDir.exists()) dataDir.mkdir();
-
-        // 3. Ustawiamy plik passwords.yml w nowym podfolderze
         this.file = new File(dataDir, "passwords.yml");
-
         if (!file.exists()) {
             try {
                 file.createNewFile();
@@ -30,45 +31,65 @@ public class PasswordManager {
                 e.printStackTrace();
             }
         }
-        this.config = YamlConfiguration.loadConfiguration(file);
+
+        reload();
     }
 
-    public void zapiszHaslo(String uuid, String haslo) {
+    public void savePassword(String uuid, String haslo) {
+        passwordCache.put(uuid, haslo); // Błyskawiczny zapis do RAM-u
         config.set("passwords." + uuid, haslo);
-        try { config.save(file); } catch (IOException e) { e.printStackTrace(); }
+        save();
     }
 
-    public String getHaslo(String uuid) {
-        return config.getString("passwords." + uuid);
+    public String getPassword(String uuid) {
+        return passwordCache.get(uuid);
     }
 
-    public boolean maHaslo(String uuid) {
-        return config.contains("passwords." + uuid);
+    public boolean hasPassword(String uuid) {
+        return passwordCache.containsKey(uuid);
     }
 
-    public void usunKonto(String uuid) {
+    public void deletePassword(String uuid) {
+        passwordCache.remove(uuid);
         config.set("passwords." + uuid, null);
-        try { config.save(file); } catch (IOException e) { e.printStackTrace(); }
+        save();
     }
 
     public void reload() {
+        this.config = YamlConfiguration.loadConfiguration(file);
+        this.passwordCache.clear();
+
+        // Ładujemy wszystkie hasła do pamięci RAM przy starcie/przeładowaniu
+        if (config.getConfigurationSection("passwords") != null) {
+            for (String key : config.getConfigurationSection("passwords").getKeys(false)) {
+                this.passwordCache.put(key, config.getString("passwords." + key));
+            }
+        }
+    }
+
+    private void save() {
         try {
-            this.config = YamlConfiguration.loadConfiguration(file);
-        } catch (Exception e) {
+            config.save(file);
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    // Używamy przy /register
     public static String hashPassword(String password) {
+        int cost = AstraLogin.getInstance().getConfig().getInt("security.bcrypt.cost", 10);
+
+        // Walidacja kosztu
+        if (cost < 8 || cost > 16) {
+            cost = 10;
+        }
+
         try {
-            return BCrypt.hashpw(password, BCrypt.gensalt(10));
+            return BCrypt.hashpw(password, BCrypt.gensalt(cost));
         } catch (Exception e) {
             return null;
         }
     }
 
-    // Używamy przy /login
     public static boolean verifyPassword(String password, String hashed) {
         try {
             if (hashed == null || !hashed.startsWith("$2a$")) return false;

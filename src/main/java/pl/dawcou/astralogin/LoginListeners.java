@@ -19,40 +19,21 @@ public class LoginListeners implements Listener {
 
 
     private final AstraLogin plugin;
-    private final LoginSystem loginSystem;
     private final SpawnManager spawnManager;
 
     public LoginListeners(AstraLogin plugin) {
         this.plugin = plugin;
-        this.loginSystem = plugin.getLoginSystem();
         this.spawnManager = plugin.getSpawnManager();
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
-        Player p = e.getPlayer();
-        UUID uuid = p.getUniqueId();
-
-        // 1. NAJPIERW ZAPISZ LOKALIZACJĘ
-        if (loginSystem.getZalogowani().contains(uuid)) {
-            spawnManager.saveLastLocation(p);
-
-            if (plugin.getConfig().getBoolean("features.session.enabled")) {
-                loginSystem.getSesje().put(uuid, System.currentTimeMillis());
-                loginSystem.getSesjeIP().put(uuid, p.getAddress().getAddress().getHostAddress());
-            }
-        }
-
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            // "Odkrywamy" go dla wszystkich, żeby silnik wyczyścił stan ukrycia
-            online.showPlayer(plugin, p);
-        }
-
-        loginSystem.getZalogowani().remove(uuid);
+        this.handleQuit(e.getPlayer());
     }
 
     @EventHandler
     public void onJoin(PlayerJoinEvent e) {
+        LoginSystem ls = plugin.getLoginSystem();
         Player p = e.getPlayer();
         UUID uuid = p.getUniqueId();
 
@@ -72,34 +53,38 @@ public class LoginListeners implements Listener {
 
         // --- LOGIKA SESJI ---
         if (plugin.getConfig().getBoolean("features.session.enabled")) {
-            if (loginSystem.getSesje().containsKey(uuid)) {
-
-                if (!plugin.getPasswordManager().maHaslo(uuid.toString())) {
-                    return;
-                }
+            if (plugin.getSessionManager().getSesje().containsKey(uuid)) {
 
                 if (p.getAddress() == null) return;
                 String currentIP = p.getAddress().getAddress().getHostAddress();
-                String savedIP = loginSystem.getSesjeIP().get(uuid);
+                String savedIP = plugin.getSessionManager().getSesjeIP().get(uuid);
 
-                if (savedIP == null || !savedIP.equals(currentIP)) {
-                    loginSystem.getSesje().remove(uuid);
-                    loginSystem.getSesjeIP().remove(uuid);
+                // POBIERAMY IP Z GLÓWNEGO IPManagera (Baza danych gracza)
+                String mainSavedIP = plugin.getIPManager().getIP(uuid.toString());
+
+                // 1. WERYFIKACJA ADRESU IP (DODANY WARUNEK: mainSavedIP == null)
+                if (mainSavedIP == null || savedIP == null || !savedIP.equals(currentIP)) {
+                    // Jeśli IP w bazie zostało zresetowane (jest null), albo IP z sesji się nie zgadza:
+                    // Bezwzględnie kasujemy całą sesję z RAM-u i pliku i NIE ROBIMY RETURN!
+                    plugin.getSessionManager().deleteSession(uuid);
+
                 } else {
-                    String timeRaw = plugin.getConfig().getString("features.session.session-time", "5 minutes").toLowerCase();
-                    long sessionLimitMillis = SessionManager.parseSessionTime(timeRaw);
-                    long lastLogout = loginSystem.getSesje().get(uuid);
+                    // 2. WERYFIKACJA CZASU TRWANIA SESJI
+                    // POPRAWKA: Wykorzystujemy istniejącą metodę z SessionManager (zmień getSessionLimitMillis() w SessionManager na public!)
+                    long sessionLimitMillis = plugin.getSessionManager().getSessionLimitMillis();
+                    long lastLogout = plugin.getSessionManager().getSesje().get(uuid);
 
                     if (System.currentTimeMillis() - lastLogout <= sessionLimitMillis) {
-                        loginSystem.finishLogin(p);
+                        // Sesja prawidłowa -> logujemy gracza automatycznie
+                        ls.finishLogin(p);
 
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("session-restored"));
                         plugin.getLogManager().log("Player " + p.getName() + " had an active session");
 
-                        return; // Sesja przywrócona, kończymy onJoin
+                        return; // Przerywamy onJoin, gracz jest pomyślnie zalogowany!
                     } else {
-                        loginSystem.getSesje().remove(uuid);
-                        loginSystem.getSesjeIP().remove(uuid);
+                        // Sesja wygasła czasowo -> czyszczenie całościowe
+                        plugin.getSessionManager().deleteSession(uuid);
                     }
                 }
             }
@@ -112,15 +97,15 @@ public class LoginListeners implements Listener {
         }
 
         // --- LOGIKA POZA SESJĄ (STANDARDOWY JOIN) ---
-        loginSystem.getStorage().save(p);
+        ls.getStorage().save(p);
         spawnManager.teleport(p, "before_login");
-        loginSystem.getZalogowani().remove(uuid);
+        ls.getZalogowani().remove(uuid);
 
         if (plugin.getConfig().getBoolean("visuals.use-blindness")) {
             p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, Integer.MAX_VALUE, 0, false, false));
         }
 
-        if (loginSystem.getData().maHaslo(uuid.toString())) {
+        if (ls.getData().hasPassword(uuid.toString())) {
             p.sendMessage(plugin.getLanguageManager().getWithPrefix("reminder-login"));
         } else {
             p.sendMessage(plugin.getLanguageManager().getWithPrefix("reminder-register"));
@@ -162,7 +147,7 @@ public class LoginListeners implements Listener {
                 @Override
                 public void run() {
                     // Sprzątanie
-                    if (!p.isOnline() || loginSystem.getZalogowani().contains(p.getUniqueId())) {
+                    if (!p.isOnline() || ls.getZalogowani().contains(p.getUniqueId())) {
                         if (useBossBar) p.hideBossBar(bossBar);
                         this.cancel();
                         return;
@@ -202,19 +187,23 @@ public class LoginListeners implements Listener {
 
     @EventHandler
     public void onPreLogin(AsyncPlayerPreLoginEvent e) {
+        LoginSystem ls = plugin.getLoginSystem();
         UUID uuid = e.getUniqueId();
         String currentIP = e.getAddress().getHostAddress();
-        IPManager ipManager = loginSystem.getIpManager();
+        IPManager ipManager = ls.getIpManager();
         String playerName = e.getName();
 
         // 1. JEDYNE SPRAWDZENIE BANA
         if (ipManager.isIPBanned(currentIP)) {
             long totalSeconds = ipManager.getIPBanTimeLeft(currentIP);
-            String timeFormatted = formatTime(totalSeconds);
-            String reason = ipManager.getBanReason(currentIP); // Pobieramy powód
+
+            // Teraz używamy klasy narzędziowej:
+            String timeFormatted = LoginUtils.formatTime(totalSeconds);
+            String reason = ipManager.getBanReason(currentIP);
+            if (reason == null) reason = "UNKNOWN";
 
             String msg;
-            if (reason.equals("SPAM")) {
+            if ("SPAM".equals(reason)) {
                 msg = plugin.getLanguageManager().getMessage("kick-ip-spammed")
                         .replace("%time%", timeFormatted);
             } else {
@@ -226,7 +215,7 @@ public class LoginListeners implements Listener {
             // Ktoś z banem na IP próbuje się wbić
             plugin.getLogManager().log("Player " + playerName + " (" + currentIP + ") tried to connect but is IP banned. Reason: " + reason);
 
-            e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, msg);
+            e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, net.kyori.adventure.text.Component.text(msg));
             return;
         }
 
@@ -244,7 +233,7 @@ public class LoginListeners implements Listener {
                 // Ktoś zna hasło/wchodzi na konto, ale IP się nie zgadza z zapisanym
                 plugin.getLogManager().log("Player " + playerName + " was blocked by IP-Lock. Current IP: " + currentIP + ", Saved IP: " + savedIP);
 
-                e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, msg);
+                e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, net.kyori.adventure.text.Component.text(msg));
                 return;
             }
         }
@@ -254,23 +243,52 @@ public class LoginListeners implements Listener {
             // Tutaj tak samo – czysto i bez śmiecenia dodatkowymi parametrami
             if (zapisaneIP == null || !IPSecurity.CheckIP(zapisaneIP, currentIP)) {
                 int limit = plugin.getConfig().getInt("security.anti-multiaccount.limit", 2);
-                int ileKont = ipManager.getIloscKontByIP(currentIP);
+                int ileKont = ipManager.getNumberOfAccountsByIP(currentIP);
 
                 if (ileKont >= limit) {
                     // Przekroczenie limitu kont na jednym IP
                     plugin.getLogManager().log("Player " + playerName + " (" + currentIP + ") was blocked by Anti-MultiAccount. Limit: " + limit + ", Current: " + ileKont);
 
-                    e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED,
-                            plugin.getLanguageManager().getMessage("anti-multiaccount-kick"));
+                    e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, net.kyori.adventure.text.Component.text(plugin.getLanguageManager().getMessage("anti-multiaccount-kick")));
                     return;
                 }
             }
         }
     }
 
-    private String formatTime(long totalSeconds) {
-        long minutes = totalSeconds / 60;
-        long seconds = totalSeconds % 60;
-        return minutes + "m " + seconds + "s";
+    public void handleQuit(Player p) {
+        // 1. Pobieramy aktualne instancje bezpośrednio z pluginu, żeby uniknąć Nullowania
+        LoginSystem ls = plugin.getLoginSystem();
+        SpawnManager sm = plugin.getSpawnManager();
+        SessionManager ss = plugin.getSessionManager();
+
+        // 2. Logika zapisu (tylko jeśli gracz był zalogowany)
+        if (ls != null && ls.getZalogowani() != null && ls.getZalogowani().contains(p.getUniqueId())) {
+
+            if (sm != null) {
+                sm.saveLastLocation(p);
+            }
+
+            if (plugin.getConfig().getBoolean("features.session.enabled") && ss != null) {
+                long now = System.currentTimeMillis();
+                ss.getSesje().put(p.getUniqueId(), now);
+                ss.getSesjeIP().put(p.getUniqueId(), p.getAddress().getAddress().getHostAddress());
+            }
+        }
+
+        // 3. Logika widoczności (silnikowe odświeżenie)
+        for (Player online : Bukkit.getOnlinePlayers()) {
+                online.showPlayer(plugin, p);
+        }
+
+        // 4. Usuwamy z mapy zalogowanych
+        if (ls != null && ls.getZalogowani() != null) {
+            ls.getZalogowani().remove(p.getUniqueId());
+        }
+
+        // 5. ATOMOWY ZAPIS (sesje zapisane na dysk raz, na końcu)
+        if (ss != null) {
+            ss.saveSessionsToConfig();
+        }
     }
 }

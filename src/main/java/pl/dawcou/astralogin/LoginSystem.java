@@ -1,27 +1,19 @@
 package pl.dawcou.astralogin;
 
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Listener;
 import org.bukkit.potion.PotionEffectType;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
+public class LoginSystem implements CommandExecutor, TabCompleter {
 
     private final PasswordManager data;
     private final AstraLogin plugin;
@@ -31,16 +23,12 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
     private final SpawnManager spawnManager;
 
     private final Set<UUID> zalogowani = new HashSet<>();
-    private final Map<UUID, Long> sesje = new HashMap<>();
-    private final Map<UUID, String> sesjeIP = new HashMap<>();
 
-    public Map<UUID, Long> getSesje() {
-        return sesje;
-    }
-
-    public Map<UUID, String> getSesjeIP() {
-        return sesjeIP;
-    }
+    public Set<UUID> getZalogowani() { return zalogowani; }
+    public InventoryManager getStorage() { return storage; }
+    public PasswordManager getData() { return data; }
+    public AttemptManager getAttemptManager() { return attemptManager; }
+    public IPManager getIpManager() { return this.ipManager; }
 
     public LoginSystem(AstraLogin plugin, PasswordManager data, InventoryManager storage, IPManager ipManager, SpawnManager spawnManager) {
         this.plugin = plugin;
@@ -65,30 +53,64 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-reset-password"));
                 return true;
             }
-            @SuppressWarnings("deprecation")
-            OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
-            if (!data.maHaslo(target.getUniqueId().toString())) {
+
+            String targetName = args[0];
+            UUID targetUUID = null;
+            org.bukkit.configuration.file.FileConfiguration accountsConfig = plugin.getAccountDataManager().getConfig();
+
+            // 1. Szukamy UUID w historii kont, żeby nie lagować serwera przez getOfflinePlayer
+            if (accountsConfig.getConfigurationSection("accounts") != null) {
+                for (String uuidKey : accountsConfig.getConfigurationSection("accounts").getKeys(false)) {
+                    String knownName = accountsConfig.getString("accounts." + uuidKey + ".last-known-name");
+                    if (knownName != null && knownName.equalsIgnoreCase(targetName)) {
+                        targetUUID = UUID.fromString(uuidKey);
+                        targetName = knownName; // Pobieramy poprawną wielkość liter z pliku (np. DawcoU)
+                        break;
+                    }
+                }
+            }
+
+            // 2. Jeśli nie grali u nas, to sprawdzamy tradycyjnie przez Bukkit na wszelki wypadek
+            if (targetUUID == null) {
+                org.bukkit.OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
+                targetUUID = target.getUniqueId();
+            }
+
+            String uuidString = targetUUID.toString();
+
+            // 3. Sprawdzamy hasło i usuwamy dane z Twoich plików passwords.yml i ips.yml
+            if (!data.hasPassword(uuidString)) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-account-reset"));
                 return true;
             }
-            data.usunKonto(target.getUniqueId().toString());
-            ipManager.usunIP(target.getUniqueId().toString());
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("admin-reset-password-success", "%player%", args[0]));
+
+            data.deletePassword(uuidString);
+            ipManager.deleteIP(uuidString);
+
+            // 4. Wywołujemy naszą metodę z managera
+            plugin.getAccountDataManager().invalidateRegistration(targetUUID);
+
+            // 5. Sukces, logi i wiadomości
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("admin-reset-password-success", "%player%", targetName));
 
             String adminName = sender.getName();
-            // Pobieramy nick gracza, któremu resetujemy hasło
-            String targetName = target.getName() != null ? target.getName() : args[0];
-
-            // Zapisujemy czyste, profesjonalne info do pliku logów
             plugin.getLogManager().log("Admin " + adminName + " reset password for player " + targetName);
 
-            if (target.isOnline() && target.getPlayer() != null) {
-                Player targetP = target.getPlayer();
-                zalogowani.remove(target.getUniqueId());
+            // 6. NAPRAWIONA LOGIKA DLA GRACZA ONLINE (Wyrzucanie i czyszczenie)
+            org.bukkit.entity.Player targetP = Bukkit.getPlayer(targetUUID); // Pobieramy gracza po UUID (szybkie i bezpieczne)
 
-                ipManager.resetIPAttempts(targetP.getAddress().getAddress().getHostAddress());
-                target.getPlayer().kickPlayer(plugin.getLanguageManager().getMessage("player-reset-password-kick"));
+            if (targetP != null && targetP.isOnline()) {
+                // Usuwamy z listy zalogowanych
+                zalogowani.remove(targetUUID);
+
+                // Resetujemy próby błędnych logowań dla jego IP
+                String playerIP = targetP.getAddress().getAddress().getHostAddress();
+                ipManager.resetIPAttempts(playerIP);
+
+                // Wyrzucamy gracza z serwera wiadomością z pliku językowego przez getMessage
+                targetP.kick(net.kyori.adventure.text.Component.text(plugin.getLanguageManager().getMessage("player-reset-password-kick")));
             }
+
             return true;
         }
 
@@ -115,7 +137,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             }
 
             // 2. Najpierw sprawdzamy stare hasło (POPRAWNIE - metodą verify)
-            String obecneHasloWPliku = data.getHaslo(p.getUniqueId().toString());
+            String obecneHasloWPliku = data.getPassword(p.getUniqueId().toString());
             if (obecneHasloWPliku == null || !PasswordManager.verifyPassword(stareWpisane, obecneHasloWPliku)) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("wrong-old-password"));
 
@@ -157,10 +179,10 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
 
             // 5. HASZUJEMY RAZ I ZAPISUJEMY (Nowe hasło, nie stare!)
             String noweHasloHash = PasswordManager.hashPassword(nowe1);
-            data.zapiszHaslo(p.getUniqueId().toString(), noweHasloHash);
+            data.savePassword(p.getUniqueId().toString(), noweHasloHash);
 
             zalogowani.remove(p.getUniqueId());
-            p.kickPlayer(plugin.getLanguageManager().getMessage("success-change-password"));
+            p.kick(net.kyori.adventure.text.Component.text(plugin.getLanguageManager().getMessage("success-change-password")));
             plugin.getLogManager().log("Player " + p.getName() + " Changed his password");
             return true;
         }
@@ -186,30 +208,21 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             boolean confirmed = (args.length > 2 && args[2].equalsIgnoreCase("confirm"));
 
             if (spawnManager.hasSpawn(type) && !confirmed) {
-                // 1. PREFIX I KOLORY: Używamy fromLegacyText
-                String baseMsg = plugin.getLanguageManager().getWithPrefix("spawn-exists", "%type%", type);
-                BaseComponent[] baseComponent = TextComponent.fromLegacyText(baseMsg + " ");
+                // 1. Pobieramy wiadomości z Twojego managera (jako zwykłe Stringi)
+                String baseMsgStr = plugin.getLanguageManager().getWithPrefix("spawn-exists", "%type%", type);
+                String btnTextStr = plugin.getLanguageManager().getMessage("spawn-overwrite-button");
+                String hoverTextStr = plugin.getLanguageManager().getMessage("spawn-overwrite-hover").replace("%type%", type);
 
-                // 2. PRZYCISK: Też z kolorami z configu
-                String btnText = plugin.getLanguageManager().getMessage("spawn-overwrite-button");
-                TextComponent confirmBtn = new TextComponent(TextComponent.fromLegacyText(btnText));
+                // 2. Tworzymy główną wiadomość i automatycznie pozwalamy Paperowi na parsowanie starych kolorów '&'
+                net.kyori.adventure.text.Component baseMsg = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(baseMsgStr + " ");
 
-                confirmBtn.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/astralogin setspawn " + type + " confirm"));
+                // 3. Tworzymy klikalny przycisk z tekstem, eventem kliknięcia oraz hoverem (podpowiedzią po najechaniu)
+                net.kyori.adventure.text.Component confirmBtn = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(btnTextStr)
+                        .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/astralogin setspawn " + type + " confirm"))
+                        .hoverEvent(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(hoverTextStr));
 
-                // 3. HOVER (NAPRAWA %type%): Musimy ręcznie zamienić placeholder
-                String hoverText = plugin.getLanguageManager().getMessage("spawn-overwrite-hover")
-                        .replace("%type%", type); // <-- TO TEGO BRAKOWAŁO!
-
-                confirmBtn.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText(hoverText)));
-
-                // Składamy wiadomość, żeby prefix nie był biały
-                TextComponent finalMsg = new TextComponent("");
-                for (BaseComponent bc : baseComponent) {
-                    finalMsg.addExtra(bc);
-                }
-                finalMsg.addExtra(confirmBtn);
-
-                p.spigot().sendMessage(finalMsg);
+                // 4. Składamy wszystko w jedną całość i wysyłamy prosto do gracza
+                p.sendMessage(baseMsg.append(confirmBtn));
                 return true;
             }
 
@@ -260,27 +273,20 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             }
 
             // 3. POKAZYWANIE PRZYCISKU Z POPRAWNYM HOVEREM I KOLORAMI
-            String baseMsg = plugin.getLanguageManager().getWithPrefix("spawn-delete-confirm", "%type%", type);
-            BaseComponent[] message = TextComponent.fromLegacyText(baseMsg + " ");
+            String baseMsgStr = plugin.getLanguageManager().getWithPrefix("spawn-delete-confirm", "%type%", type);
+            String btnTextStr = plugin.getLanguageManager().getMessage("spawn-delete-button");
+            String hoverTextStr = plugin.getLanguageManager().getMessage("spawn-delete-hover").replace("%type%", type);
 
-            String btnText = plugin.getLanguageManager().getMessage("spawn-delete-button");
-            TextComponent confirmBtn = new TextComponent(TextComponent.fromLegacyText(btnText));
+            // Automatycznie parsujemy kolory '&' z Twojego managera do komponentu
+            net.kyori.adventure.text.Component baseMsg = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(baseMsgStr + " ");
 
-            confirmBtn.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/astralogin delspawn " + type + " confirm"));
+            // Tworzymy klikalny przycisk usuwania z hoverem
+            net.kyori.adventure.text.Component confirmBtn = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(btnTextStr)
+                    .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/astralogin delspawn " + type + " confirm"))
+                    .hoverEvent(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(hoverTextStr));
 
-            String hoverText = plugin.getLanguageManager().getMessage("spawn-delete-hover")
-                    .replace("%type%", type);
-
-            confirmBtn.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText(hoverText)));
-
-            // Budujemy wiadomość, aby prefix nie był biały
-            TextComponent finalMsg = new TextComponent("");
-            for (BaseComponent bc : message) {
-                finalMsg.addExtra(bc);
-            }
-            finalMsg.addExtra(confirmBtn);
-
-            p.spigot().sendMessage(finalMsg);
+            // Łączymy w jedno i wysyłamy nowoczesną metodą bezpośrednio do gracza
+            p.sendMessage(baseMsg.append(confirmBtn));
             return true;
         }
 
@@ -319,72 +325,76 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 return true;
             }
 
-            if (data.getHaslo(p.getUniqueId().toString()) != null) {
+            if (data.getPassword(p.getUniqueId().toString()) != null) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("has-account"));
                 return true;
             }
 
-            if (args.length == 2) {
-                if (!args[0].equals(args[1])) {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("passwords-not-match"));
-                    return true;
-                }
-
-                // Pobieramy min z configu, ale Math.max pilnuje, żeby wartość NIGDY nie była mniejsza niż 5
-                int min = plugin.getConfig().getInt("features.password.min-password-length");
-                min = Math.max(5, min);
-
-                // Pobieramy max z configu, ale Math.min pilnuje, żeby wartość NIGDY nie przekroczyła 32
-                int max = plugin.getConfig().getInt("features.password.max-password-length");
-                max = Math.min(32, max);
-
-                // Dodatkowe zabezpieczenie: gdyby admin w configu ustawił min większe niż max (np. min: 20, max: 10)
-                if (min > max) {
-                    min = 6;
-                    max = 24;
-                }
-
-                if (args[0].length() < min) {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-too-short", "%min%", String.valueOf(min)));
-                    return true;
-                }
-                if (args[0].length() > max) {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-too-long", "%max%", String.valueOf(max)));
-                    return true;
-                }
-
-                // --- PRZYGOTOWANIE DANYCH DO ASYNC ---
-                String ip = p.getAddress().getAddress().getHostAddress();
-                String passwordToHash = args[0];
-                String uuid = p.getUniqueId().toString();
-
-                plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
-                    // 1. Hashujemy (ciężkie dla CPU)
-                    String hashedPass = PasswordManager.hashPassword(passwordToHash);
-
-                    // 2. Zapisujemy dane (operacje na plikach - IO)
-                    data.zapiszHaslo(uuid, hashedPass);
-                    ipManager.zapiszIP(uuid, ip);
-
-                    // 3. Wracamy na główny wątek (Sync)
-                    p.getScheduler().run(plugin, synctask -> {
-                        if (!p.isOnline()) return;
-
-                        finishLogin(p);
-                        p.sendTitle(
-                                plugin.getLanguageManager().getMessage("title-register"),
-                                plugin.getLanguageManager().getMessage("subtitle-register"),
-                                10, 40, 10
-                        );
-                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-register"));
-                        storage.restore(p);
-                        plugin.getLogManager().log("Player " + p.getName() + " Registered");
-                    }, null);
-                });
-
-            } else {
+            if (args.length != 2) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-register"));
+                return true;
             }
+
+            if (!args[0].equals(args[1])) {
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("passwords-not-match"));
+                return true;
+            }
+
+            // Pobieramy min z configu, ale Math.max pilnuje, żeby wartość NIGDY nie była mniejsza niż 5
+            int min = plugin.getConfig().getInt("features.password.min-password-length");
+            min = Math.max(5, min);
+
+            // Pobieramy max z configu, ale Math.min pilnuje, żeby wartość NIGDY nie przekroczyła 32
+            int max = plugin.getConfig().getInt("features.password.max-password-length");
+            max = Math.min(32, max);
+
+            // Dodatkowe zabezpieczenie: gdyby admin w configu ustawił min większe niż max (np. min: 20, max: 10)
+            if (min > max) {
+                min = 6;
+                max = 24;
+            }
+
+            if (args[0].length() < min) {
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-too-short", "%min%", String.valueOf(min)));
+                return true;
+            }
+            if (args[0].length() > max) {
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-too-long", "%max%", String.valueOf(max)));
+                return true;
+            }
+
+            // --- PRZYGOTOWANIE DANYCH DO ASYNC ----
+            UUID playerUUID = p.getUniqueId();                     // Unikalne UUID gracza (do metod data managera)
+            String uuidString = playerUUID.toString();            // UUID jako String (do Twoich dotychczasowych plików)
+            String playerName = p.getName();                      // Nick gracza
+            String ip = p.getAddress().getAddress().getHostAddress(); // IP gracza
+            String passwordToHash = args[0];                      // Surowe hasło do zahashowania BCryptem
+
+            plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
+                // 1. Hashujemy (ciężkie dla CPU)
+                String hashedPass = PasswordManager.hashPassword(passwordToHash);
+
+                // 2. Zapisujemy dane (operacje na plikach - IO)
+                data.savePassword(uuidString, hashedPass);
+                ipManager.saveIP(uuidString, ip);
+
+                // 3. Wracamy na główny wątek (Sync)
+                p.getScheduler().run(plugin, synctask -> {
+                    if (!p.isOnline()) return;
+
+                    finishLogin(p);
+                    p.sendTitle(
+                            plugin.getLanguageManager().getMessage("title-register"),
+                            plugin.getLanguageManager().getMessage("subtitle-register"),
+                            10, 40, 10
+                    );
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-register"));
+                    storage.restore(p);
+                    plugin.getLogManager().log("Player " + p.getName() + " Registered");
+
+                    plugin.getAccountDataManager().recordRegister(playerUUID, playerName, ip);
+                }, null);
+            });
             return true;
         }
 
@@ -395,7 +405,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             }
 
             String uuid = p.getUniqueId().toString();
-            String pass = data.getHaslo(uuid);
+            String pass = data.getPassword(uuid);
 
             if (pass == null) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("no-account"));
@@ -410,12 +420,14 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
             if (args.length == 1) {
                 String inputPassword = args[0];
                 String currentIP = p.getAddress().getAddress().getHostAddress();
+                String playerName = p.getName(); // <-- Pobieramy nick na głównym wątku bezpiecznie!
+                UUID playerUUID = p.getUniqueId(); // <-- Pobieramy czyste UUID dla managera
 
                 plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
                     if (PasswordManager.verifyPassword(inputPassword, pass)) {
 
                         if (ipManager.getIP(uuid) == null) {
-                            ipManager.zapiszIP(uuid, currentIP);
+                            ipManager.saveIP(uuid, currentIP);
                         }
 
                         p.getScheduler().run(plugin, synctask -> {
@@ -430,6 +442,14 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-login"));
                             storage.restore(p);
                             plugin.getLogManager().log("Player " + p.getName() + " logged in");
+
+                            // KOD ZAPISU STATYSTYK - UŻYWA BEZPIECZNYCH ZMIENNYCH:
+                            plugin.getAccountDataManager().recordLogin(
+                                    playerUUID,
+                                    playerName,
+                                    currentIP
+                            );
+
                         }, null);
 
                     } else {
@@ -457,8 +477,7 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
         String ip = p.getAddress().getAddress().getHostAddress();
 
         zalogowani.add(uuid);
-        sesje.remove(uuid);
-        sesjeIP.remove(uuid);
+        plugin.getSessionManager().deleteSession(uuid);
 
         p.removePotionEffect(PotionEffectType.BLINDNESS);
 
@@ -509,10 +528,4 @@ public class LoginSystem implements CommandExecutor, Listener, TabCompleter {
                 .filter(s -> s.toLowerCase().startsWith(lastArg))
                 .collect(java.util.stream.Collectors.toList());
     }
-
-    public Set<UUID> getZalogowani() { return zalogowani; }
-    public InventoryManager getStorage() { return storage; }
-    public PasswordManager getData() { return data; }
-    public AttemptManager getAttemptManager() { return attemptManager; }
-    public IPManager getIpManager() { return this.ipManager; }
 }

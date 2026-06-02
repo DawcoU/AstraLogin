@@ -33,7 +33,6 @@ public class IPSecurity implements CommandExecutor {
             return true;
         }
 
-        @SuppressWarnings("deprecation")
         OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
         String uuid = target.getUniqueId().toString();
 
@@ -45,13 +44,14 @@ public class IPSecurity implements CommandExecutor {
         }
 
         // Usuwamy IP
-        ipManager.usunIP(uuid);
+        ipManager.deleteIP(uuid);
 
         // Pobieramy obiekt zalogowanego gracza, jeśli jest na serwerze
         Player onlineTarget = Bukkit.getPlayer(target.getUniqueId());
         if (onlineTarget != null) {
             // Wyrzucamy gracza z serwera z wiadomością z managera językowego
-            onlineTarget.kickPlayer(plugin.getLanguageManager().getMessage("player-reset-ip-kick"));
+            String kickReason = plugin.getLanguageManager().getMessage("player-reset-ip-kick");
+            onlineTarget.kick(net.kyori.adventure.text.Component.text(kickReason));
         }
 
         // Pobieramy wiadomość z messages.yml i podmieniamy %player%
@@ -61,7 +61,7 @@ public class IPSecurity implements CommandExecutor {
         sender.sendMessage(successMsg);
 
         String adminName = sender.getName();
-        // Pobieramy nick gracza, któremu resetujemy hasło
+        // Pobieramy nick gracza, któremu resetujemy IP
         String targetName = target.getName() != null ? target.getName() : args[0];
         plugin.getLogManager().log("Admin " + adminName + " reset IP for player " + targetName);
         return true;
