@@ -5,7 +5,7 @@
 # #                                                           #
 # #############################################################
 
-# You can use color codes (e.g., &a, &c, &l) and placeholders like %time%, %player%, %min%.
+# You can use color codes (e.g., &a, &c, &l), HEX codes, gradients, and placeholders like %time%, %player%, %min%.
 
 messages:
   # --- General / System ---
@@ -33,11 +33,12 @@ messages:
   password-too-long: "&cPassword is too long! Maximum &6%max% &ccharacters"
   usage-change-password: "&cCorrect usage: &e/changepassword <old> <new> <repeat>"
   wrong-old-password: "&cOld password is incorrect!"
-  success-change-password: "&aYour password has been changed! &ePlease log in again"
+  success-change-password-kick: "&aYour password has been changed! &ePlease log in again"
+  success-change-password: "&aYour password has been successfully changed!"
   password-is-identical: "&cThe new password is identical to the old one!"
 
   # --- Security & Bans ---
-  kick-timeout: "&cLogin Timeout Expired!"
+  kick-timeout: "&cLogin time expired!"
   kick-max-attempts: "&cToo many failed login attempts! Remaining attempts: &6%remaining%"
   kick-max-attempts-ban: "&cToo many failed attempts! You are banned for &6%time%"
   anti-multiaccount-kick: "&cThe account limit for this IP has been reached!"
@@ -45,14 +46,14 @@ messages:
   ip-lock-kick: "&cYour IP does not match this account!"
 
   # --- Sessions & UI ---
-  timer-message: "&ePlease log in in &6%time%s&e!"
+  timer-message: "&ePlease log in in &6%time%&e!"
   title-login: "&a&lLOGGED IN"
   subtitle-login: "&7Welcome back!"
   title-register: "&a&lREGISTERED"
   subtitle-register: "&7Welcome to the server!"
   session-restored: "&eSession active &aLogged in automatically"
 
-  # --- Admin Commands ---
+  # --- /resetpassword and /resetip commands ---
   usage-reset-password: "&cCorrect usage: &e/resetpassword <player>"
   usage-reset-ip: "&cCorrect usage: &e/resetip <player>"
   no-account-reset: "&cThis player has no registered password!"
@@ -61,30 +62,74 @@ messages:
   player-reset-password-kick: "&cYour password has been reset by the administrator!"
   player-reset-ip-kick: "&cYour IP address has been reset by the administrator!"
 
+  # 2FA Messages
+  2fa-usage: "&cCorrect usage: &6/2fa setup, next, unsetup, confirm | <code>"
+  2fa-already-enabled: "&cYou already have 2FA enabled!"
+  2fa-not-enabled: "&cYou do not have 2FA enabled!"
+  2fa-setup-instructions:
+    - "&7&m----------------------------------------------------------------"
+    - "&6&l2FA - Setup"
+    - "&eKey: &f%secret%"
+    - "&eEnter the code in the app, then: &6/2fa <code>"
+    - "&7&m----------------------------------------------------------------"
+  2fa-setup-backups-codes:
+    - "&eBackup Codes:"
+    - "%codes%"
+    - "&6Use one of these if you lose access to the app!"
+  2fa-timer: "&aTime to setup: &e%seconds%"
+  2fa-expired: "&cVerification time has expired!"
+  2fa-setup-already-active: "&cYou're already setting up 2FA!"
+  2fa-not-in-setup: "&cYou are not in the process of setting up/removing 2FA"
+  2fa-success: "&a2FA security successfully enabled!"
+  title-2fa: "&b&l2FA"
+  2fa-removed-success: "&a2FA successfully removed!"
+  2fa-wrong-code: "&cIncorrect 2FA code"
+  2fa-required: "&eEnter the code from the app: &6/2fa <code>"
+  session-2fa-expired: "&cYour 2FA session has expired! Enter the code"
+  2fa-not-needed: "&cYou do not need to enter the 2FA code at this time"
+  2fa-unsetup-instructions: "&cTo disable 2FA, enter the code: /2fa unsetup <code>"
+
   # /account Command
-  account-usage: "§cCorrect usage: &e/account <nick>"
-  account-not-found: "§cPlayer &6%target% &cnever registered on the server"
-  account-stats-header: "§8--- §6Account statistics: §e%target% §8---"
-  account-stats-uuid: "§7UUID: §f%uuid%"
-  account-stats-ip: "§7Last IP: §f%ip%"
-  account-stats-reg-date: "§7Registration date: §f%register_date%"
-  account-stats-login-date: "§7Last login: §f%login_date%"
-  account-stats-status: "§7Registration status: %status%"
-  account-status-active: "§aRegistered"
-  account-status-waiting: "§eWaiting for re-registration (Reset)"
-  account-stats-footer: "§8--------------------------------"
+  account-usage: "&cCorrect usage: &e/account <nick>"
+  account-not-found: "&cPlayer &6%target% &cnever registered on the server"
+  account-stats-header: "&8--- &6Account statistics: &e%target% &8---"
+  account-stats-uuid: "&7UUID: &f%uuid%"
+  account-stats-ip: "&7Last IP: &f%ip%"
+  account-stats-reg-date: "&7Registration date: &f%register_date%"
+  account-stats-login-date: "&7Last login: &f%login_date%"
+  account-stats-status: "&7Registration status: %status%"
+  account-status-not-active-register: "&cUnregistered"
+  account-stats-status-2fa: "&72FA Status: %status%"
+  account-status-active-2fa: "&aEnabled"
+  account-status-not-active-2fa: "&cDisabled"
+  account-stats-footer: "&8--------------------------------"
+
+  # /kontalista command
+  accounts-list-generating: "&7Loading list of registered accounts..."
+  accounts-list-empty: "&cAccount database is empty"
+  accounts-list-header: "&7===== &6Registered Accounts &7====="
+  accounts-list-format: "&7- &e{name} &7(&aUUID: &b{uuid}&7)"
+  accounts-list-footer: "&7==================================================="
 
   # /listaip command
   listaip-generating: "&7Loading IP List..."
   listaip-empty: "&cIP address database is empty"
-  listaip-header: "§8--- §6Used IP Register §8---"
-  listaip-format: "§e{ip} §b(§6Accounts: {count}§b) §7-> §a{players}"
-  listaip-footer: "§8------------------------------------------------"
+  listaip-header: "&7===== &6Registered IP &7====="
+  listaip-format: "&e{ip} &b(&6Accounts: {count}&b) &7-> &a{players}"
+  listaip-footer: "&7=========================================="
 
   # /resetaccount command
-  usage-purge-account: "§cCorrect usage: &e/resetaccount <nickname>"
-  admin-purge-success: "§aSuccessfully deleted ALL account data for player §e%player%"
-  player-purge-kick: "§cYour account has been completely removed from the server database by the administrator"
+  usage-purge-account: "&cCorrect usage: &e/resetaccount <nickname>"
+  admin-purge-success: "&aSuccessfully deleted ALL account data for player &e%player%"
+  player-purge-kick: "&cYour account has been completely removed from the server database by the administrator"
+
+  # /zresetuj2fa Command
+  usage-reset-2fa: "&cCorrect usage: &e/zresetuj2fa <nick>"
+  admin-reset-2fa-success: "&aSuccessfully removed 2-step verification from player &e%player%"
+  2fa-not-found: "&cPlayer &6%target% &cdoes not have 2-step verification (2FA) enabled!"
+  2fa-player-is-waiting: "&cPlayer &6%target% &cis being verified!"
+  2fa-player-is-setting-up: "&cPlayer &6%target% &cis setting up 2FA!"
+  player-reset-2fa: "&cYour 2-step verification has been removed by an administrator"
 
   # --- Spawn System ---
   spawn-set-success: "&aSuccessfully set location for: &e%type%"

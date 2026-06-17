@@ -74,7 +74,7 @@ public class LanguageManager {
      * Główny parser: Zamienia tagi MiniMessage (gradienty, hexy) oraz stare kody '&'
      * na tradycyjny format kolorów (§), zwracany jako zwykły String.
      */
-    private String parseToLegacy(String text) {
+    public String parseToLegacy(String text) {
         if (text == null) return "";
 
         // 1. Jeśli linijka ma tagi MiniMessage (gradienty, hexy itp.)
@@ -99,19 +99,24 @@ public class LanguageManager {
         return text.replace("&", "§");
     }
 
-    // Pobiera czystą wiadomość z mapy (jako String)
+    // Pobiera czystą wiadomość z mapy i od razu ją konwertuje (Z PREFIXEM LUB BEZ - zależy co masz w configu)
     public String getMessage(String path) {
-        return messages.getOrDefault(path, "§cMissing string: " + path);
+        String rawMessage = messages.getOrDefault(path, "§cNo message: " + path);
+        return parseToLegacy(rawMessage);
     }
 
-    // Pobiera wiadomość z prefixem (jako String)
+    // Pobiera wiadomość z prefixem SZTYWNO na początku (zostawiamy)
     public String getWithPrefix(String path) {
         return parseToLegacy(AstraLogin.PREFIX) + " " + getMessage(path);
     }
 
-    // Metoda z placeholderem (np. do {COUNT} lub %type%)
+    // Metoda z placeholderem (teraz bezpiecznie przetwarza podmieniony tekst)
     public String getWithPrefix(String path, String placeholder, String value) {
-        String msg = getMessage(path).replace(placeholder, value);
-        return parseToLegacy(AstraLogin.PREFIX) + " " + msg;
+        // 1. Pobieramy SUROWY tekst z mapy, żeby placeholder się podmienił zanim wejdą sekcje '§'
+        String rawMessage = messages.getOrDefault(path, "§cNo message: " + path);
+        String msg = rawMessage.replace(placeholder, value);
+
+        // 2. Dopiero teraz formatujemy całość
+        return parseToLegacy(AstraLogin.PREFIX) + " " + parseToLegacy(msg);
     }
 }

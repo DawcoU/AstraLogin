@@ -61,17 +61,22 @@ public class AccountManager implements CommandExecutor {
             String regDate = config.getString(path + "register-date", "Brak danych");
             String loginDate = config.getString(path + "last-login-date", "Brak danych");
             boolean isRegistered = config.getBoolean(path + "is-registered", false);
+            boolean Has2FA = config.getBoolean(path + "2fa-enabled", false);
 
-            String statusText = isRegistered ?
-                    plugin.getLanguageManager().getMessage("account-status-active") :
-                    plugin.getLanguageManager().getMessage("account-status-waiting");
+            if (!isRegistered) {
+                regDate = plugin.getLanguageManager().getMessage("account-status-not-active-register");
+            }
+
+            String statusText2FA = Has2FA ?
+                    plugin.getLanguageManager().getMessage("account-status-active-2fa") :
+                    plugin.getLanguageManager().getMessage("account-status-not-active-2fa");
 
             sender.sendMessage(plugin.getLanguageManager().getMessage("account-stats-header").replace("%target%", targetName));
             sender.sendMessage(plugin.getLanguageManager().getMessage("account-stats-uuid").replace("%uuid%", targetUUIDString));
             sender.sendMessage(plugin.getLanguageManager().getMessage("account-stats-ip").replace("%ip%", ip));
             sender.sendMessage(plugin.getLanguageManager().getMessage("account-stats-reg-date").replace("%register_date%", regDate));
             sender.sendMessage(plugin.getLanguageManager().getMessage("account-stats-login-date").replace("%login_date%", loginDate));
-            sender.sendMessage(plugin.getLanguageManager().getMessage("account-stats-status").replace("%status%", statusText));
+            sender.sendMessage(plugin.getLanguageManager().getMessage("account-stats-status-2fa").replace("%status%", statusText2FA));
             sender.sendMessage(plugin.getLanguageManager().getMessage("account-stats-footer"));
 
             return true;
@@ -124,7 +129,8 @@ public class AccountManager implements CommandExecutor {
             plugin.getIPManager().deleteIP(uuidString);
             plugin.getInventoryManager().deleteInventoryCache(uuidString);
             plugin.getSpawnManager().deletePlayerSpawn(uuidString);
-            plugin.getSessionManager().DeleteSession(uuidString);
+            plugin.getSessionManager().deleteSession(targetUUID);
+            plugin.getSessionManager().deleteSession2FA(targetUUID);
 
             plugin.getAccountDataManager().purgeAccountData(targetUUID);
 
@@ -181,6 +187,57 @@ public class AccountManager implements CommandExecutor {
 
                 // Wysyłamy stopkę bezpośrednio z managera
                 sender.sendMessage(plugin.getLanguageManager().getMessage("listaip-footer"));
+            });
+
+            return true;
+        }
+
+        else if (command.getName().equalsIgnoreCase("listakont") || command.getName().equalsIgnoreCase("accountslist")) {
+            if (!sender.hasPermission("astralogin.accountslist")) {
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
+                return true;
+            }
+
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("accounts-list-generating"));
+
+            plugin.getServer().getAsyncScheduler().runNow(plugin, (task) -> {
+                FileConfiguration config = plugin.getAccountDataManager().getConfig();
+
+                if (config.getConfigurationSection("accounts") == null) {
+                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("accounts-list-empty"));
+                    return;
+                }
+
+                java.util.List<String> formattedAccounts = new java.util.ArrayList<>();
+                String format = plugin.getLanguageManager().getMessage("accounts-list-format");
+
+                for (String uuidKey : config.getConfigurationSection("accounts").getKeys(false)) {
+                    String path = "accounts." + uuidKey + ".";
+
+                    // Filtrujemy tylko realnie zarejestrowanych graczy
+                    if (config.getBoolean(path + "is-registered", false)) {
+                        String knownName = config.getString(path + "last-known-name", "Unknown");
+
+                        // Formatujemy linijkę – teraz bez zmiennej {ip}
+                        String line = format
+                                .replace("{name}", knownName)
+                                .replace("{uuid}", uuidKey);
+
+                        formattedAccounts.add(line);
+                    }
+                }
+
+                if (formattedAccounts.isEmpty()) {
+                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("accounts-list-empty"));
+                    return;
+                }
+
+                // Wysyłanie sformatowanej listy kont
+                sender.sendMessage(plugin.getLanguageManager().getMessage("accounts-list-header"));
+                for (String accountLine : formattedAccounts) {
+                    sender.sendMessage(accountLine);
+                }
+                sender.sendMessage(plugin.getLanguageManager().getMessage("accounts-list-footer"));
             });
 
             return true;

@@ -49,7 +49,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
     public AttemptManager getAttemptManager() { return this.attemptManager; }
     public FilesConverter getFilesConverter() { return this.filesConverter; }
     public LogManager getLogManager() { return this.logManager; }
-    public AccountDataManager getAccountDataManager() { return this.accountDataManager; }
+    public AccountDataManager getAccountDataManager() { return accountDataManager; }
     public static AstraLogin getInstance() {
         return instance;
     }
@@ -80,13 +80,14 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
         // 4. Inicjalizacja managerów logicznych
         this.accountDataManager = new AccountDataManager(this);
+        TwoFactorManager twoFactorManager = new TwoFactorManager(this);
         this.inventoryManager = new InventoryManager(this);
         this.spawnManager = new SpawnManager(this);
         this.passwordManager = new PasswordManager(this);
         this.ipManager = new IPManager(this);
         this.sessionManager = new SessionManager(this);
         this.attemptManager = new AttemptManager(this);
-        this.loginListeners = new LoginListeners(this);
+        this.loginListeners = new LoginListeners(this, this.accountDataManager);
 
         // 5. Wczytywanie baz danych i cache
         this.passwordManager.reload();
@@ -105,6 +106,10 @@ public class AstraLogin extends JavaPlugin implements Listener {
             noticeManager.sendLoggerError(e);
         }
 
+        try {
+            Class.forName("pl.dawcou.astralogin.LoginUtils");
+        } catch (ClassNotFoundException ignored) {}
+
         // Tworzenie serca pluginu - LoginSystem
         this.loginSystem = new LoginSystem(this, this.passwordManager, this.inventoryManager, this.ipManager, this.spawnManager);
 
@@ -115,19 +120,60 @@ public class AstraLogin extends JavaPlugin implements Listener {
         // Ten zajmuje się blokowaniem niszczenia bloków, ruchu itp. dla niezalogowanych
         getServer().getPluginManager().registerEvents(new LoginBlocks(this), this);
 
-        // Komendy
-        getCommand("zarejestruj").setExecutor(loginSystem);
-        getCommand("zaloguj").setExecutor(loginSystem);
-        getCommand("astralogin").setExecutor(loginSystem);
-        getCommand("astralogin").setTabCompleter(loginSystem);
-        getCommand("zresetujhaslo").setExecutor(loginSystem);
-        getCommand("zmienhaslo").setExecutor(loginSystem);
-        getCommand("zresetujip").setExecutor(new IPSecurity(this, ipManager));
-        getCommand("konto").setExecutor(new AccountManager(this));
-        getCommand("zresetujkonto").setExecutor(new AccountManager(this));
-        getCommand("listaip").setExecutor(new AccountManager(this));
+        // Komendy główne
+        // Tworzymy obiekty executorów raz
+        IPSecurity ipSecurity = new IPSecurity(this, ipManager);
+        AccountManager accountManager = new AccountManager(this);
+        org.bukkit.command.PluginCommand cmd;
+
+        // Komendy główne
+        cmd = getCommand("zarejestruj");
+        if (cmd != null) cmd.setExecutor(loginSystem);
+
+        cmd = getCommand("zaloguj");
+        if (cmd != null) cmd.setExecutor(loginSystem);
+
+        cmd = getCommand("astralogin");
+        if (cmd != null) {
+            cmd.setExecutor(loginSystem);
+            cmd.setTabCompleter(loginSystem);
+        }
+
+        cmd = getCommand("zresetujhaslo");
+        if (cmd != null) cmd.setExecutor(loginSystem);
+
+        cmd = getCommand("zmienhaslo");
+        if (cmd != null) cmd.setExecutor(loginSystem);
+
+        // Komendy administracyjne
+        cmd = getCommand("zresetujip");
+        if (cmd != null) cmd.setExecutor(ipSecurity);
+
+        cmd = getCommand("konto");
+        if (cmd != null) cmd.setExecutor(accountManager);
+
+        cmd = getCommand("zresetujkonto");
+        if (cmd != null) cmd.setExecutor(accountManager);
+
+        cmd = getCommand("listaip");
+        if (cmd != null) cmd.setExecutor(accountManager);
+
+        cmd = getCommand("listakont");
+        if (cmd != null) cmd.setExecutor(accountManager);
+
+        cmd = getCommand("2fa");
+        if (cmd != null) {
+            cmd.setExecutor(new TwoFactorCommand(this, twoFactorManager, loginSystem));
+            cmd.setTabCompleter(new TwoFactorCommand(this, twoFactorManager, loginSystem));
+        }
+
+        cmd = getCommand("zresetuj2fa");
+        if (cmd != null) {
+            cmd.setExecutor(new TwoFactorCommand(this, twoFactorManager, loginSystem));
+        }
 
         this.sessionManager.loadSessionsFromConfig();
+        this.sessionManager.load2FAFromConfig();
 
         // Zapisuj sesje co 10 minut (asynchronicznie, żeby nie lagować głównego wątku)
         getServer().getAsyncScheduler().runAtFixedRate(this, task -> {
@@ -166,9 +212,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        // DEBUG: Sprawdźmy co żyje
         if (this.loginListeners == null) {
-            getLogger().severe("UWAGA: loginListeners jest NULL w onDisable! Szukaj błędu w onEnable!");
             return;
         }
 

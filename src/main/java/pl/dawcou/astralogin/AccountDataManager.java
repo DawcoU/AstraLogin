@@ -74,7 +74,7 @@ public class AccountDataManager {
         accountsConfig.set(path + "last-ip", ip);
         accountsConfig.set(path + "register-date", getCurrentDateTime());
         accountsConfig.set(path + "last-login-date", getCurrentDateTime());
-        accountsConfig.set(path + "is-registered", true); // Nasza flaga bezpieczeństwa!
+        accountsConfig.set(path + "is-registered", true);
         saveConfig();
     }
 

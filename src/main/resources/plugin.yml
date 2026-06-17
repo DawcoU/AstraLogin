@@ -21,8 +21,14 @@ commands:
     aliases: [account]
   zresetujkonto:
     aliases: [resetaccount]
+  zresetuj2fa:
+    aliases: [reset2fa]
   listaip:
     aliases: [iplist]
+  listakont:
+    aliases: [accountslist]
+  2fa:
+    aliases: [tfa, auth]
 
 permissions:
   astralogin.reload:
@@ -37,7 +43,11 @@ permissions:
     default: op
   astralogin.resetaccount:
     default: op
+  astralogin.reset2fa:
+    default: op
   astralogin.account:
     default: op
   astralogin.iplist:
+    default: op
+  astralogin.accountslist:
     default: op

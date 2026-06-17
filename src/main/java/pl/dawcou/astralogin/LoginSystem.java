@@ -1,5 +1,7 @@
 package pl.dawcou.astralogin;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -8,10 +10,8 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffectType;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.time.Duration;
+import java.util.*;
 
 public class LoginSystem implements CommandExecutor, TabCompleter {
 
@@ -23,8 +23,12 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
     private final SpawnManager spawnManager;
 
     private final Set<UUID> zalogowani = new HashSet<>();
+    private final Map<UUID, String> waitingFor2FA = new HashMap<>();
 
     public Set<UUID> getZalogowani() { return zalogowani; }
+    public boolean isWaitingFor2FA(UUID uuid) { return waitingFor2FA.containsKey(uuid); }
+    public void addWaitingFor2FA(UUID uuid, String uuidString) { this.waitingFor2FA.put(uuid, uuidString); }
+    public void removeWaitingFor2FA(UUID uuid) { waitingFor2FA.remove(uuid); }
     public InventoryManager getStorage() { return storage; }
     public PasswordManager getData() { return data; }
     public AttemptManager getAttemptManager() { return attemptManager; }
@@ -142,7 +146,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("wrong-old-password"));
 
                 if (plugin.getConfig().getInt("features.attempts.max", 3) > 0) {
-                    attemptManager.dodajProbe(p);
+                    attemptManager.dodajProbe(p, "Password");
                 }
                 return true;
             }
@@ -181,8 +185,13 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
             String noweHasloHash = PasswordManager.hashPassword(nowe1);
             data.savePassword(p.getUniqueId().toString(), noweHasloHash);
 
-            zalogowani.remove(p.getUniqueId());
-            p.kick(net.kyori.adventure.text.Component.text(plugin.getLanguageManager().getMessage("success-change-password")));
+            if (zalogowani.contains(p.getUniqueId())) {
+                zalogowani.remove(p.getUniqueId());
+                p.kick(net.kyori.adventure.text.Component.text(plugin.getLanguageManager().getMessage("success-change-password-kick")));
+            } else {
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-change-password"));
+            }
+
             plugin.getLogManager().log("Player " + p.getName() + " Changed his password");
             return true;
         }
@@ -304,7 +313,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
             }
 
             if (args.length == 1 && args[0].equalsIgnoreCase("info")) {
-                sender.sendMessage("§7------------ " + AstraLogin.PREFIX + " §7----------");
+                sender.sendMessage(plugin.getLanguageManager().parseToLegacy("<gray>------------ " + AstraLogin.PREFIX + " <gray>----------"));
                 sender.sendMessage("§aPlugin created by: §eDawcoU");
                 sender.sendMessage("§aPlugin version: §ev" + plugin.getDescription().getVersion());
                 sender.sendMessage("");
@@ -382,17 +391,36 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                 p.getScheduler().run(plugin, synctask -> {
                     if (!p.isOnline()) return;
 
-                    finishLogin(p);
-                    p.sendTitle(
-                            plugin.getLanguageManager().getMessage("title-register"),
-                            plugin.getLanguageManager().getMessage("subtitle-register"),
-                            10, 40, 10
-                    );
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-register"));
-                    storage.restore(p);
-                    plugin.getLogManager().log("Player " + p.getName() + " Registered");
-
                     plugin.getAccountDataManager().recordRegister(playerUUID, playerName, ip);
+
+                    // SPRAWDZAMY CZY MA JUŻ AKTYWNE 2FA (np. po restarcie hasła przez admina)
+                    boolean is2FAEnabled = plugin.getAccountDataManager().getConfig().getBoolean("accounts." + uuidString + ".2fa-enabled", false);
+
+                    if (is2FAEnabled) {
+                        // Zamiast finishLogin, wrzucamy go do poczekalni 2FA!
+                        addWaitingFor2FA(playerUUID, uuidString);
+
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-required"));
+
+                        Title title2fa = Title.title(
+                                Component.text(plugin.getLanguageManager().getMessage("title-2fa")), // Główny tytuł
+                                Component.text(plugin.getLanguageManager().getMessage("2fa-required")), // Podtytuł
+                                Title.Times.times(Duration.ofMillis(500), Duration.ofHours(1), Duration.ofMillis(500))
+                        );
+                        p.showTitle(title2fa);
+                        plugin.getLogManager().log("Player " + p.getName() + " registered, but has active 2FA. Waiting for code...");
+                    } else {
+                        finishLogin(p);
+                        p.sendTitle(
+                                plugin.getLanguageManager().getMessage("title-register"),
+                                plugin.getLanguageManager().getMessage("subtitle-register"),
+                                10, 40, 10
+                        );
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-register"));
+                        plugin.getLogManager().log("Player " + p.getName() + " registered");
+
+                        plugin.getAccountDataManager().recordRegister(playerUUID, playerName, ip);
+                    }
                 }, null);
             });
             return true;
@@ -420,8 +448,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
             if (args.length == 1) {
                 String inputPassword = args[0];
                 String currentIP = p.getAddress().getAddress().getHostAddress();
-                String playerName = p.getName(); // <-- Pobieramy nick na głównym wątku bezpiecznie!
-                UUID playerUUID = p.getUniqueId(); // <-- Pobieramy czyste UUID dla managera
+                UUID playerUUID = p.getUniqueId();
 
                 plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
                     if (PasswordManager.verifyPassword(inputPassword, pass)) {
@@ -430,36 +457,62 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                             ipManager.saveIP(uuid, currentIP);
                         }
 
-                        p.getScheduler().run(plugin, synctask -> {
-                            if (!p.isOnline()) return;
+                        // ⚡ POBIERAMY STATUSY: Czy sesje 2FA są aktywne w konfiguracji pluginu?
+                        boolean is2FASessionEnabled = plugin.getConfig().getBoolean("features.2fa.session.enabled", true);
+                        boolean is2FAEnabled = plugin.getAccountDataManager().getConfig().getBoolean("accounts." + uuid + ".2fa-enabled", false);
 
-                            finishLogin(p);
-                            p.sendTitle(
-                                    plugin.getLanguageManager().getMessage("title-login"),
-                                    plugin.getLanguageManager().getMessage("subtitle-login"),
-                                    10, 40, 10
-                            );
-                            p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-login"));
-                            storage.restore(p);
-                            plugin.getLogManager().log("Player " + p.getName() + " logged in");
+                        // Jeśli opcja sesji 2FA jest wyłączona w configu, 'hasActive2FA' ZAWSZE traktujemy jako false
+                        boolean hasActive2FA = is2FASessionEnabled && plugin.getSessionManager().hasActive2FASession(playerUUID);
 
-                            // KOD ZAPISU STATYSTYK - UŻYWA BEZPIECZNYCH ZMIENNYCH:
-                            plugin.getAccountDataManager().recordLogin(
-                                    playerUUID,
-                                    playerName,
-                                    currentIP
-                            );
+                        // KOMBINACJA: Hasło poprawne, 2FA włączone, ale BRAK aktywnej sesji 2FA (lub sesje wyłączone w configu)
+                        if (is2FAEnabled && !hasActive2FA) {
+                            addWaitingFor2FA(playerUUID, uuid);
+                            p.getScheduler().run(plugin, (sTask) -> {
+                                p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-required"));
+                                Title title2fa = Title.title(
+                                        Component.text(plugin.getLanguageManager().getMessage("title-2fa")), // Główny tytuł
+                                        Component.text(plugin.getLanguageManager().getMessage("2fa-required")), // Podtytuł
+                                        Title.Times.times(Duration.ofMillis(500), Duration.ofHours(1), Duration.ofMillis(500))
+                                );
+                                p.showTitle(title2fa);
 
-                        }, null);
+                                // Zapisujemy zwykłą sesję hasła, skoro hasło było wpisane poprawnie!
+                                plugin.getSessionManager().saveSession(playerUUID, currentIP);
+                            }, null);
+                        }
+                        // KOMBINACJA: Hasło poprawne, a sesja 2FA jest aktywna (lub gracz nie ma włączonego 2FA)
+                        else {
+                            p.getScheduler().run(plugin, (syncTask) -> {
+                                if (!p.isOnline()) return;
+
+                                finishLogin(p);
+                                p.sendTitle(
+                                        plugin.getLanguageManager().getMessage("title-login"),
+                                        plugin.getLanguageManager().getMessage("subtitle-login"),
+                                        10, 40, 10
+                                );
+                                p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-login"));
+
+                                plugin.getLogManager().log("Player " + p.getName() + " logged in");
+                                plugin.getAccountDataManager().recordLogin(playerUUID, p.getName(), currentIP);
+
+                                // Zapisujemy sesję hasła
+                                plugin.getSessionManager().saveSession(playerUUID, currentIP);
+
+                                // ⚡ BEZPIECZNIK: Zapisujemy sesję 2FA na dysk TYLKO jeśli funkcja sesji 2FA jest włączona w config.yml!
+                                if (is2FAEnabled && is2FASessionEnabled) {
+                                    plugin.getSessionManager().saveSession2FA(playerUUID, currentIP);
+                                }
+                            }, null);
+                        }
 
                     } else {
                         p.getScheduler().run(plugin, synctask -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("wrong-password"));
                             plugin.getLogManager().log("Player " + p.getName() + " entered the wrong password");
 
-                            // Sprawdzamy nową ścieżkę w configu
                             if (plugin.getConfig().getInt("features.attempts.max", 3) > 0) {
-                                attemptManager.dodajProbe(p);
+                                attemptManager.dodajProbe(p, "Password");
                             }
                         }, null);
                     }
@@ -477,6 +530,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
         String ip = p.getAddress().getAddress().getHostAddress();
 
         zalogowani.add(uuid);
+        storage.restore(p);
         plugin.getSessionManager().deleteSession(uuid);
 
         p.removePotionEffect(PotionEffectType.BLINDNESS);

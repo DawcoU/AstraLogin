@@ -31,12 +31,12 @@ security:
     # 1 = Checks only 1 part (e.g., 46.X.X.X - very loose)
     ip-check-octets: 2
 
-    # Protection against spam entering the server (e.g. bots/attacks)
-    entry-protection:
-      enabled: true        # Should this protection be enabled?
-      max-attempts: 10      # Number of entries
-      within-seconds: 60  # In what time (e.g. 120s = 2 minutes)
-      tempban-time: "30 minutes" # How many minutes does it ban an IP for after exceeding the limit
+  # Protection against spam entering the server (e.g. bots/attacks)
+  anti-spam:
+    enabled: true        # Should this protection be enabled?
+    max-attempts: 10      # Number of entries
+    within-seconds: 60  # In what time (e.g. 120s = 2 minutes)
+    tempban-time: "30 minutes" # How many minutes does it ban an IP for after exceeding the limit
 
   anti-multiaccount:
     enabled: true
@@ -76,7 +76,7 @@ features:
     login-time-enabled: true
 
     # Set your login time
-    login-time-limit: 90 # Time in seconds
+    login-time-limit: "2 minutes"
 
     # Should the login time be displayed on the boss bar?
     use-bossbar: true
@@ -106,12 +106,21 @@ features:
     # Should the player's gamemode be saved?
     save-gamemode: true
 
+  2fa:
+    # Determine how much time a player has to configure 2FA
+    setup-timeout: "2 minutes"
+
+    session:
+      # Should 2FA session be enabled?
+      enabled: true
+      # How long should a 2FA session last?
+      session-time: "2 days"
+
   password:
     # Minimum number of characters in a password
     min-password-length: 6
 
     # Maximum number of characters in a password
-
     max-password-length: 24
 
 # =========================

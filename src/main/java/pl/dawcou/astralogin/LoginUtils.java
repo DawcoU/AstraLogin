@@ -25,7 +25,6 @@ public class LoginUtils {
         }
     }
 
-    // W klasie LoginUtils
     public static String formatTime(long totalSeconds) {
         long minutes = totalSeconds / 60;
         long seconds = totalSeconds % 60;

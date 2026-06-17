@@ -13,7 +13,7 @@ public class AttemptManager {
         this.plugin = plugin;
     }
 
-    public void dodajProbe(Player p) {
+    public void dodajProbe(Player p, String type) {
         String ip = p.getAddress().getAddress().getHostAddress();
         String path = "features.attempts.";
 
@@ -25,36 +25,30 @@ public class AttemptManager {
         int aktualne = proby.getOrDefault(p.getUniqueId(), 0) + 1;
         proby.put(p.getUniqueId(), aktualne);
 
-        // 1. NAJPIERW SPRAWDZAMY BANA (bo to najważniejsze)
         if (aktualne >= threshold) {
             clearAttempts(p.getUniqueId());
-            long banMillis = LoginUtils.parseTime(timeStr, 300000L); // 300000L to 5 minut jako default
-            plugin.getIPManager().banIPWithMillis(ip, banMillis, "PASSWORD");
+            long banMillis = LoginUtils.parseTime(timeStr, 300000L);
+            plugin.getIPManager().banIPWithMillis(ip, banMillis, type); // Używamy typu (PASSWORD lub 2FA)
 
-            // Ban za próbę włamania / wielokrotne złe hasło
-            plugin.getLogManager().log("Player " + p.getName() + " (" + ip + ") was IP banned for " + timeStr + ". Reason: Too many failed login attempts");
+            plugin.getLogManager().log("Player " + p.getName() + " (" + ip + ") was IP banned. Reason: Too many failed " + type + " attempts");
 
             String msg = plugin.getLanguageManager().getMessage("kick-max-attempts-ban")
                     .replace("%time%", timeStr);
             p.kick(net.kyori.adventure.text.Component.text(msg));
             return;
         }
-        // 2. POTEM KICK (wyrzuca równe max i każdy błąd marginesu aż do bana)
+
         if (aktualne >= max) {
             int remaining = threshold - aktualne;
-
-            // Kick za błędne hasło (wskazujemy ile prób zostało do całkowitego bana)
-            plugin.getLogManager().log("Player " + p.getName() + " (" + ip + ") was kicked for incorrect password. Attempts: " + aktualne + "/" + threshold + " until IP ban");
+            plugin.getLogManager().log("Player " + p.getName() + " (" + ip + ") was kicked for incorrect " + type + ". Attempts: " + aktualne + "/" + threshold);
 
             String msg = plugin.getLanguageManager().getMessage("kick-max-attempts")
                     .replace("%remaining%", String.valueOf(remaining));
-
             p.kick(net.kyori.adventure.text.Component.text(msg));
             return;
         }
     }
 
-    // Call this method in your LoginListener when password is correct!
     public void clearAttempts(UUID uuid) {
         proby.remove(uuid);
     }

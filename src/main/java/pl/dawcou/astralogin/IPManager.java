@@ -109,7 +109,7 @@ public class IPManager {
     }
 
     public void addIPAttempt(String ip) {
-        String path = "security.ip-security.entry-protection.";
+        String path = "security.anti-spam.";
 
         int max = plugin.getConfig().getInt(path + "max-attempts", 5);
         String timeStr = plugin.getConfig().getString(path + "tempban-time", "10 minutes");

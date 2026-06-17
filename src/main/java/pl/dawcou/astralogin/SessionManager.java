@@ -15,17 +15,13 @@ public class SessionManager {
     private final File sessionFile;
     private FileConfiguration sessionConfig;
 
-    // Jedyne, uniwersalne mapy sesji w całym pluginie
+    // --- MAPY RAM DLA SESJI HASŁA ---
     private final Map<UUID, Long> sesje = new HashMap<>();
     private final Map<UUID, String> sesjeIP = new HashMap<>();
 
-    public Map<UUID, Long> getSesje() {
-        return this.sesje;
-    }
-
-    public Map<UUID, String> getSesjeIP() {
-        return this.sesjeIP;
-    }
+    // --- MAPY RAM DLA MODUŁU 2FA ---
+    private final Map<UUID, Long> dfaSesje = new HashMap<>();
+    private final Map<UUID, String> dfaIP = new HashMap<>();
 
     public SessionManager(AstraLogin plugin) {
         this.plugin = plugin;
@@ -37,8 +33,11 @@ public class SessionManager {
         this.sessionConfig = YamlConfiguration.loadConfiguration(sessionFile);
     }
 
+    // ==========================================
+    //          LOGIKA OBSŁUGI SESJI
+    // ==========================================
+
     public void saveSessionsToConfig() {
-        sessionConfig.set("sessions", null);
         long now = System.currentTimeMillis();
         long limit = getSessionLimitMillis();
 
@@ -47,13 +46,40 @@ public class SessionManager {
                 String path = "sessions." + uuid;
                 sessionConfig.set(path + ".timestamp", timestamp);
                 sessionConfig.set(path + ".ip", this.sesjeIP.get(uuid));
+            } else {
+                String path = "sessions." + uuid;
+                sessionConfig.set(path + ".timestamp", null);
+                sessionConfig.set(path + ".ip", null);
             }
         });
 
         try {
             sessionConfig.save(sessionFile);
         } catch (IOException e) {
-            plugin.getNoticeManager().sendSessionSaveError(e);
+            e.printStackTrace();
+        }
+    }
+
+    public void save2FAToConfig() {
+        long now = System.currentTimeMillis();
+        long limit = get2FALimitMillis();
+
+        this.dfaSesje.forEach((uuid, timestamp) -> {
+            if (now - timestamp < limit) {
+                String path = "sessions." + uuid;
+                sessionConfig.set(path + ".2fa-timestamp", timestamp);
+                sessionConfig.set(path + ".2fa-ip", this.dfaIP.get(uuid));
+            } else {
+                String path = "sessions." + uuid;
+                sessionConfig.set(path + ".2fa-timestamp", null);
+                sessionConfig.set(path + ".2fa-ip", null);
+            }
+        });
+
+        try {
+            sessionConfig.save(sessionFile);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -68,7 +94,6 @@ public class SessionManager {
         long now = System.currentTimeMillis();
         int count = 0;
 
-        // Czyszczenie starych danych w pamięci na wypadek reloadu pluginu
         this.sesje.clear();
         this.sesjeIP.clear();
 
@@ -78,13 +103,13 @@ public class SessionManager {
                 long timestamp = sessionConfig.getLong("sessions." + uuidStr + ".timestamp");
                 String ip = sessionConfig.getString("sessions." + uuidStr + ".ip");
 
-                if (now - timestamp < sessionLimit) {
+                if (timestamp > 0 && (now - timestamp < sessionLimit)) {
                     this.sesje.put(uuid, timestamp);
                     this.sesjeIP.put(uuid, ip);
                     count++;
                 }
             } catch (IllegalArgumentException e) {
-                // Ignorowanie uszkodzonych rekordów UUID
+                // Ignorowanie uszkodzonych rekordow
             }
         }
 
@@ -98,42 +123,145 @@ public class SessionManager {
         return LoginUtils.parseTime(timeStr, 900000L);
     }
 
-    /**
-     * Główna metoda usuwająca sesję na podstawie obiektu UUID.
-     * Idealna do użycia w finishLogin i eventach w grze!
-     */
     public void deleteSession(UUID uuid) {
-        if (uuid == null) {
-            return;
-        }
+        if (uuid == null) return;
 
-        // 1. Czyszczenie z lokalnej pamięci RAM
         this.sesje.remove(uuid);
         this.sesjeIP.remove(uuid);
 
-        // 2. Czyszczenie z pliku YML
-        String path = "sessions." + uuid.toString();
+        String path = "sessions." + uuid;
         if (sessionConfig.contains(path)) {
-            sessionConfig.set(path, null);
-
+            sessionConfig.set(path + ".timestamp", null);
+            sessionConfig.set(path + ".ip", null);
             try {
                 sessionConfig.save(sessionFile);
             } catch (IOException e) {
-                plugin.getNoticeManager().sendSessionSaveError(e);
+                e.printStackTrace();
             }
         }
     }
 
-    public void DeleteSession(String uuidString) {
-        if (uuidString == null || uuidString.isEmpty()) {
-            return;
+    public boolean hasActiveSession(UUID uuid, String currentIP) {
+        if (uuid == null || currentIP == null) return false;
+        if (!this.sesje.containsKey(uuid) || !this.sesjeIP.containsKey(uuid)) return false;
+
+        String savedIP = this.sesjeIP.get(uuid);
+        if (!currentIP.equals(savedIP)) {
+            deleteSession(uuid);
+            return false;
         }
 
-        try {
-            UUID uuidObiekt = UUID.fromString(uuidString);
-            deleteSession(uuidObiekt); // Wywołujemy główną logikę powyżej
-        } catch (IllegalArgumentException e) {
-            plugin.getNoticeManager().sendInvalidUUIDError(e);
+        long lastLogout = this.sesje.get(uuid);
+        long now = System.currentTimeMillis();
+
+        if (now - lastLogout <= getSessionLimitMillis()) {
+            return true;
+        } else {
+            deleteSession(uuid);
+            return false;
         }
+    }
+
+    public void saveSession(UUID uuid, String ip) {
+        if (uuid == null || ip == null) return;
+
+        long now = System.currentTimeMillis();
+        String path = "sessions." + uuid;
+
+        this.sesje.put(uuid, now);
+        this.sesjeIP.put(uuid, ip);
+
+        sessionConfig.set(path + ".timestamp", now);
+        sessionConfig.set(path + ".ip", ip);
+
+        try {
+            sessionConfig.save(sessionFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void saveSession2FA(UUID uuid, String ip) {
+        if (uuid == null) return;
+
+        long now = System.currentTimeMillis();
+        String path = "sessions." + uuid;
+
+        this.dfaSesje.put(uuid, now);
+        this.dfaIP.put(uuid, ip);
+
+        sessionConfig.set(path + ".2fa-timestamp", now);
+        sessionConfig.set(path + ".2fa-ip", ip);
+
+        try {
+            sessionConfig.save(sessionFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void deleteSession2FA(UUID uuid) {
+        if (uuid == null) return;
+
+        this.dfaSesje.remove(uuid);
+        this.dfaIP.remove(uuid);
+
+        String path = "sessions." + uuid;
+        if (sessionConfig.contains(path)) {
+            sessionConfig.set(path + ".2fa-timestamp", null);
+            sessionConfig.set(path + ".2fa-ip", null);
+            try {
+                sessionConfig.save(sessionFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void load2FAFromConfig() {
+        if (!sessionFile.exists()) return;
+
+        sessionConfig = YamlConfiguration.loadConfiguration(sessionFile);
+        ConfigurationSection section = sessionConfig.getConfigurationSection("sessions");
+        if (section == null) return;
+
+        long dfaLimit = get2FALimitMillis();
+        long now = System.currentTimeMillis();
+
+        this.dfaSesje.clear();
+        this.dfaIP.clear();
+
+        for (String uuidStr : section.getKeys(false)) {
+            try {
+                UUID uuid = UUID.fromString(uuidStr);
+                long timestamp = sessionConfig.getLong("sessions." + uuidStr + ".2fa-timestamp");
+                String ip = sessionConfig.getString("sessions." + uuidStr + ".2fa-ip");
+
+                if (timestamp > 0 && (now - timestamp < dfaLimit)) {
+                    this.dfaSesje.put(uuid, timestamp);
+                    this.dfaIP.put(uuid, ip);
+                }
+            } catch (IllegalArgumentException e) {
+                // Ignorowanie blednych struktur UUID
+            }
+        }
+    }
+
+    public long get2FALimitMillis() {
+        String timeStr = plugin.getConfig().getString("features.2fa.session.session-time", "2 days");
+        return LoginUtils.parseTime(timeStr, 172800000L);
+    }
+
+    public boolean hasActive2FASession(UUID uuid) {
+        if (uuid == null || !this.dfaSesje.containsKey(uuid)) return false;
+
+        long timestamp = this.dfaSesje.get(uuid);
+        long now = System.currentTimeMillis();
+
+        if (now - timestamp >= get2FALimitMillis()) {
+            deleteSession2FA(uuid);
+            return false;
+        }
+        return true;
     }
 }

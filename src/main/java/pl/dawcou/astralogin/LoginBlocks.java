@@ -3,7 +3,6 @@ package pl.dawcou.astralogin;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
@@ -11,6 +10,8 @@ import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.*;
+
+import java.util.UUID;
 
 public class LoginBlocks implements Listener {
 
@@ -24,28 +25,51 @@ public class LoginBlocks implements Listener {
 
     // --- BLOKADY (ROZBITA LOGIKA) ---
 
-    @EventHandler(priority = EventPriority.HIGHEST)
+    @EventHandler
     public void onCommand(PlayerCommandPreprocessEvent e) {
-        if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
+        UUID uuid = e.getPlayer().getUniqueId();
+        String message = e.getMessage().toLowerCase();
+        String cmd = message.split(" ")[0];
 
-            // Wyciągamy samą komendę (pierwsze słowo)
-            String cmd = e.getMessage().split(" ")[0].toLowerCase();
-
-            if (cmd.equals("/login") || cmd.equals("/l") || cmd.equals("/zaloguj") ||
-                    cmd.equals("/register") || cmd.equals("/reg") || cmd.equals("/zarejestruj")) {
+        // 1. Jeśli jest w trakcie 2FA -> pozwalamy TYLKO na /2fa (nawet jeśli jest w getZalogowani())
+        if (loginSystem.isWaitingFor2FA(uuid)) {
+            if (cmd.startsWith("/2fa")) {
                 return;
             }
-
+            // Blokujemy wszystko inne dla gracza oczekującego na kod
             e.setCancelled(true);
-            e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
+            e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-required"));
+            return;
         }
+
+        // 2. Jeśli jest w pełni zalogowany i nie czeka na 2FA -> wpuszczamy wszędzie
+        if (loginSystem.getZalogowani().contains(uuid)) {
+            return;
+        }
+
+        // 3. Jeśli nie jest zalogowany i NIE jest w trakcie 2FA -> pozwalamy TYLKO na login/register
+        if (cmd.startsWith("/login") || cmd.startsWith("/l ") || cmd.startsWith("/zaloguj") ||
+                cmd.startsWith("/register") || cmd.startsWith("/reg ") || cmd.startsWith("/zarejestruj") ||
+                cmd.startsWith("/zmienhaslo") || cmd.startsWith("/changepassword")) {
+            return;
+        }
+
+        // Blokada reszty dla całkowicie niezalogowanych
+        e.setCancelled(true);
+        e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
     }
 
     @EventHandler
     public void onChat(AsyncChatEvent e) {
-        if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
+        UUID uuid = e.getPlayer().getUniqueId();
+        if (!loginSystem.getZalogowani().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
             e.setCancelled(true);
-            e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
+            // Jeśli ma hasło z sesji, ale czeka na 2FA, wysyłamy komunikat o 2FA
+            if (loginSystem.isWaitingFor2FA(uuid)) {
+                e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-required"));
+            } else {
+                e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
+            }
         }
     }
 
@@ -58,7 +82,8 @@ public class LoginBlocks implements Listener {
             return; // Jeśli zmienił tylko kierunek patrzenia (myszkę), pozwól mu na to
         }
 
-        if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
+        UUID uuid = e.getPlayer().getUniqueId();
+        if (!loginSystem.getZalogowani().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
             e.setCancelled(true);
         }
     }
@@ -66,47 +91,51 @@ public class LoginBlocks implements Listener {
     @EventHandler
     public void onBreak(BlockBreakEvent e) {
         Player p = e.getPlayer();
-        if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
+        UUID uuid = p.getUniqueId();
+        if (!loginSystem.getZalogowani().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
             e.setCancelled(true);
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "2fa-required" : "blocked-action"));
         }
     }
 
     @EventHandler
     public void onPlace(BlockPlaceEvent e) {
         Player p = e.getPlayer();
-        if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
+        UUID uuid = p.getUniqueId();
+        if (!loginSystem.getZalogowani().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
             e.setCancelled(true);
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
-
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "2fa-required" : "blocked-action"));
         }
     }
 
     @EventHandler
     public void onDmg(EntityDamageByEntityEvent e) {
-        // 1. Blokada otrzymywania obrażeń (niezalogowany jest nieśmiertelny)
+        // 1. Blokada otrzymywania obrażeń (niezalogowany/w trakcie 2FA jest nieśmiertelny)
         if (e.getEntity() instanceof Player) {
-            if (!loginSystem.getZalogowani().contains(e.getEntity().getUniqueId())) {
+            UUID uuid = e.getEntity().getUniqueId();
+            if (!loginSystem.getZalogowani().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
                 e.setCancelled(true);
                 return;
             }
         }
 
-        // 2. Blokada zadawania obrażeń (niezalogowany nikogo nie uderzy)
+        // 2. Blokada zadawania obrażeń (niezalogowany/w trakcie 2FA nikogo nie uderzy)
         if (e.getDamager() instanceof Player) {
             Player p = (Player) e.getDamager();
-            if (!loginSystem.getZalogowani().contains(e.getDamager().getUniqueId())) {
+            UUID uuid = p.getUniqueId();
+            if (!loginSystem.getZalogowani().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
                 e.setCancelled(true);
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "2fa-required" : "blocked-action"));
             }
         }
     }
 
     @EventHandler
     public void onMobTarget(EntityTargetLivingEntityEvent e) {
-        // 3. Moby ignorują gracza bez loginu
+        // 3. Moby ignorują gracza bez pełnego loginu (również w trakcie 2FA)
         if (e.getTarget() instanceof Player) {
-            if (!loginSystem.getZalogowani().contains(e.getTarget().getUniqueId())) {
+            UUID uuid = e.getTarget().getUniqueId();
+            if (!loginSystem.getZalogowani().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
                 e.setCancelled(true);
             }
         }
@@ -115,39 +144,40 @@ public class LoginBlocks implements Listener {
     @EventHandler
     public void onInteract(PlayerInteractEvent e) {
         Player p = e.getPlayer();
-        if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
+        UUID uuid = p.getUniqueId();
+        if (!loginSystem.getZalogowani().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
             e.setCancelled(true);
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "2fa-required" : "blocked-action"));
         }
     }
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent e) {
-        // Sprawdzamy UUID przez getWhoClicked()
-        if (!loginSystem.getZalogowani().contains(e.getWhoClicked().getUniqueId())) {
-
+        UUID uuid = e.getWhoClicked().getUniqueId();
+        if (!loginSystem.getZalogowani().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
             e.setCancelled(true);
             Player p = (Player) e.getWhoClicked();
-
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "2fa-required" : "blocked-action"));
         }
     }
 
     @EventHandler
     public void onInventoryOpen(InventoryOpenEvent e) {
         Player p = (Player) e.getPlayer();
-        if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
+        UUID uuid = p.getUniqueId();
+        if (!loginSystem.getZalogowani().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
             e.setCancelled(true);
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "2fa-required" : "blocked-action"));
         }
     }
 
     @EventHandler
     public void onDrop(PlayerDropItemEvent e) {
         Player p = e.getPlayer();
-        if (!loginSystem.getZalogowani().contains(e.getPlayer().getUniqueId())) {
+        UUID uuid = p.getUniqueId();
+        if (!loginSystem.getZalogowani().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
             e.setCancelled(true);
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "2fa-required" : "blocked-action"));
         }
     }
 
@@ -155,10 +185,11 @@ public class LoginBlocks implements Listener {
     public void onPickup(EntityPickupItemEvent e) {
         if (e.getEntity() instanceof Player) {
             Player p = (Player) e.getEntity();
+            UUID uuid = p.getUniqueId();
 
-            if (!loginSystem.getZalogowani().contains(p.getUniqueId())) {
+            if (!loginSystem.getZalogowani().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
                 e.setCancelled(true);
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "2fa-required" : "blocked-action"));
             }
         }
     }

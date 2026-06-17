@@ -1,6 +1,5 @@
 package pl.dawcou.astralogin;
 
-import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 
@@ -88,21 +87,6 @@ public class NoticeManager {
                 "§cNie udało się zapisać logu bezpieczeństwa do pliku: §e" + fileName :
                 "§cFailed to save security log to file: §e" + fileName;
         plugin.getLogger().severe(msg);
-    }
-
-    public void sendSessionSaveError(Exception e) {
-        String msg = getLang().equalsIgnoreCase("pl") ?
-                "§cNie udało się zapisać sesji do pliku! Błąd: " :
-                "§cCould not save sessions to file! Error: ";
-        plugin.getLogger().severe(msg + e.getMessage());
-    }
-
-    public void sendInvalidUUIDError(Exception e) {
-        String msg = getLang().equalsIgnoreCase("pl") ?
-                "Nie udało się usunąć sesji. Błędny format UUID! Błąd: " :
-                "Failed to delete session. Incorrect UUID format! Error: ";
-
-        plugin.getLogger().warning(msg + e.getMessage());
     }
 
     public void sendSessionsLoaded(int count) {

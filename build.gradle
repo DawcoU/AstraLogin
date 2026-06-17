@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'pl.dawcou'
-version = '3.3.0'
+version = '4.0.0-RC1'
 
 repositories {
     mavenCentral()
@@ -22,6 +22,8 @@ dependencies {
     // Biblioteki do załączenia w środku (shadow)
     shadow 'org.mindrot:jbcrypt:0.4'
     shadow 'org.bstats:bstats-bukkit:3.2.1'
+
+    shadow 'com.warrenstrange:googleauth:1.5.0'
 }
 
 java {
@@ -41,6 +43,7 @@ shadowJar {
     configurations = [project.configurations.shadow]
 
     // Relokacja
+    relocate 'com.warrenstrange.googleauth', 'pl.dawcou.astralogin.googleauth'
     relocate 'org.bstats', 'pl.dawcou.astralogin.bstats'
     relocate 'org.mindrot.jbcrypt', 'pl.dawcou.astralogin.jbcrypt'
 }
