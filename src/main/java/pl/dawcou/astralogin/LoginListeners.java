@@ -250,6 +250,7 @@ public class LoginListeners implements Listener {
             net.kyori.adventure.text.Component kickComponent = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(rawMessage);
 
             e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, kickComponent);
+            plugin.getLogManager().log("Someone tried to join the account of an active player (" + playerName + ") with IP (" + currentIP + ")");
         }
 
         // 1. JEDYNE SPRAWDZENIE BANA

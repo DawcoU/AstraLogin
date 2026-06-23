@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'pl.dawcou'
-version = '4.0.0-RC1'
+version = '4.0.0'
 
 repositories {
     mavenCentral()
@@ -22,7 +22,6 @@ dependencies {
     // Biblioteki do załączenia w środku (shadow)
     shadow 'org.mindrot:jbcrypt:0.4'
     shadow 'org.bstats:bstats-bukkit:3.2.1'
-
     shadow 'com.warrenstrange:googleauth:1.5.0'
 }
 
