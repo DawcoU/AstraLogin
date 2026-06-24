@@ -2,6 +2,8 @@ package pl.dawcou.astralogin;
 
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -243,12 +245,13 @@ public class LoginListeners implements Listener {
 
         // Sprawdzamy, czy gracz o tym nicku jest już na serwerze
         if (Bukkit.getPlayerExact(playerName) != null) {
-            // Pobieramy surowy tekst z pliku
+            // 1. Pobieramy surowy tekst jako String
             String rawMessage = plugin.getLanguageManager().getMessage("already-online");
 
-            // Renderujemy wiadomość przez MiniMessage do formatu Component
-            net.kyori.adventure.text.Component kickComponent = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(rawMessage);
+            // 2. Zamieniamy String z paragrafami na Component (bez używania MiniMessage)
+            Component kickComponent = LegacyComponentSerializer.legacySection().deserialize(rawMessage);
 
+            // 3. Wrzucamy gotowy Component do metody Paper
             e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, kickComponent);
             plugin.getLogManager().log("Someone tried to join the account of an active player (" + playerName + ") with IP (" + currentIP + ")");
         }
