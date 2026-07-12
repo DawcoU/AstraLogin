@@ -8,13 +8,29 @@
 settings:
   # Wybierz język pluginu (Dostępne: pl, en)
   # Select the plugin language (Available: pl, en)
-  language: pl
+  language: en
 
   # Should the plugin check for newer versions of the plugin?
   check-updates: true
 
   # Should the plugin save events (logins, registrations, etc.) to .log files?
-  file-logging: true
+  logs:
+    # Should logging be enabled?
+    enabled: true
+
+    # What is the maximum number of logs? Older ones will be deleted.
+    limit: 30
+
+  backups:
+    # Should automatic backups be enabled?
+    enabled: true
+
+    # How often should the backup be performed (e.g., "12 hours", "1 day", "48 hours")
+    # NOTE: The minimum value is "12 hours", smaller values will be reset to 12 hours to protect the hard drive from overflowing
+    interval: "24 hours"
+
+    # What is the maximum number of automatic backups? Older ones will be deleted.
+    limit: 10
 
 # =====================================
 #           Security Settings
@@ -127,7 +143,7 @@ features:
 #          VISUALS
 # =========================
 visuals:
-  # Apply blindness effect to unauthenticated players.
+  # Apply blindness effect to not logged in players.
   use-blindness: true
 
   # Hides players who are not logged in

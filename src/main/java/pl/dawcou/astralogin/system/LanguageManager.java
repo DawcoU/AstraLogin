@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin;
+package pl.dawcou.astralogin.system;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -7,6 +7,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
+import pl.dawcou.astralogin.auth.AstraLogin;
 
 import java.io.File;
 import java.util.HashMap;
@@ -21,18 +22,18 @@ public class LanguageManager {
     public LanguageManager(JavaPlugin plugin) {
         this.plugin = plugin;
         setupFiles(); // Najpierw upewniamy się, że pliki są na dysku
-        reload();     // Potem ładujemy je do RAMu
+        reload();
     }
 
     public void reload() {
-        // Czyścimy mapę, żeby nie dublować przy przeładowaniu
+        // Czyścimy mapę
         messages.clear();
 
-        String lang = plugin.getConfig().getString("settings.language", "pl");
+        String lang = plugin.getConfig().getString("settings.language", "en");
         File langFile = new File(plugin.getDataFolder(), "languages/" + lang + ".yml");
 
         if (!langFile.exists()) {
-            langFile = new File(plugin.getDataFolder(), "languages/pl.yml");
+            langFile = new File(plugin.getDataFolder(), "languages/en.yml");
         }
 
         FileConfiguration langConfig = YamlConfiguration.loadConfiguration(langFile);
@@ -99,7 +100,7 @@ public class LanguageManager {
         return text.replace("&", "§");
     }
 
-    // Pobiera czystą wiadomość z mapy i od razu ją konwertuje (Z PREFIXEM LUB BEZ - zależy co masz w configu)
+    // Pobiera czystą wiadomość z mapy i od razu ją konwertuje (BEZ PREFIX'U)
     public String getMessage(String path) {
         String rawMessage = messages.getOrDefault(path, "§cNo message: " + path);
         return parseToLegacy(rawMessage);
@@ -108,15 +109,5 @@ public class LanguageManager {
     // Pobiera wiadomość z prefixem SZTYWNO na początku (zostawiamy)
     public String getWithPrefix(String path) {
         return parseToLegacy(AstraLogin.PREFIX) + " " + getMessage(path);
-    }
-
-    // Metoda z placeholderem (teraz bezpiecznie przetwarza podmieniony tekst)
-    public String getWithPrefix(String path, String placeholder, String value) {
-        // 1. Pobieramy SUROWY tekst z mapy, żeby placeholder się podmienił zanim wejdą sekcje '§'
-        String rawMessage = messages.getOrDefault(path, "§cNo message: " + path);
-        String msg = rawMessage.replace(placeholder, value);
-
-        // 2. Dopiero teraz formatujemy całość
-        return parseToLegacy(AstraLogin.PREFIX) + " " + parseToLegacy(msg);
     }
 }

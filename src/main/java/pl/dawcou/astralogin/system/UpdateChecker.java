@@ -1,4 +1,6 @@
-package pl.dawcou.astralogin;
+package pl.dawcou.astralogin.system;
+
+import pl.dawcou.astralogin.auth.AstraLogin;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;

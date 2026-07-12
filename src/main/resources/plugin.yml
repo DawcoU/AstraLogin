@@ -1,7 +1,7 @@
 name: AstraLogin
 version: '${version}'
-main: pl.dawcou.astralogin.AstraLogin
-api-version: '1.18'
+main: pl.dawcou.astralogin.auth.AstraLogin
+api-version: '1.20'
 load: POSTWORLD
 
 commands:
@@ -29,13 +29,19 @@ commands:
     aliases: [accountslist]
   2fa:
     aliases: [tfa, auth]
+  przenieskonto:
+    aliases: [moveaccount]
+  spawnlogowania:
+    aliases: [loginspawn]
 
 permissions:
   astralogin.reload:
     default: op
   astralogin.update:
     default: op
-  astralogin.spawn:
+  astralogin.setspawn:
+    default: op
+  astralogin.delspawn:
     default: op
   astralogin.resetpassword:
     default: op
@@ -50,4 +56,6 @@ permissions:
   astralogin.iplist:
     default: op
   astralogin.accountslist:
+    default: op
+  astralogin.moveaccount:
     default: op

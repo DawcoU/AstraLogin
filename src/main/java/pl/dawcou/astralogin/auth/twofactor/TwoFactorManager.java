@@ -1,8 +1,11 @@
-package pl.dawcou.astralogin;
+package pl.dawcou.astralogin.auth.twofactor;
 
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
 import org.bukkit.configuration.file.FileConfiguration;
+import pl.dawcou.astralogin.accounts.AccountManager;
+import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.system.LoginUtils;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -32,7 +35,7 @@ public class TwoFactorManager {
         GoogleAuthenticatorKey key = gAuth.createCredentials();
         String secret = key.getKey();
 
-        String timeConfig = plugin.getConfig().getString("features.2fa.setup-timeout", "1 minute");
+        String timeConfig = plugin.getConfig().getString("features.2fa.setup-timeout", "2 minutes");
         long timeoutMillis = LoginUtils.parseTime(timeConfig, 60000L);
 
         pendingSetups.put(uuid, secret);
@@ -84,6 +87,14 @@ public class TwoFactorManager {
         pendingBackupCodes.remove(uuid);
     }
 
+    public void invalidateSetup(String uuidStr) {
+        try {
+            UUID uuid = UUID.fromString(uuidStr);
+            invalidateSetup(uuid);
+        } catch (IllegalArgumentException ignored) {
+        }
+    }
+
     /**
      * Weryfikuje, czy 6-cyfrowy kod podany przez gracza zgadza się z jego tymczasowym kluczem.
      */
@@ -92,7 +103,7 @@ public class TwoFactorManager {
     }
 
     public boolean useBackupCode(UUID uuid, String inputCode) {
-        AccountDataManager accountManager = plugin.getAccountDataManager();
+        AccountManager accountManager = plugin.getAccountDataManager();
         FileConfiguration config = accountManager.getConfig();
         String path = "accounts." + uuid.toString() + ".backup-codes";
 
@@ -119,7 +130,7 @@ public class TwoFactorManager {
      * Zapisuje aktywowane 2FA do pliku kont gracza accounts.yml.
      */
     public void save2FA(UUID uuid, String secret) {
-        AccountDataManager accountManager = plugin.getAccountDataManager();
+        AccountManager accountManager = plugin.getAccountDataManager();
         FileConfiguration config = accountManager.getConfig();
         String path = "accounts." + uuid.toString() + ".";
 
@@ -137,7 +148,7 @@ public class TwoFactorManager {
     }
 
     public void delete2FA(UUID uuid) {
-        AccountDataManager accountManager = plugin.getAccountDataManager();
+        AccountManager accountManager = plugin.getAccountDataManager();
         FileConfiguration config = accountManager.getConfig();
 
         // Usuwamy dane z konfiguracji

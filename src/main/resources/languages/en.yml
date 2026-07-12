@@ -16,13 +16,13 @@ messages:
 
   # --- Login & Registration ---
   already-logged: "&cYou are already logged in/registered!"
-  no-account: "&cYou don't have an account! Type &e/register <password> <repeat password>"
+  no-account: "&cYou don't have an account! Type &e/register <password> <repeat>"
   success-login: "&aLogged in successfully"
   success-register: "&aRegistered successfully"
   reminder-login: "&ePlease log in: &f/login <password>"
-  reminder-register: "&ePlease register: &f/register <password> <repeat password>"
+  reminder-register: "&ePlease register: &f/register <password> <repeat"
   usage-login: "&cCorrect usage: &e/login <password>"
-  usage-register: "&cCorrect usage: &e/register <password> <repeat password>"
+  usage-register: "&cCorrect usage: &e/register <password> <repeat>"
   has-account: "&cYou already have an account! Type &e/login <password>"
   already-online: "&cA player with this name is already on the server!"
 
@@ -57,6 +57,7 @@ messages:
   usage-reset-password: "&cCorrect usage: &e/resetpassword <player>"
   usage-reset-ip: "&cCorrect usage: &e/resetip <player>"
   no-account-reset: "&cThis player has no registered password!"
+  no-ip-reset: "&cThis player has no recorded IP address!"
   admin-reset-password-success: "&aPlayer &6%player%'s password has been reset"
   admin-reset-ip-success: "&aPlayer &6%player%'s IP has been reset"
   player-reset-password-kick: "&cYour password has been reset by the administrator!"
@@ -67,11 +68,11 @@ messages:
   2fa-already-enabled: "&cYou already have 2FA enabled!"
   2fa-not-enabled: "&cYou do not have 2FA enabled!"
   2fa-setup-instructions:
-    - "&7&m----------------------------------------------------------------"
+    - "&7&m--------------------------"
     - "&6&l2FA - Setup"
     - "&eKey: &f%secret%"
     - "&eEnter the code in the app, then: &6/2fa <code>"
-    - "&7&m----------------------------------------------------------------"
+    - "&7&m-------------------------"
   2fa-setup-backups-codes:
     - "&eBackup Codes:"
     - "%codes%"
@@ -92,12 +93,12 @@ messages:
   # /account Command
   account-usage: "&cCorrect usage: &e/account <nick>"
   account-not-found: "&cPlayer &6%target% &cnever registered on the server"
+  account-no-data: "No data"
   account-stats-header: "&8--- &6Account statistics: &e%target% &8---"
   account-stats-uuid: "&7UUID: &f%uuid%"
   account-stats-ip: "&7Last IP: &f%ip%"
   account-stats-reg-date: "&7Registration date: &f%register_date%"
   account-stats-login-date: "&7Last login: &f%login_date%"
-  account-stats-status: "&7Registration status: %status%"
   account-status-not-active-register: "&cUnregistered"
   account-stats-status-2fa: "&72FA Status: %status%"
   account-status-active-2fa: "&aEnabled"
@@ -118,12 +119,30 @@ messages:
   listaip-format: "&e{ip} &b(&6Accounts: {count}&b) &7-> &a{players}"
   listaip-footer: "&7=========================================="
 
+  # /moveaccount command
+  move-account-usage: "&cCorrect usage: &e/moveaccount <old nickname> <new nickname>"
+  move-account-start: "&aStarting the verification and migration process for &e%old% &a--> &e%new%"
+  move-account-success: "&aData successfully transferred from account &e%old% &a to account &e%new%&a!"
+  move-account-error: "§cA fatal error occurred while scanning files. Migration aborted."
+  move-account-error-migration: "§cAn error occurred while saving the migrated files!"
+  move-account-new-player-exists: "§cThe new UUID &6(%uuid%) &c already exists in the plugin database!"
+  move-account-old-player-no-data: "&cPlayer &6%target% &cdoes not have any saved data in this plugin. There is nothing to migrate!"
+  move-account-player-not-exists: "&cPlayer &6%target% &chas never played on this server!"
+  move-account-player-is-the-same: "&cPlayer old and new are the same!"
+  move-account-players-already-online: "&cPlayer &6%old% &club &6%new% &care online! &4They must not be migrating to the server to avoid data corruption!"
+  move-account-confirm: "&cThis action is &4&nIRREVERSIBLE&c!"
+  move-account-button: "&6&l[MOVE]"
+  move-account-hover: "&4Click here to move account"
+
   # /resetaccount command
   usage-purge-account: "&cCorrect usage: &e/resetaccount <nickname>"
   admin-purge-success: "&aSuccessfully deleted ALL account data for player &e%player%"
   player-purge-kick: "&cYour account has been completely removed from the server database by the administrator"
+  account-purge-confirm: "&cThis action is &4&nIRREVERSIBLE&c!"
+  account-purge-button: "&6&l[DELETE]"
+  account-purge-hover: "&4Click here to delete account"
 
-  # /zresetuj2fa Command
+  # /reset2fa Command
   usage-reset-2fa: "&cCorrect usage: &e/zresetuj2fa <nick>"
   admin-reset-2fa-success: "&aSuccessfully removed 2-step verification from player &e%player%"
   2fa-not-found: "&cPlayer &6%target% &cdoes not have 2-step verification (2FA) enabled!"
@@ -134,7 +153,8 @@ messages:
   # --- Spawn System ---
   spawn-set-success: "&aSuccessfully set location for: &e%type%"
   spawn-deleted-success: "&aSpawn location removed: &e%type%"
-  spawn-usage: "&cCorrect usage: &e/astralogin %cmd% <before_login|after_login>"
+  loginspawn-usage: "&cCorrect usage: &e/loginspawn <setspawn|delspawn> <before_login|after_login>"
+  spawn-usage: "&cCorrect usage: &e/loginspawn %cmd% <before_login|after_login>"
   spawn-invalid-type: "&cInvalid type! &eUse: before_login or after_login"
   spawn-exists: "&cSpawn &6%type% &calready exists!"
   spawn-does-not-exist: "&cSpawn &6%type% &cdoes not exist!"

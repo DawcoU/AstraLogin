@@ -1,15 +1,20 @@
-package pl.dawcou.astralogin;
+package pl.dawcou.astralogin.auth.twofactor;
 
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.auth.LoginSystem;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
@@ -41,7 +46,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
             String targetName = args[0];
 
-            org.bukkit.OfflinePlayer offlineP = Bukkit.getOfflinePlayer(targetName);
+            OfflinePlayer offlineP = Bukkit.getOfflinePlayer(targetName);
             UUID targetUUID = offlineP.getUniqueId();
 
             FileConfiguration accountsConfig = plugin.getAccountDataManager().getConfig();
@@ -68,7 +73,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             Player targetP = offlineP.getPlayer();
             if (targetP != null && targetP.isOnline()) {
                 String MessageReset2FA = plugin.getLanguageManager().getMessage("player-reset-2fa");
-                targetP.sendMessage(net.kyori.adventure.text.Component.text(MessageReset2FA));
+                targetP.sendMessage(Component.text(MessageReset2FA));
             }
 
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("admin-reset-2fa-success").replace("%player%", targetName));
@@ -116,19 +121,17 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             List<String> backupCodes = twoFactorManager.getPendingBackupCodes(uuid);
 
             if (backupMessage != null && !backupMessage.isEmpty() && backupCodes != null) {
-                // Składamy wszystkie 5 kodów w jeden sformatowany tekst z nowymi liniami
                 StringBuilder codesBuilder = new StringBuilder();
                 for (int i = 0; i < backupCodes.size(); i++) {
-                    codesBuilder.append("&7- &f").append(backupCodes.get(i));
+                    codesBuilder.append(backupCodes.get(i));
                     if (i < backupCodes.size() - 1) {
-                        codesBuilder.append("\n"); // Nowa linia dla każdego kodu
+                        codesBuilder.append("\n");
                     }
                 }
 
-                // Podmieniamy placeholder %codes% na naszą gotową listę kodów
-                // Używamy ChatColor, bo nowo dodane kody z Javy muszą dostać kolory
                 String finalMessage = backupMessage.replace("%codes%", codesBuilder.toString());
-                p.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', finalMessage));
+
+                p.sendMessage(Component.text(finalMessage));
             }
 
             // Optymalizacja: Pobieramy formaty wiadomości RAZ przed uruchomieniem schedulera
@@ -152,9 +155,9 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
                 String secondsLeft = twoFactorManager.getRemainingTime(uuid);
 
-                p.sendActionBar(net.kyori.adventure.text.Component.text(
+                p.sendActionBar(Component.text(
                         timerFormat.replace("%seconds%", secondsLeft)));
-            }, 0, 1, java.util.concurrent.TimeUnit.SECONDS);
+            }, 0, 1, TimeUnit.SECONDS);
             return true;
         }
 
@@ -176,7 +179,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             if (twoFactorManager.useBackupCode(uuid, inputCode)) {
                 loginSystem.removeWaitingFor2FA(uuid);
 
-                if (!loginSystem.getZalogowani().contains(uuid)) {
+                if (!loginSystem.getLoggedIn().contains(uuid)) {
                     loginSystem.finishLogin(p);
                 }
 
@@ -199,7 +202,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                 if (twoFactorManager.verifyCode(secret, code)) {
                     loginSystem.removeWaitingFor2FA(uuid);
 
-                    if (!loginSystem.getZalogowani().contains(uuid)) {
+                    if (!loginSystem.getLoggedIn().contains(uuid)) {
                         loginSystem.finishLogin(p);
                     }
 

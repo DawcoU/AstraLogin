@@ -3,7 +3,7 @@
 
 Created and maintained by **DawcoU** 👨‍💻
 
-AstraLogin is a modern, high-performance login plugin built specifically for newer Minecraft versions (1.18 - 1.20+).
+AstraLogin is a modern, high-performance login plugin built specifically for newer Minecraft versions (1.19.4 - 26.2+).
 Developed in Java 17 and leveraging the Paper API for maximum efficiency, it is the perfect choice for Survival, RPG, and SMP servers. 🚀🎮
 
 ---
@@ -32,21 +32,23 @@ Developed in Java 17 and leveraging the Paper API for maximum efficiency, it is 
 
 ### 🛠️ Commands & Permissions
 
-| Command                       | Description                                                | Permission                 |
-|:------------------------------|:-----------------------------------------------------------|:---------------------------|
-| `/register <pass> <repeat>`   | Register a new account 🔐                                  | *None*                     |
-| `/login <pass>`               | Log into the server 🔑                                     | *None*                     |
-| `/changepassword <old> <new>` | Change your current password 🔄                            | *None*                     |
-| `/2fa <setup/unsetup/code>`   | Manage and verify your 2FA security 📱                     | *None*                     |
-| `/account <player>`           | View advanced account stats (UUID, IP, 2FA, dates) 📊      | `astralogin.account`       |
-| `/accountslist`               | View all AstraLogin accounts 👥                              | `astralogin.accountslist`  |
-| `/resetpassword <player>`     | Deletes a player's password ❌                              | `astralogin.resetpassword` |
-| `/resetip <player>`           | Resets the IP lock for a player 🌐                         | `astralogin.resetip`       |
-| `/resetaccount <player>`      | **Wipes all player data** (password, IP, location, 2FA) ⚠️ | `astralogin.resetaccount`  |
-| `/astralogin reload`          | Reloads the plugin configuration ⚙️                        | `astralogin.reload`        |
+| Command                                                      | Description                                                | Permission                                   |
+|:-------------------------------------------------------------|:-----------------------------------------------------------|:---------------------------------------------|
+| `/register <pass> <repeat>`                                  | Register a new account 🔐                                  | *None*                                       |
+| `/login <pass>`                                              | Log into the server 🔑                                     | *None*                                       |
+| `/changepassword <old> <new> <repeat>`                       | Change your current password 🔄                            | *None*                                       |
+| `/2fa <setup/unsetup/code>`                                  | Manage and verify your 2FA security 📱                     | *None*                                       |
+| `/account <player>`                                          | View advanced account stats (UUID, IP, 2FA, dates) 📊      | `astralogin.account`                         |
+| `/accountslist`                                              | View all AstraLogin accounts 👥                            | `astralogin.accountslist`                    |
+| `/resetpassword <player>`                                    | Deletes a player's password ❌                              | `astralogin.resetpassword`                   |
+| `/resetip <player>`                                          | Resets the player's IP address 🌐                         | `astralogin.resetip`                         |
+| `/resetaccount <player>`                                     | **Wipes all player data** (password, IP, location, 2FA) ⚠️ | `astralogin.resetaccount`                    |
+| `/moveaccount <old player> <new player>`                     | Transfers all AstraLogin player data to another account ▶️   | `astralogin.moveaccount`                     |
+| `/loginspawn <setspawn/delspawn> <before_login/after_login>` | Sets and removes the selected login spawn 🗺️              | `astralogin.setspawn`, `astralogin.delspawn` |
+| `/astralogin reload`                                         | Reloads the plugin configuration ⚙️                        | `astralogin.reload`                          |
 
 **Other Permissions:**
-* `astralogin.updates` – Receive a notification when a new version is available. 📡🔔
+* `astralogin.update` – Receive a notification when a new version is available. 📡🔔
 
 ---
 
@@ -56,6 +58,17 @@ Developed in Java 17 and leveraging the Paper API for maximum efficiency, it is 
 2. Drop it into your `plugins` folder. 📂
 3. Restart your server. 🔄
 4. Customize your messages and settings in `config.yml`. 📝⚙️
+
+---
+
+### 🛠️ Other Projects
+🛡️ **[AstraRedstoneSystems](https://modrinth.com/plugin/astraredstonesystems)** - Check out my other plugin! It's an advanced redstone mechanics system with number gates and more!
+
+---
+
+# Links 💾
+
+**GitHub AstraLogin:** [https://github.com/DawcoU/AstraLogin](https://github.com/DawcoU/AstraLogin) 🖥️
 
 ---
 

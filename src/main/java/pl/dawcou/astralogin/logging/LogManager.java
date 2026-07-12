@@ -1,4 +1,7 @@
-package pl.dawcou.astralogin;
+package pl.dawcou.astralogin.logging;
+
+import org.bukkit.configuration.file.FileConfiguration;
+import pl.dawcou.astralogin.auth.AstraLogin;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -26,10 +29,13 @@ public class LogManager {
         }
     }
 
-    public void log(String message) {
-        if (!plugin.getConfig().getBoolean("settings.file-logging", true)) {
+    public synchronized void log(String message) {
+        if (!plugin.getConfig().getBoolean("settings.logs.enabled", true)) {
             return;
         }
+
+        FileConfiguration config = plugin.getConfig();
+        int limit = config.getInt("settings.logs.limit", 30);
 
         // Pobieramy aktualny czas od razu na głównym wątku, żeby mieć idealną dokładność zdarzenia
         LocalDateTime now = LocalDateTime.now();
@@ -40,25 +46,37 @@ public class LogManager {
 
         // Odpalamy asynchroniczny scheduler z Paper API, który zapisze to na dysku w tle
         plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
-            File logFile = new File(logsFolder, fileName);
+            try (FileWriter fw = new FileWriter(new File(logsFolder, fileName), true);
+                 PrintWriter pw = new PrintWriter(fw)) {
 
-            try {
-                if (!logFile.exists()) {
-                    logFile.createNewFile();
-                }
-
-                // FileWriter z parametrem true, aby dopisywać linie na końcu pliku (append)
-                try (FileWriter fw = new FileWriter(logFile, true);
-                     PrintWriter pw = new PrintWriter(fw)) {
-                    pw.println(fullLogLine);
-                }
+                pw.println(fullLogLine);
 
             } catch (IOException e) {
-                // Najpierw Twoja ładna informacja o pliku
+                // Najpierw mięso potem kości
                 plugin.getNoticeManager().sendLogSaveError(fileName);
-                // A potem surowy, pełny powód prosto od Javy
                 e.printStackTrace();
             }
+
+            // Pobieranie limitu z configu i czyszczenie starych logów
+            int finalLimit = Math.max(5, Math.min(60, limit));
+
+            deleteOldLogs(logsFolder, finalLimit);
         });
+    }
+
+    private void deleteOldLogs(File logDirectory, int limit) {
+        File[] files = logDirectory.listFiles((dir, name) -> name.endsWith(".log"));
+
+        if (files == null || files.length <= limit) {
+            return;
+        }
+
+        // Sortowanie plików od najstarszego do najnowszego
+        java.util.Arrays.sort(files, java.util.Comparator.comparingLong(File::lastModified));
+
+        int filesToDelete = files.length - limit;
+        for (int i = 0; i < filesToDelete; i++) {
+            files[i].delete();
+        }
     }
 }

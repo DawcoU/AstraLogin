@@ -1,8 +1,10 @@
-package pl.dawcou.astralogin;
+package pl.dawcou.astralogin.auth;
 
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import pl.dawcou.astralogin.system.LoginUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
@@ -133,6 +135,13 @@ public class SessionManager {
         if (sessionConfig.contains(path)) {
             sessionConfig.set(path + ".timestamp", null);
             sessionConfig.set(path + ".ip", null);
+
+            // Jeśli po usunięciu sesji głównej cała sekcja UUID jest pusta, usuń ją całkowicie
+            var section = sessionConfig.getConfigurationSection(path);
+            if (section == null || section.getKeys(false).isEmpty()) {
+                sessionConfig.set(path, null);
+            }
+
             try {
                 sessionConfig.save(sessionFile);
             } catch (IOException e) {
@@ -210,6 +219,13 @@ public class SessionManager {
         if (sessionConfig.contains(path)) {
             sessionConfig.set(path + ".2fa-timestamp", null);
             sessionConfig.set(path + ".2fa-ip", null);
+
+            // Jeśli po usunięciu 2FA cała sekcja UUID jest pusta, usuń ją całkowicie
+            var section = sessionConfig.getConfigurationSection(path);
+            if (section == null || section.getKeys(false).isEmpty()) {
+                sessionConfig.set(path, null);
+            }
+
             try {
                 sessionConfig.save(sessionFile);
             } catch (IOException e) {
@@ -263,5 +279,13 @@ public class SessionManager {
             return false;
         }
         return true;
+    }
+
+    public void reload() {
+        // Wczytujemy plik z dysku na nowo do obiektu konfiguracyjnego
+        this.sessionConfig = YamlConfiguration.loadConfiguration(sessionFile);
+
+        loadSessionsFromConfig();
+        load2FAFromConfig();
     }
 }

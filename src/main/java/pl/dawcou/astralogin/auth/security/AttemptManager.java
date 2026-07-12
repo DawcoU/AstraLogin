@@ -1,12 +1,16 @@
-package pl.dawcou.astralogin;
+package pl.dawcou.astralogin.auth.security;
 
+import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
+import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.system.LoginUtils;
+
 import java.util.HashMap;
 import java.util.UUID;
 
 public class AttemptManager {
 
-    private final HashMap<UUID, Integer> proby = new HashMap<>();
+    private final HashMap<UUID, Integer> attempts = new HashMap<>();
     private final AstraLogin plugin;
 
     public AttemptManager(AstraLogin plugin) {
@@ -22,8 +26,8 @@ public class AttemptManager {
         int threshold = max + margin;
         String timeStr = plugin.getConfig().getString(path + "tempban-time", "5 minutes");
 
-        int aktualne = proby.getOrDefault(p.getUniqueId(), 0) + 1;
-        proby.put(p.getUniqueId(), aktualne);
+        int aktualne = attempts.getOrDefault(p.getUniqueId(), 0) + 1;
+        attempts.put(p.getUniqueId(), aktualne);
 
         if (aktualne >= threshold) {
             clearAttempts(p.getUniqueId());
@@ -34,7 +38,7 @@ public class AttemptManager {
 
             String msg = plugin.getLanguageManager().getMessage("kick-max-attempts-ban")
                     .replace("%time%", timeStr);
-            p.kick(net.kyori.adventure.text.Component.text(msg));
+            p.kick(Component.text(msg));
             return;
         }
 
@@ -44,12 +48,22 @@ public class AttemptManager {
 
             String msg = plugin.getLanguageManager().getMessage("kick-max-attempts")
                     .replace("%remaining%", String.valueOf(remaining));
-            p.kick(net.kyori.adventure.text.Component.text(msg));
+            p.kick(Component.text(msg));
             return;
         }
     }
 
     public void clearAttempts(UUID uuid) {
-        proby.remove(uuid);
+        attempts.remove(uuid);
+    }
+
+    public void unregisterCache(String oldUUIDStr) {
+        try {
+            if (oldUUIDStr != null) {
+                UUID oldUUID = UUID.fromString(oldUUIDStr);
+                this.attempts.remove(oldUUID);
+            }
+        } catch (IllegalArgumentException ignored) {
+        }
     }
 }

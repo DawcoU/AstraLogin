@@ -1,7 +1,9 @@
-package pl.dawcou.astralogin;
+package pl.dawcou.astralogin.file;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import pl.dawcou.astralogin.auth.AstraLogin;
+
 import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;

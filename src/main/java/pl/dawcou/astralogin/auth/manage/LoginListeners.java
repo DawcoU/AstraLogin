@@ -1,8 +1,7 @@
-package pl.dawcou.astralogin;
+package pl.dawcou.astralogin.auth.manage;
 
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
@@ -14,21 +13,24 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.auth.LoginSystem;
+import pl.dawcou.astralogin.auth.SessionManager;
+import pl.dawcou.astralogin.auth.security.IPManager;
+import pl.dawcou.astralogin.system.LoginUtils;
+import pl.dawcou.astralogin.system.UpdateChecker;
+import pl.dawcou.astralogin.auth.twofactor.TwoFactorManager;
 
 import java.time.Duration;
 import java.util.UUID;
 
 public class LoginListeners implements Listener {
 
-
     private final AstraLogin plugin;
-    private final SpawnManager spawnManager;
-    private final AccountDataManager manager;
 
-    public LoginListeners(AstraLogin plugin, AccountDataManager manager) {
+    public LoginListeners(AstraLogin plugin) {
         this.plugin = plugin;
-        this.spawnManager = plugin.getSpawnManager();
-        this.manager = manager;
+
     }
 
     @EventHandler
@@ -38,7 +40,7 @@ public class LoginListeners implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent e) {
-        LoginSystem ls = plugin.getLoginSystem();
+        LoginSystem loginSystem = plugin.getLoginSystem();
         Player p = e.getPlayer();
         UUID uuid = p.getUniqueId();
         String path = "accounts." + p.getUniqueId() + ".";
@@ -48,18 +50,18 @@ public class LoginListeners implements Listener {
             plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
                 new UpdateChecker(plugin).getVersion(version -> {
                     if (!plugin.getDescription().getVersion().equals(version)) {
-                        p.getScheduler().run(plugin, stask -> {
+                        plugin.getServer().getAsyncScheduler().runNow(plugin, synctask -> {
                             plugin.getNoticeManager().sendUpdateNotice(p, version);
-                        }, null);
+                        });
                     }
                 });
             });
         }
 
-        if (ls.getData().hasPassword(uuid.toString())) {
-            if (!manager.getConfig().getBoolean(path + "is-registered")) {
-                manager.getConfig().set(path + "is-registered", true);
-                manager.saveConfig();
+        if (plugin.getPasswordManager().hasPassword(uuid.toString())) {
+            if (!plugin.getAccountDataManager().getConfig().getBoolean(path + "is-registered")) {
+                plugin.getAccountDataManager().getConfig().set(path + "is-registered", true);
+                plugin.getAccountDataManager().saveConfig();
             }
         }
 
@@ -77,7 +79,7 @@ public class LoginListeners implements Listener {
                 }
                 else if (plugin.getSessionManager().hasActiveSession(uuid, currentIP)) {
 
-                    // ⚡ POBIERAMY STATUSY 2FA DLA TEGO KONKRETNEGO GRACZA
+                    // POBIERAMY STATUSY 2FA DLA TEGO KONKRETNEGO GRACZA
                     boolean is2FAEnabled = plugin.getAccountDataManager().getConfig().getBoolean("accounts." + uuid + ".2fa-enabled", false);
 
                     if (is2FAEnabled) {
@@ -88,7 +90,7 @@ public class LoginListeners implements Listener {
                         if (!is2FASessionEnabled || !hasActive2FA) {
                             // [Kombinacja: Hasło przywrócone, ale brakuje kodu 2FA / sesja 2FA wyłączona]
                             passwordBypassedBySession = true;
-                            ls.addWaitingFor2FA(uuid, uuid.toString());
+                            loginSystem.addWaitingFor2FA(uuid, uuid.toString());
 
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-required"));
                             Title title2fa = Title.title(
@@ -99,14 +101,14 @@ public class LoginListeners implements Listener {
                             p.showTitle(title2fa);
                         } else {
                             // [Kombinacja: Pełna sesja - Oba aktywne]
-                            ls.finishLogin(p);
+                            loginSystem.finishLogin(p);
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("session-restored"));
                             plugin.getLogManager().log("Player " + p.getName() + " had an active session (Password + 2FA)");
                             return; // Gracz gra!
                         }
                     } else {
                         // GRACZ NIE MA WŁĄCZONEGO 2FA -> skoro sesja hasła jest aktywna, logujemy go od razu!
-                        ls.finishLogin(p);
+                        loginSystem.finishLogin(p);
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("session-restored"));
                         plugin.getLogManager().log("Player " + p.getName() + " had an active session (Password only)");
                         return; // Gracz gra!
@@ -122,16 +124,16 @@ public class LoginListeners implements Listener {
         }
 
         // --- LOGIKA POZA SESJĄ LUB DLA BLOKADY 2FA ---
-        ls.getStorage().save(p);
-        spawnManager.teleport(p, "before_login");
+        plugin.getInventoryManager().save(p);
+        plugin.getSpawnManager().teleport(p, "before_login");
 
         // Jeśli hasło NIE zostało przywrócone przez sesję, standardowo wyrzucamy z zalogowanych
         if (!passwordBypassedBySession) {
-            ls.getZalogowani().remove(uuid);
+            loginSystem.getLoggedIn().remove(uuid);
         } else {
             // Jeśli hasło przeszło z sesji, upewniamy się, że gracz ma status zalogowanego z hasła
-            if (!ls.getZalogowani().contains(uuid)) {
-                ls.getZalogowani().add(uuid);
+            if (!loginSystem.getLoggedIn().contains(uuid)) {
+                loginSystem.getLoggedIn().add(uuid);
             }
         }
 
@@ -149,7 +151,7 @@ public class LoginListeners implements Listener {
             );
             p.showTitle(title2fa);
         } else {
-            if (ls.getData().hasPassword(uuid.toString())) {
+            if (plugin.getPasswordManager().hasPassword(uuid.toString())) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("reminder-login"));
 
                 // WYSYŁANIE SAMEGO SUBTYTUŁU DLA LOGOWANIA:
@@ -199,26 +201,31 @@ public class LoginListeners implements Listener {
             final BossBar bossBar = BossBar.bossBar(Component.empty(), 1.0f, color, overlay);
             if (useBossBar) p.showBossBar(bossBar);
 
-            p.getScheduler().runAtFixedRate(plugin, (scheduledTask) -> {
-                // Warunek zakończenia: gracz wyszedł LUB (jest zalogowany i NIE oczekuje na 2FA)
-                if (!p.isOnline() || (ls.getZalogowani().contains(p.getUniqueId()) && !ls.isWaitingFor2FA(p.getUniqueId()))) {
-                    if (useBossBar) p.hideBossBar(bossBar);
+            p.getScheduler().runAtFixedRate(plugin, task -> {
+                if (!p.isOnline() || (loginSystem.getLoggedIn().contains(p.getUniqueId()) && !loginSystem.isWaitingFor2FA(p.getUniqueId()))) {
                     if (useBossBar) {
                         p.hideBossBar(bossBar);
                     }
-                    scheduledTask.cancel();
+                    task.cancel();
                     return;
                 }
 
                 if (time[0] <= 0) {
-                    if (useBossBar) p.hideBossBar(bossBar);
+                    if (useBossBar) {
+                        p.hideBossBar(bossBar);
+                    }
+
                     p.kick(Component.text(plugin.getLanguageManager().getMessage("kick-timeout")));
-                    scheduledTask.cancel();
+
+                    task.cancel();
                     plugin.getLogManager().log("Player " + p.getName() + " Was kicked for exceeding the login timeout");
                     return;
                 }
 
-                String rawMsg = plugin.getLanguageManager().getMessage("timer-message").replace("%time%", LoginUtils.formatTime(time[0]));
+                String rawMsg = plugin.getLanguageManager()
+                        .getMessage("timer-message")
+                        .replace("%time%", LoginUtils.formatTime(time[0]));
+
                 Component message = Component.text(rawMsg);
 
                 if (useBossBar) {
@@ -231,16 +238,16 @@ public class LoginListeners implements Listener {
                 }
 
                 time[0]--;
-            }, null, 1L, 20L);
+
+            }, () -> {}, 1L, 20L);
         }
     }
 
     @EventHandler
     public void onPreLogin(AsyncPlayerPreLoginEvent e) {
-        LoginSystem ls = plugin.getLoginSystem();
         UUID uuid = e.getUniqueId();
         String currentIP = e.getAddress().getHostAddress();
-        IPManager ipManager = ls.getIpManager();
+        IPManager ipManager = plugin.getIPManager();
         String playerName = e.getName();
 
         // Sprawdzamy, czy gracz o tym nicku jest już na serwerze
@@ -251,7 +258,7 @@ public class LoginListeners implements Listener {
             // 2. Zamieniamy String z paragrafami na Component (bez używania MiniMessage)
             Component kickComponent = LegacyComponentSerializer.legacySection().deserialize(rawMessage);
 
-            // 3. Wrzucamy gotowy Component do metody Paper
+            // 3. Wrzucamy gotowy Component
             e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, kickComponent);
             plugin.getLogManager().log("Someone tried to join the account of an active player (" + playerName + ") with IP (" + currentIP + ")");
         }
@@ -278,7 +285,7 @@ public class LoginListeners implements Listener {
             // Ktoś z banem na IP próbuje się wbić
             plugin.getLogManager().log("Player " + playerName + " (" + currentIP + ") tried to connect but is IP banned. Reason: " + reason);
 
-            e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, net.kyori.adventure.text.Component.text(msg));
+            e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, Component.text(msg));
             return;
         }
 
@@ -290,13 +297,13 @@ public class LoginListeners implements Listener {
         if (plugin.getConfig().getBoolean("security.ip-security.enabled", true)) {
             String savedIP = ipManager.getIP(uuid.toString());
             // Metoda przyjmuje znowu 2 argumenty, bo sama wie ile członów sprawdzać!
-            if (savedIP != null && !IPSecurity.CheckIP(savedIP, currentIP)) {
+            if (savedIP != null && !IPManager.CheckIP(savedIP, currentIP)) {
                 String msg = plugin.getLanguageManager().getMessage("ip-lock-kick");
 
                 // Ktoś zna hasło/wchodzi na konto, ale IP się nie zgadza z zapisanym
                 plugin.getLogManager().log("Player " + playerName + " was blocked by IP-Lock. Current IP: " + currentIP + ", Saved IP: " + savedIP);
 
-                e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, net.kyori.adventure.text.Component.text(msg));
+                e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, Component.text(msg));
                 return;
             }
         }
@@ -304,7 +311,7 @@ public class LoginListeners implements Listener {
         if (plugin.getConfig().getBoolean("security.anti-multiaccount.enabled", true)) {
             String zapisaneIP = ipManager.getIP(uuid.toString());
             // Tutaj tak samo – czysto i bez śmiecenia dodatkowymi parametrami
-            if (zapisaneIP == null || !IPSecurity.CheckIP(zapisaneIP, currentIP)) {
+            if (zapisaneIP == null || !IPManager.CheckIP(zapisaneIP, currentIP)) {
                 int limit = plugin.getConfig().getInt("security.anti-multiaccount.limit", 2);
                 int ileKont = ipManager.getNumberOfAccountsByIP(currentIP);
 
@@ -312,7 +319,7 @@ public class LoginListeners implements Listener {
                     // Przekroczenie limitu kont na jednym IP
                     plugin.getLogManager().log("Player " + playerName + " (" + currentIP + ") was blocked by Anti-MultiAccount. Limit: " + limit + ", Current: " + ileKont);
 
-                    e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, net.kyori.adventure.text.Component.text(plugin.getLanguageManager().getMessage("anti-multiaccount-kick")));
+                    e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, Component.text(plugin.getLanguageManager().getMessage("anti-multiaccount-kick")));
                     return;
                 }
             }
@@ -320,37 +327,57 @@ public class LoginListeners implements Listener {
     }
 
     public void handleQuit(Player p) {
-        // 1. Pobieramy aktualne instancje bezpośrednio z pluginu, żeby uniknąć Nullowania
-        LoginSystem ls = plugin.getLoginSystem();
-        SpawnManager sm = plugin.getSpawnManager();
-        SessionManager ss = plugin.getSessionManager();
+        // 1. Pobieramy aktualne instancje bezpośrednio z pluginu
+        UUID uuid = p.getUniqueId();
+        LoginSystem loginSystem = plugin.getLoginSystem();
+        SpawnManager spawnManager = plugin.getSpawnManager();
+        SessionManager sessionManager = plugin.getSessionManager();
+        InventoryManager inventoryManager = plugin.getInventoryManager();
+        TwoFactorManager twoFactorManager = plugin.getTwoFactorManager();
 
         // 2. Logika zapisu (tylko jeśli gracz był zalogowany)
-        if (ls != null && ls.getZalogowani() != null && ls.getZalogowani().contains(p.getUniqueId())) {
+        // KROK 1: Najpierw upewniamy się, czy obiekty w ogóle istnieją w RAMie (Bezpiecznik)
+        if (loginSystem != null && loginSystem.getLoggedIn() != null) {
 
-            if (sm != null) {
-                sm.saveLastLocation(p);
-            }
+            // KROK 2: Dopiero tutaj robimy czystą logikę Zalogowany vs Niezalogowany
+            if (loginSystem.getLoggedIn().contains(p.getUniqueId())) {
 
-            if (plugin.getConfig().getBoolean("features.session.enabled") && ss != null) {
-                ss.saveSession(p.getUniqueId(), p.getAddress().getAddress().getHostAddress());
+                // --- GRACZ BYŁ ZALOGOWANY ---
+                if (spawnManager != null) {
+                    spawnManager.saveLastLocation(p);
+                }
+
+                if (plugin.getConfig().getBoolean("features.session.enabled") && sessionManager != null) {
+                    sessionManager.saveSession(p.getUniqueId(), p.getAddress().getAddress().getHostAddress());
+                }
+
+            } else {
+                // --- GRACZ NIE BYŁ ZALOGOWANY ---
+                if (inventoryManager != null) {
+                    inventoryManager.restore(p);
+                }
             }
         }
 
         // 3. Logika widoczności (silnikowe odświeżenie)
         for (Player online : Bukkit.getOnlinePlayers()) {
-                online.showPlayer(plugin, p);
+            online.showPlayer(plugin, p);
         }
 
         // 4. Usuwamy z mapy zalogowanych
-        if (ls != null && ls.getZalogowani() != null) {
-            ls.getZalogowani().remove(p.getUniqueId());
+        if (loginSystem != null && loginSystem.getLoggedIn() != null) {
+            loginSystem.getLoggedIn().remove(p.getUniqueId());
         }
 
-        // 5. ZAPIS (sesje zapisane na dysk raz, na końcu)
-        if (ss != null) {
-            ss.saveSessionsToConfig();
-            ss.save2FAToConfig();
+        // 5. ZAPIS (sesji)
+        if (sessionManager != null) {
+            sessionManager.saveSessionsToConfig();
+            sessionManager.save2FAToConfig();
+        }
+
+        // 6. CZYSZCZENIE (zamrożonych setup'ów)
+        if (twoFactorManager != null) {
+            twoFactorManager.invalidateSetup(uuid);
         }
     }
 }

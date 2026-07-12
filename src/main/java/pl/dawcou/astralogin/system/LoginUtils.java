@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin;
+package pl.dawcou.astralogin.system;
 
 public class LoginUtils {
 

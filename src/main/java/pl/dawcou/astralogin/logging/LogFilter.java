@@ -1,10 +1,11 @@
-package pl.dawcou.astralogin;
+package pl.dawcou.astralogin.logging;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.filter.AbstractFilter;
 import org.apache.logging.log4j.message.Message;
+import pl.dawcou.astralogin.auth.AstraLogin;
 
 public class LogFilter extends AbstractFilter {
 

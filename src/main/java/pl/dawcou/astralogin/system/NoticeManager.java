@@ -1,7 +1,8 @@
-package pl.dawcou.astralogin;
+package pl.dawcou.astralogin.system;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
+import pl.dawcou.astralogin.auth.AstraLogin;
 
 public class NoticeManager {
 
@@ -30,14 +31,9 @@ public class NoticeManager {
         Bukkit.getConsoleSender().sendMessage(PREFIX2 + " " + msg + error);
     }
 
-    public void sendSpawnCreateError() {
-        String msg = getLang().equalsIgnoreCase("pl") ? "§cNie można utworzyć pliku spawns/locations.yml!" : "§cCould not create spawns/locations.yml file!";
-        plugin.getLogger().severe(msg);
-    }
-
     public void sendPlayerLocationReadError(String playerName) {
-        String msg = getLang().equalsIgnoreCase("pl") ? "Błąd podczas odczytu pozycji dla " + playerName : "Error while reading location for " + playerName;
-        plugin.getLogger().warning(msg);
+        String msg = getLang().equalsIgnoreCase("pl") ? "§cBłąd podczas odczytu pozycji dla " + playerName : "§cError while reading location for " + playerName;
+        plugin.getLogger().severe(msg);
     }
 
     public void sendSpawnSaveError() {
@@ -50,11 +46,6 @@ public class NoticeManager {
         plugin.getLogger().warning(msg);
     }
 
-    public void sendNoIPSaved(CommandSender sender) {
-        String msg = getLang().equalsIgnoreCase("pl") ? "§cTen gracz nie ma zapisanego adresu IP!" : "§cThis player does not have a saved IP address!";
-        sender.sendMessage(PREFIX + " " + msg);
-    }
-
     public void sendVersionOk(String version) {
         String msg = getLang().equalsIgnoreCase("pl") ? "§aAstraLogin jest aktualny §f(§ev" + version + "§f)" : "§aAstraLogin is up to date §f(§ev" + version + "§f)";
         Bukkit.getConsoleSender().sendMessage(PREFIX2 + " " + msg);
@@ -64,22 +55,15 @@ public class NoticeManager {
         String msg = getLang().equalsIgnoreCase("pl") ?
                 "§aFiltr haseł został pomyślnie aktywowany" :
                 "§aPassword filter has been successfully activated";
-        plugin.getLogger().info(msg);
+        Bukkit.getConsoleSender().sendMessage(PREFIX2 + " " + msg);
     }
 
     public void sendLoggerError(Exception e) {
-        String errorMsg;
-
-        if (getLang().equalsIgnoreCase("pl")) {
-            errorMsg = "§4KRYTYCZNY BŁĄD: §cNie udało się aktywować filtra logów! Hasła mogą być widoczne w konsoli Błąd: " + e.getMessage();
-        } else {
-            errorMsg = "§4CRITICAL ERROR: §cFailed to activate log filter! Passwords may be visible in console Error: " + e.getMessage();
-        }
-
-        // Używamy severe, bo to poważna sprawa dotycząca bezpieczeństwa
-        plugin.getLogger().severe(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(
-                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(errorMsg)
-        ));
+        String msg = getLang().equalsIgnoreCase("pl") ?
+                "§4KRYTYCZNY BŁĄD: §cNie udało się aktywować filtra logów! Hasła mogą być widoczne w konsoli Błąd: " + e.getMessage() :
+                "§4CRITICAL ERROR: §cFailed to activate log filter! Passwords may be visible in console Error: " + e.getMessage();
+        plugin.getLogger().severe((msg)
+        );
     }
 
     public void sendLogSaveError(String fileName) {
@@ -89,11 +73,32 @@ public class NoticeManager {
         plugin.getLogger().severe(msg);
     }
 
+    public void sendBackupSaveError(String error) {
+        String msg = getLang().equalsIgnoreCase("pl") ?
+                "§cNie udało się wykonać automatycznej kopi zapasowej, Błąd:" :
+                "§cAutomatic backup failed, Error:";
+        plugin.getLogger().severe(msg + " " + error);
+    }
+
+    public void sendBackupSave(String fileName) {
+        String msg = getLang().equalsIgnoreCase("pl") ?
+                "§aPomyślnie wykonano automatyczną kopię zapasową w pliku:§e" :
+                "§aAutomatic backup to file successfully completed:§e";
+        Bukkit.getConsoleSender().sendMessage(PREFIX2 + " " + msg + " " + fileName);
+    }
+
+    public void sendMigrationError(String fileName) {
+        String msg = getLang().equalsIgnoreCase("pl") ?
+                "§cNie udało się zmodyfikować pliku przy migracji:" :
+                "§cFailed to modify file during migration:";
+        plugin.getLogger().warning(msg + " " + fileName);
+    }
+
     public void sendSessionsLoaded(int count) {
         String msg = getLang().equalsIgnoreCase("pl") ?
                 "§eWczytano §6" + count + " §eaktywnych sesji z pliku" :
                 "§eLoaded §6" + count + " §eactive sessions from file";
-        plugin.getLogger().info(msg);
+        Bukkit.getConsoleSender().sendMessage(PREFIX2 + " " + msg);
     }
 
     public void sendLangUpdateSuccess(String fileName) {

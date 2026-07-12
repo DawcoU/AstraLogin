@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'pl.dawcou'
-version = '4.0.1'
+version = '4.1.0'
 
 repositories {
     mavenCentral()
@@ -20,9 +20,9 @@ dependencies {
     compileOnly 'org.apache.logging.log4j:log4j-core:2.20.0'
 
     // Biblioteki do załączenia w środku (shadow)
-    shadow 'org.mindrot:jbcrypt:0.4'
-    shadow 'org.bstats:bstats-bukkit:3.2.1'
-    shadow 'com.warrenstrange:googleauth:1.5.0'
+    implementation 'org.mindrot:jbcrypt:0.4'
+    implementation 'org.bstats:bstats-bukkit:3.2.1'
+    implementation 'com.warrenstrange:googleauth:1.5.0'
 }
 
 java {
@@ -38,13 +38,8 @@ processResources {
 
 shadowJar {
     archiveClassifier.set('')
-    // Dodajemy konfigurację shadow, żeby wciągnęło zależności
-    configurations = [project.configurations.shadow]
 
-    // Relokacja
     relocate 'com.warrenstrange.googleauth', 'pl.dawcou.astralogin.googleauth'
     relocate 'org.bstats', 'pl.dawcou.astralogin.bstats'
     relocate 'org.mindrot.jbcrypt', 'pl.dawcou.astralogin.jbcrypt'
 }
-
-tasks.build.dependsOn shadowJar

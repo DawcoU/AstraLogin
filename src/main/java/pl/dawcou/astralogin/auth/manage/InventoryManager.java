@@ -1,17 +1,19 @@
-package pl.dawcou.astralogin;
+package pl.dawcou.astralogin.auth.manage;
 
 import org.bukkit.GameMode;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import pl.dawcou.astralogin.auth.AstraLogin;
+
 import java.io.File;
 import java.io.IOException;
 
 public class InventoryManager {
 
     private final File file;
-    private final FileConfiguration config;
+    private FileConfiguration config;
     private final AstraLogin plugin;
 
     public InventoryManager(AstraLogin plugin) {
@@ -33,7 +35,7 @@ public class InventoryManager {
         // Jeśli plik zawiera już UUID gracza (bo np. wyszedł niezalogowany), to NIEZALEŻNIE
         // od tego, czy admin właśnie wyłączył opcję w configu, musimy wyczyścić mu tymczasowe EQ
         // i ustawić survival, ponieważ jego prawdziwe przedmioty już bezpiecznie leżą w pliku!
-        if (config.contains(uuid)) {
+        if (config.contains("inventory." + uuid)) {
             p.getInventory().clear();
             p.getInventory().setArmorContents(null);
             p.setGameMode(GameMode.SURVIVAL);
@@ -130,9 +132,19 @@ public class InventoryManager {
     }
 
     public void deleteInventoryCache(String uuidString) {
-        if (config.contains("inventory." + uuidString)) {
-            config.set("inventory." + uuidString, null);
+        String path = "inventory." + uuidString;
+        if (config.contains(path)) {
+            config.set(path, null);
             save();
+        }
+    }
+
+    public void reload() {
+        try {
+            // Całkowicie porzucamy stary stan z RAM-u i ładujemy plik od nowa
+            this.config = YamlConfiguration.loadConfiguration(file);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

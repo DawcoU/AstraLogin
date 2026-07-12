@@ -1,19 +1,31 @@
-package pl.dawcou.astralogin;
+package pl.dawcou.astralogin.auth.security;
 
+import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.system.LoginUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class IPManager {
+public class IPManager implements CommandExecutor {
 
     private final AstraLogin plugin;
     private final File file;
     private FileConfiguration config;
 
-    // Potężna optymalizacja: gotowe mapy do sprawdzania IP i ilości kont
+    public static int ipCheckOctets = 4;
+
+    // Mapy do sprawdzania IP i ilości kont
     private final Map<String, String> uuidToIpCache = new HashMap<>();
     private final Map<String, Integer> ipCountCache = new HashMap<>();
 
@@ -46,6 +58,77 @@ public class IPManager {
         reload();
     }
 
+    @Override
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+        if (!sender.hasPermission("astralogin.resetip")) {
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
+            return true;
+        }
+
+        if (args.length != 1) {
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-reset-ip"));
+            return true;
+        }
+
+        OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
+        String uuid = target.getUniqueId().toString();
+
+        // Sprawdzamy czy IP w ogóle istnieje
+        if (getIP(uuid) == null) {
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-ip-reset"));
+            return true;
+        }
+
+        // Usuwamy IP
+        deleteIP(uuid);
+
+        // Pobieramy obiekt zalogowanego gracza, jeśli jest na serwerze
+        Player onlineTarget = Bukkit.getPlayer(target.getUniqueId());
+        if (onlineTarget != null) {
+            String kickReason = plugin.getLanguageManager().getMessage("player-reset-ip-kick");
+            onlineTarget.kick(Component.text(kickReason));
+        }
+
+        String successMsg = plugin.getLanguageManager().getWithPrefix("admin-reset-ip-success")
+                .replace("%player%", args[0]);
+
+        sender.sendMessage(successMsg);
+
+        String adminName = sender.getName();
+        // Pobieramy nick gracza, któremu resetujemy IP
+        String targetName = target.getName() != null ? target.getName() : args[0];
+        plugin.getLogManager().log("Admin " + adminName + " reset IP for player " + targetName);
+        return true;
+    }
+
+    public static boolean CheckIP(String savedIP, String currentIP) {
+        if (savedIP == null || currentIP == null) return false;
+        if (savedIP.equals(currentIP)) return true;
+
+        if (savedIP.contains(".") && currentIP.contains(".")) {
+            String[] s = savedIP.split("\\.");
+            String[] c = currentIP.split("\\.");
+
+            if (s.length < 4 || c.length < 4) {
+                return false;
+            }
+
+            // Korzystamy bezpośrednio z pola w tej klasie, zabezpieczając zakres
+            int octets = ipCheckOctets;
+            if (octets < 1) octets = 1;
+            if (octets > 4) octets = 4;
+
+            for (int i = 0; i < octets; i++) {
+                if (!s[i].equals(c[i])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        return savedIP.equalsIgnoreCase(currentIP);
+    }
+
     public void saveIP(String uuid, String ip) {
         // Jeśli gracz zmienia IP, zmniejszamy licznik starego IP
         String oldIp = uuidToIpCache.get(uuid);
@@ -62,7 +145,7 @@ public class IPManager {
     }
 
     public String getIP(String uuid) {
-        return uuidToIpCache.get(uuid); // Błyskawiczne pobieranie z RAM-u
+        return uuidToIpCache.get(uuid);
     }
 
     public void deleteIP(String uuid) {
@@ -87,7 +170,6 @@ public class IPManager {
     }
 
     // --- OCHRONA IP ---
-
     public boolean isIPBanned(String ip) {
         if (!ipBans.containsKey(ip)) return false;
         if (System.currentTimeMillis() > ipBans.get(ip)) {
@@ -142,7 +224,6 @@ public class IPManager {
         this.uuidToIpCache.clear();
         this.ipCountCache.clear();
 
-        // Przebudowanie całego cache w RAM-ie przy przeładowaniu
         if (config.getConfigurationSection("ips") != null) {
             for (String key : config.getConfigurationSection("ips").getKeys(false)) {
                 String ip = config.getString("ips." + key);

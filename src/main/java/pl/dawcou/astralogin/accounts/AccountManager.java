@@ -1,8 +1,8 @@
-package pl.dawcou.astralogin;
+package pl.dawcou.astralogin.accounts;
 
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import pl.dawcou.astralogin.auth.AstraLogin;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,13 +10,13 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
-public class AccountDataManager {
+public class AccountManager {
 
     private final AstraLogin plugin;
     private File configFile;
     private FileConfiguration accountsConfig;
 
-    public AccountDataManager(AstraLogin plugin) {
+    public AccountManager(AstraLogin plugin) {
         this.plugin = plugin;
         setup();
     }
@@ -54,7 +54,7 @@ public class AccountDataManager {
      * Zapisuje konfigurację na dysk asynchronicznie, aby nie blokować głównego wątku serwera.
      */
     public void saveConfig() {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
             synchronized (configFile) { // Synchronizacja, żeby uniknąć uszkodzenia pliku przy wielu zapisach naraz
                 try {
                     accountsConfig.save(configFile);
@@ -83,7 +83,7 @@ public class AccountDataManager {
      */
     public void recordLogin(UUID uuid, String name, String ip) {
         String path = "accounts." + uuid.toString() + ".";
-        accountsConfig.set(path + "last-known-name", name); // Przy okazji aktualizujemy nick, gdyby gracz zmienił go w premium
+        accountsConfig.set(path + "last-known-name", name); // Przy okazji aktualizujemy nick, gdyby gracz zmienił go
         accountsConfig.set(path + "last-ip", ip);
         accountsConfig.set(path + "last-login-date", getCurrentDateTime());
         saveConfig();
