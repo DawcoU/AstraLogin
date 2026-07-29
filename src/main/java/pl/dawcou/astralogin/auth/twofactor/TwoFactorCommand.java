@@ -35,12 +35,12 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
         // ==========================================
         if (command.getName().equalsIgnoreCase("zresetuj2fa") || command.getName().equalsIgnoreCase("reset2fa")) {
             if (!sender.hasPermission("astralogin.reset2fa")) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
                 return true;
             }
 
             if (args.length < 1) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-reset-2fa"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.usage"));
                 return true;
             }
 
@@ -52,18 +52,18 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             FileConfiguration accountsConfig = plugin.getAccountDataManager().getConfig();
 
             if (twoFactorManager.isSetupActive(targetUUID)) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-player-is-setting-up")
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.player-setting-up")
                         .replace("%target%", targetName));
                 return true;
             }
 
             if (!accountsConfig.contains("accounts." + targetUUID + ".2fa-enabled")) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-not-found").replace("%target%", targetName));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.not-found").replace("%target%", targetName));
                 return true;
             }
 
             if (loginSystem.isWaitingFor2FA(targetUUID)) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-player-is-waiting").replace("%target%", targetName));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.player-waiting").replace("%target%", targetName));
                 return true;
             }
 
@@ -72,11 +72,11 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
             Player targetP = offlineP.getPlayer();
             if (targetP != null && targetP.isOnline()) {
-                String MessageReset2FA = plugin.getLanguageManager().getMessage("player-reset-2fa");
+                String MessageReset2FA = plugin.getLanguageManager().getMessage("reset-twofactor.player-message");
                 targetP.sendMessage(Component.text(MessageReset2FA));
             }
 
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("admin-reset-2fa-success").replace("%player%", targetName));
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.admin-success").replace("%player%", targetName));
 
             String adminName = sender.getName();
             plugin.getLogManager().log("Admin " + adminName + " Removed two-step verification for the player " + targetName);
@@ -85,14 +85,14 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
         }
 
         if (!(sender instanceof Player p)) {
-            sender.sendMessage(plugin.getLanguageManager().getMessage("only-players"));
+            sender.sendMessage(plugin.getLanguageManager().getMessage("general.only-players"));
             return true;
         }
 
         UUID uuid = p.getUniqueId();
 
         if (args.length == 0) {
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-usage"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.usage"));
             return true;
         }
 
@@ -104,7 +104,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             }
 
             if (twoFactorManager.isSetupActive(uuid)) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-setup-already-active"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.setup-already-active"));
                 return true;
             }
 
@@ -112,31 +112,33 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
             String secret = twoFactorManager.startSetup(uuid);
 
-            // Wysyłamy instrukcję z kluczem tajnym
-            p.sendMessage(plugin.getLanguageManager().getMessage("2fa-setup-instructions")
-                    .replace("%secret%", secret));
-
-            // 2. Pobieramy wiadomość kodów zapasowych jako jeden czysty String
-            String backupMessage = plugin.getLanguageManager().getMessage("2fa-setup-backups-codes");
-            List<String> backupCodes = twoFactorManager.getPendingBackupCodes(uuid);
-
-            if (backupMessage != null && !backupMessage.isEmpty() && backupCodes != null) {
-                StringBuilder codesBuilder = new StringBuilder();
-                for (int i = 0; i < backupCodes.size(); i++) {
-                    codesBuilder.append(backupCodes.get(i));
-                    if (i < backupCodes.size() - 1) {
-                        codesBuilder.append("\n");
-                    }
-                }
-
-                String finalMessage = backupMessage.replace("%codes%", codesBuilder.toString());
-
-                p.sendMessage(Component.text(finalMessage));
+            // 1. Wysyłamy instrukcję konfiguracyjną
+            List<String> setupInstructions = plugin.getLanguageManager().getMessageList("twofactor.setup-instructions");
+            for (String line : setupInstructions) {
+                p.sendMessage(line.replace("%secret%", secret));
             }
 
-            // Optymalizacja: Pobieramy formaty wiadomości RAZ przed uruchomieniem schedulera
-            String timerFormat = plugin.getLanguageManager().getMessage("2fa-timer");
-            String expiredMessage = plugin.getLanguageManager().getWithPrefix("2fa-expired");
+            // 2. Wysyłamy kody zapasowe
+            List<String> backupTemplate = plugin.getLanguageManager().getMessageList("twofactor.setup-backup-codes");
+            List<String> backupCodes = twoFactorManager.getPendingBackupCodes(uuid);
+
+            if (backupTemplate != null && backupCodes != null) {
+                for (String line : backupTemplate) {
+                    if (line.contains("%codes%")) {
+                        // Dla każdego wygenerowanego kodu tworzymy osobną linijkę według szablonu z yaml-a
+                        for (String code : backupCodes) {
+                            p.sendMessage(line.replace("%codes%", code));
+                        }
+                    } else {
+                        // Zwykła linijka (nagłówek/stopka)
+                        p.sendMessage(line);
+                    }
+                }
+            }
+
+            // Pobieramy formaty wiadomości RAZ przed uruchomieniem schedulera
+            String timerFormat = plugin.getLanguageManager().getMessage("twofactor.setup-timer");
+            String expiredMessage = plugin.getLanguageManager().getWithPrefix("twofactor.expired");
 
             plugin.getServer().getAsyncScheduler().runAtFixedRate(plugin, (task) -> {
                 // Jeśli gracz wyjdzie, po prostu anulujemy bez wysyłania wiadomości
@@ -164,18 +166,19 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
         // UNSETUP
         if (args[0].equalsIgnoreCase("unsetup")) {
             if (!plugin.getAccountDataManager().getConfig().getBoolean("accounts." + uuid + ".2fa-enabled", false)) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-not-enabled"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.not-enabled"));
                 return true;
             }
 
             if (args.length != 2) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-unsetup-instructions"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.unsetup-instructions"));
                 return true;
             }
 
             String inputCode = args[1];
+            String ip = p.getAddress().getAddress().getHostAddress();
 
-            // NOWOŚĆ: Logowanie unsetupu za pomocą kodu zapasowego
+            // ogowanie unsetupu za pomocą kodu zapasowego
             if (twoFactorManager.useBackupCode(uuid, inputCode)) {
                 loginSystem.removeWaitingFor2FA(uuid);
 
@@ -184,16 +187,16 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                 }
 
                 twoFactorManager.delete2FA(uuid);
-                // TUTAJ: Log z info, że użyto kodu zapasowego!
+                // Log z info, że użyto kodu zapasowego!
                 plugin.getLogManager().log("Player " + p.getName() + " removed 2FA protection using a backup code");
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-removed-success"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.removed-success"));
                 return true;
             }
 
             // Standardowa ścieżka z kodem Google Authenticator
             String secret = twoFactorManager.getSavedSecret(uuid);
             if (secret == null) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-not-enabled"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.not-enabled"));
                 return true;
             }
 
@@ -208,12 +211,19 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
                     twoFactorManager.delete2FA(uuid);
                     plugin.getLogManager().log("Player " + p.getName() + " removed 2FA protection from his account");
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-removed-success"));
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.removed-success"));
                 } else {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-wrong-code"));
+                    if (plugin.getConfig().getInt("features.attempts.max", 3) > 0) {
+                        plugin.getAttemptManager().dodajProbe(p, "2FA");
+                    }
+                    plugin.getIpTrustManager().addTrustScore(
+                            ip,
+                            plugin.getIpTrustManager().getTwofaFailedPoints()
+                    );
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.wrong-code"));
                 }
             } catch (NumberFormatException e) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-wrong-code"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.wrong-code"));
             }
             return true;
         }
@@ -230,23 +240,31 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                     plugin.getSessionManager().saveSession2FA(uuid, ip);
                 }
                 plugin.getLogManager().log("Player " + p.getName() + " entered a valid backup code and was logged in");
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-login"));
+                plugin.getIpTrustManager().addTrustScore(
+                        ip,
+                        plugin.getIpTrustManager().getTwofaSuccessPoints()
+                );
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.success"));
                 p.sendTitle(
-                        plugin.getLanguageManager().getMessage("title-login"),
-                        plugin.getLanguageManager().getMessage("subtitle-login"),
+                        plugin.getLanguageManager().getMessage("title.login"),
+                        plugin.getLanguageManager().getMessage("title.login-subtitle"),
                         10, 40, 10
                 );
             } else {
                 if (plugin.getConfig().getInt("features.attempts.max", 3) > 0) {
                     plugin.getAttemptManager().dodajProbe(p, "2FA");
                 }
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-wrong-code"));
+                plugin.getIpTrustManager().addTrustScore(
+                        ip,
+                        plugin.getIpTrustManager().getTwofaFailedPoints()
+                );
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.wrong-code"));
             }
             return true;
         }
 
         if (rawInput.contains("-") && !loginSystem.isWaitingFor2FA(uuid)) {
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-not-needed"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.not-needed"));
             return true;
         }
 
@@ -255,7 +273,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
         try {
             code = Integer.parseInt(rawInput.replace(" ", ""));
         } catch (NumberFormatException e) {
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-usage"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.usage"));
             return true;
         }
 
@@ -268,12 +286,12 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                     twoFactorManager.save2FA(uuid, secret);
                     plugin.getLogManager().log("Player " + p.getName() + " successfully completed 2FA setup");
                     p.getScheduler().run(plugin, syncTask -> {
-                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-success"));
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.success"));
                         p.sendTitle("", "", 0, 10, 0);
                     }, null);
                 });
             } else {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-wrong-code"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.wrong-code"));
             }
             return true;
         }
@@ -289,21 +307,29 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                     plugin.getSessionManager().saveSession2FA(uuid, ip);
                 }
                 plugin.getLogManager().log("Player " + p.getName() + " entered the correct 2FA code and was logged in");
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-login"));
+                plugin.getIpTrustManager().addTrustScore(
+                        ip,
+                        plugin.getIpTrustManager().getTwofaSuccessPoints()
+                );
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.success"));
                 p.sendTitle(
-                        plugin.getLanguageManager().getMessage("title-login"),
-                        plugin.getLanguageManager().getMessage("subtitle-login"),
+                        plugin.getLanguageManager().getMessage("title.login"),
+                        plugin.getLanguageManager().getMessage("title.login-subtitle"),
                         10, 40, 10
                 );
             } else {
                 if (plugin.getConfig().getInt("features.attempts.max", 3) > 0) {
                     plugin.getAttemptManager().dodajProbe(p, "2FA");
                 }
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-wrong-code"));
+                plugin.getIpTrustManager().addTrustScore(
+                        ip,
+                        plugin.getIpTrustManager().getTwofaFailedPoints()
+                );
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.wrong-code"));
             }
             return true;
         }
-        p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-not-needed"));
+        p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.not-needed"));
         return true;
     }
 

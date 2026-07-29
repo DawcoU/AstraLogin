@@ -54,7 +54,7 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
 
         if (command.getName().equalsIgnoreCase("zresetujhaslo")) {
             if (!sender.hasPermission("astralogin.resetpassword")) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
                 return true;
             }
             if (args.length < 1) {
@@ -87,12 +87,12 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
             String uuidString = targetUUID.toString();
 
             // 3. Sprawdzamy hasło i usuwamy dane
-            if (!plugin.getPasswordManager().hasPassword(uuidString)) {
+            if (!isRegistered(uuidString)) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-account-reset"));
                 return true;
             }
 
-            plugin.getPasswordManager().deletePassword(uuidString);
+            deletePassword(uuidString);
             plugin.getIPManager().deleteIP(uuidString);
 
             plugin.getAccountDataManager().invalidateRegistration(targetUUID);
@@ -108,9 +108,6 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
             Player targetP = Bukkit.getPlayer(targetUUID); // Pobieramy gracza po UUID
 
             if (targetP != null && targetP.isOnline()) {
-                // Usuwamy z listy zalogowanych
-                plugin.getLoginSystem().getLoggedIn().remove(targetUUID);
-
                 // Resetujemy próby błędnych logowań dla jego IP
                 String playerIP = targetP.getAddress().getAddress().getHostAddress();
                 plugin.getIPManager().resetIPAttempts(playerIP);
@@ -124,29 +121,34 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
 
         if (command.getName().equalsIgnoreCase("zmienhaslo")) {
             if (p == null) {
-                sender.sendMessage(plugin.getLanguageManager().getMessage("only-players"));
+                sender.sendMessage(plugin.getLanguageManager().getMessage("general.only-players"));
                 return true;
             }
 
             if (args.length != 3) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-change-password"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.change-usage"));
                 return true;
             }
 
+            String ip = p.getAddress().getAddress().getHostAddress();
             String oldPassword = args[0];
             String newPassword = args[1];
-            String newPassword2 = args[2];
+            String newPasswordConfirm = args[2];
 
             // 1. Czy nowe hasło jest takie samo jak stare?
             if (oldPassword.equals(newPassword)) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-is-identical"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.identical"));
                 return true;
             }
 
             // 2. Sprawdzamy stare hasło
-            String obecneHasloWPliku = plugin.getPasswordManager().getPassword(p.getUniqueId().toString());
+            String obecneHasloWPliku = getPassword(p.getUniqueId().toString());
             if (obecneHasloWPliku == null || !PasswordManager.verifyPassword(oldPassword, obecneHasloWPliku)) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("wrong-old-password"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.wrong-old"));
+                plugin.getIpTrustManager().addTrustScore(
+                        ip,
+                        plugin.getIpTrustManager().getFailedPasswordPoints()
+                );
 
                 if (plugin.getConfig().getInt("features.attempts.max", 3) > 0) {
                     plugin.getAttemptManager().dodajProbe(p, "Password");
@@ -155,8 +157,8 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
             }
 
             // 3. Sprawdzamy czy nowe hasła się zgadzają
-            if (!newPassword.equals(newPassword2)) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("passwords-not-match"));
+            if (!newPassword.equals(newPasswordConfirm)) {
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.not-match"));
                 return true;
             }
 
@@ -176,26 +178,25 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
             }
 
             if (newPassword.length() < min) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-too-short").replace("%min%", String.valueOf(min)));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.too-short").replace("%min%", String.valueOf(min)));
                 return true;
             }
             if (newPassword.length() > max) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-too-long").replace("%max%", String.valueOf(max)));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.too-long").replace("%max%", String.valueOf(max)));
                 return true;
             }
 
             // 5. HASZUJEMY RAZ I ZAPISUJEMY
-            String newHashPassword = PasswordManager.hashPassword(plugin, newPassword);
-            plugin.getPasswordManager().savePassword(p.getUniqueId().toString(), newHashPassword);
+            String newHashPassword = hashPassword(plugin, newPassword);
+            savePassword(p.getUniqueId().toString(), newHashPassword);
 
             if (plugin.getLoginSystem().getLoggedIn().contains(p.getUniqueId())) {
-                plugin.getLoginSystem().getLoggedIn().remove(p.getUniqueId());
-                p.kick(Component.text(plugin.getLanguageManager().getMessage("success-change-password-kick")));
+                p.kick(Component.text(plugin.getLanguageManager().getMessage("password.changed-kick")));
             } else {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-change-password"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.changed"));
             }
 
-            plugin.getLogManager().log("Player " + p.getName() + " Changed his password");
+            plugin.getLogManager().log("Player " + p.getName() + " changed his password");
             return true;
         }
         return false;
@@ -211,7 +212,7 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
         return passwordCache.get(uuid);
     }
 
-    public boolean hasPassword(String uuid) {
+    public boolean isRegistered(String uuid) {
         return passwordCache.containsKey(uuid);
     }
 

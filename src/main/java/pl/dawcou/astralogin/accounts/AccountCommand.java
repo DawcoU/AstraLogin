@@ -36,12 +36,12 @@ public class AccountCommand implements CommandExecutor {
         // ==========================================
         if (command.getName().equalsIgnoreCase("konto") || command.getName().equalsIgnoreCase("account")) {
             if (!sender.hasPermission("astralogin.account")) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
                 return true;
             }
 
             if (args.length != 1) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-usage"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account.usage"));
                 return true;
             }
 
@@ -62,33 +62,33 @@ public class AccountCommand implements CommandExecutor {
             }
 
             if (targetUUIDString == null) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-not-found")
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account.not-found")
                         .replace("%target%", targetName));
                 return true;
             }
 
             String path = "accounts." + targetUUIDString + ".";
             String ip = config.getString(path + "last-ip", "Brak danych");
-            String regDate = config.getString(path + "register-date", plugin.getLanguageManager().getMessage("account-no-data"));
-            String loginDate = config.getString(path + "last-login-date", plugin.getLanguageManager().getMessage("account-no-data"));
+            String regDate = config.getString(path + "register-date", plugin.getLanguageManager().getMessage("account.not-found"));
+            String loginDate = config.getString(path + "last-login-date", plugin.getLanguageManager().getMessage("account.not-found"));
             boolean isRegistered = config.getBoolean(path + "is-registered", false);
             boolean Has2FA = config.getBoolean(path + "2fa-enabled", false);
 
             if (!isRegistered) {
-                regDate = plugin.getLanguageManager().getMessage("account-status-not-active-register");
+                regDate = plugin.getLanguageManager().getMessage("account.status.not-registered");
             }
 
             String statusText2FA = Has2FA ?
-                    plugin.getLanguageManager().getMessage("account-status-active-2fa") :
-                    plugin.getLanguageManager().getMessage("account-status-not-active-2fa");
+                    plugin.getLanguageManager().getMessage("account.status.twofactor-enabled") :
+                    plugin.getLanguageManager().getMessage("account.status.twofactor-disabled");
 
-            sender.sendMessage(plugin.getLanguageManager().getMessage("account-stats-header").replace("%target%", targetName));
-            sender.sendMessage(plugin.getLanguageManager().getMessage("account-stats-uuid").replace("%uuid%", targetUUIDString));
-            sender.sendMessage(plugin.getLanguageManager().getMessage("account-stats-ip").replace("%ip%", ip));
-            sender.sendMessage(plugin.getLanguageManager().getMessage("account-stats-reg-date").replace("%register_date%", regDate));
-            sender.sendMessage(plugin.getLanguageManager().getMessage("account-stats-login-date").replace("%login_date%", loginDate));
-            sender.sendMessage(plugin.getLanguageManager().getMessage("account-stats-status-2fa").replace("%status%", statusText2FA));
-            sender.sendMessage(plugin.getLanguageManager().getMessage("account-stats-footer"));
+            sender.sendMessage(plugin.getLanguageManager().getMessage("account.stats.header").replace("%target%", targetName));
+            sender.sendMessage(plugin.getLanguageManager().getMessage("account.stats.uuid").replace("%uuid%", targetUUIDString));
+            sender.sendMessage(plugin.getLanguageManager().getMessage("account.stats.ip").replace("%ip%", ip));
+            sender.sendMessage(plugin.getLanguageManager().getMessage("account.stats.register-date").replace("%register_date%", regDate));
+            sender.sendMessage(plugin.getLanguageManager().getMessage("account.stats.login-date").replace("%login_date%", loginDate));
+            sender.sendMessage(plugin.getLanguageManager().getMessage("account.stats.twofactor-status").replace("%status%", statusText2FA));
+            sender.sendMessage(plugin.getLanguageManager().getMessage("account.stats.footer"));
 
             return true;
         }
@@ -98,12 +98,12 @@ public class AccountCommand implements CommandExecutor {
         // ==========================================
         else if (command.getName().equalsIgnoreCase("zresetujkonto") || command.getName().equalsIgnoreCase("resetaccount")) {
             if (!sender.hasPermission("astralogin.resetaccount")) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
                 return true;
             }
 
             if (args.length < 1) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-purge-account"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("purge-account.usage"));
                 return true;
             }
 
@@ -123,7 +123,7 @@ public class AccountCommand implements CommandExecutor {
             }
 
             if (targetUUID == null) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-not-found").replace("%target%", targetName));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("purge-account.not-found").replace("%target%", targetName));
                 return true;
             }
 
@@ -131,9 +131,9 @@ public class AccountCommand implements CommandExecutor {
                 boolean confirmed = (args.length > 1 && args[1].equalsIgnoreCase("confirm"));
 
                 if (!confirmed) {
-                    String baseMsgStr = plugin.getLanguageManager().getWithPrefix("account-purge-confirm");
-                    String btnTextStr = plugin.getLanguageManager().getMessage("account-purge-button");
-                    String hoverTextStr = plugin.getLanguageManager().getMessage("account-purge-hover");
+                    String baseMsgStr = plugin.getLanguageManager().getWithPrefix("purge-account.confirm");
+                    String btnTextStr = plugin.getLanguageManager().getMessage("purge-account.button");
+                    String hoverTextStr = plugin.getLanguageManager().getMessage("purge-account.hover");
 
                     Component baseMsg = LegacyComponentSerializer.legacySection()
                             .deserialize(baseMsgStr + " ");
@@ -153,7 +153,7 @@ public class AccountCommand implements CommandExecutor {
             Player targetP = Bukkit.getPlayer(targetUUID);
             if (targetP != null && targetP.isOnline()) {
                 plugin.getLoginSystem().getLoggedIn().remove(targetUUID);
-                String purgeReason = plugin.getLanguageManager().getMessage("player-purge-kick");
+                String purgeReason = plugin.getLanguageManager().getMessage("account-purge.player-kick");
                 targetP.kick(Component.text(purgeReason));
             }
 
@@ -166,7 +166,7 @@ public class AccountCommand implements CommandExecutor {
 
             plugin.getAccountDataManager().purgeAccountData(targetUUID);
 
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("admin-purge-success").replace("%player%", targetName));
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-purge.admin-success").replace("%player%", targetName));
 
             String adminName = sender.getName();
             plugin.getLogManager().log("Admin " + adminName + " PURGED all account data for player " + targetName);
@@ -176,11 +176,11 @@ public class AccountCommand implements CommandExecutor {
 
         else if (command.getName().equalsIgnoreCase("listaip") || command.getName().equalsIgnoreCase("iplist")) {
             if (!sender.hasPermission("astralogin.iplist")) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
                 return true;
             }
 
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("listaip-generating"));
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-list.generating"));
 
             plugin.getServer().getAsyncScheduler().runNow(plugin, (task) -> {
                 Map<String, List<String>> ipToNamesMap = new HashMap<>();
@@ -199,26 +199,26 @@ public class AccountCommand implements CommandExecutor {
                 }
 
                 if (ipToNamesMap.isEmpty()) {
-                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("listaip-empty"));
+                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-list.empty"));
                     return;
                 }
 
                 // Wysyłamy nagłówek bezpośrednio z managera
-                sender.sendMessage(plugin.getLanguageManager().getMessage("listaip-header"));
+                sender.sendMessage(plugin.getLanguageManager().getMessage("ip-list.header"));
 
                 // Pobieramy format raz przed pętlą
-                String format = plugin.getLanguageManager().getMessage("listaip-format");
+                String format = plugin.getLanguageManager().getMessage("ip-list.format");
 
                 for (Map.Entry<String, List<String>> entry : ipToNamesMap.entrySet()) {
                     // Podmieniamy zmienne od razu przy wysyłaniu wiadomości, bez tworzenia zbędnych zmiennych pośrednich!
                     sender.sendMessage(format
-                            .replace("{ip}", entry.getKey())
-                            .replace("{count}", String.valueOf(entry.getValue().size()))
-                            .replace("{players}", String.join(", ", entry.getValue())));
+                            .replace("%ip%", entry.getKey())
+                            .replace("%count%", String.valueOf(entry.getValue().size()))
+                            .replace("%players%", String.join(", ", entry.getValue())));
                 }
 
                 // Wysyłamy stopkę bezpośrednio z managera
-                sender.sendMessage(plugin.getLanguageManager().getMessage("listaip-footer"));
+                sender.sendMessage(plugin.getLanguageManager().getMessage("ip-list.footer"));
             });
 
             return true;
@@ -226,22 +226,22 @@ public class AccountCommand implements CommandExecutor {
 
         else if (command.getName().equalsIgnoreCase("listakont") || command.getName().equalsIgnoreCase("accountslist")) {
             if (!sender.hasPermission("astralogin.accountslist")) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
                 return true;
             }
 
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("accounts-list-generating"));
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("accounts-list.generating"));
 
             plugin.getServer().getAsyncScheduler().runNow(plugin, (task) -> {
                 FileConfiguration config = plugin.getAccountDataManager().getConfig();
 
                 if (config.getConfigurationSection("accounts") == null) {
-                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("accounts-list-empty"));
+                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("accounts-list.empty"));
                     return;
                 }
 
                 List<String> formattedAccounts = new ArrayList<>();
-                String format = plugin.getLanguageManager().getMessage("accounts-list-format");
+                String format = plugin.getLanguageManager().getMessage("accounts-list.format");
 
                 for (String uuidKey : config.getConfigurationSection("accounts").getKeys(false)) {
                     String path = "accounts." + uuidKey + ".";
@@ -252,24 +252,24 @@ public class AccountCommand implements CommandExecutor {
 
                         // Formatujemy linijkę – teraz bez zmiennej {ip}
                         String line = format
-                                .replace("{name}", knownName)
-                                .replace("{uuid}", uuidKey);
+                                .replace("%name%", knownName)
+                                .replace("%uuid%", uuidKey);
 
                         formattedAccounts.add(line);
                     }
                 }
 
                 if (formattedAccounts.isEmpty()) {
-                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("accounts-list-empty"));
+                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("accounts-list.empty"));
                     return;
                 }
 
                 // Wysyłanie sformatowanej listy kont
-                sender.sendMessage(plugin.getLanguageManager().getMessage("accounts-list-header"));
+                sender.sendMessage(plugin.getLanguageManager().getMessage("accounts-list.header"));
                 for (String accountLine : formattedAccounts) {
                     sender.sendMessage(accountLine);
                 }
-                sender.sendMessage(plugin.getLanguageManager().getMessage("accounts-list-footer"));
+                sender.sendMessage(plugin.getLanguageManager().getMessage("accounts-list.footer"));
             });
 
             return true;
@@ -277,12 +277,12 @@ public class AccountCommand implements CommandExecutor {
 
         else if (command.getName().equalsIgnoreCase("przenieskonto") || command.getName().equalsIgnoreCase("moveaccount")) {
             if (!sender.hasPermission("astralogin.moveaccount")) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
                 return true;
             }
 
             if (args.length < 2) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("move-account-usage"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.usage"));
                 return true;
             }
 
@@ -296,24 +296,24 @@ public class AccountCommand implements CommandExecutor {
             String newUUID = newPlayer.getUniqueId().toString();
 
             if (oldNick.equals(newNick)) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("move-account-player-is-the-same"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.player-same"));
                 return true;
             }
 
             if (!oldPlayer.hasPlayedBefore()) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("move-account-player-not-exists")
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.player-not-exists")
                         .replace("%target%", oldNick));
                 return true;
             }
 
             if (oldPlayer.isOnline() || newPlayer.isOnline()) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("move-account-players-already-online")
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.players-online")
                         .replace("%old%", oldNick)
                         .replace("%new%", newNick));
                 return true;
             }
 
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("move-account-start")
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.start")
                     .replace("%old%", oldNick)
                     .replace("%new%", newNick));
 
@@ -345,7 +345,7 @@ public class AccountCommand implements CommandExecutor {
 
                 // Jeśli stary nick nie ma żadnych danych - blokujemy za pomocą javowego replace
                 if (!oldPlayerHasData) {
-                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("move-account-old-player-no-data")
+                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.old-player-no-data")
                             .replace("%target%", oldNick));
                     return;
                 }
@@ -372,7 +372,7 @@ public class AccountCommand implements CommandExecutor {
 
                 // Jeśli znaleźliśmy plik blokujący - przerywamy i wypisujemy jego nazwę!
                 if (blockingFile != null) {
-                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("move-account-new-player-exists")
+                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.new-player-exists")
                             .replace("%uuid%", newUUID));
                     return;
                 }
@@ -381,9 +381,9 @@ public class AccountCommand implements CommandExecutor {
                     boolean confirmed = (args.length > 2 && args[2].equalsIgnoreCase("confirm"));
 
                     if (!confirmed) {
-                        String baseMsgStr = plugin.getLanguageManager().getWithPrefix("move-account-confirm");
-                        String btnTextStr = plugin.getLanguageManager().getMessage("move-account-button");
-                        String hoverTextStr = plugin.getLanguageManager().getMessage("move-account-hover");
+                        String baseMsgStr = plugin.getLanguageManager().getWithPrefix("account-move.confirm");
+                        String btnTextStr = plugin.getLanguageManager().getMessage("account-move.button");
+                        String hoverTextStr = plugin.getLanguageManager().getMessage("account-move.hover");
 
                         Component baseMsg = LegacyComponentSerializer.legacySection()
                                 .deserialize(baseMsgStr + " ");
@@ -433,7 +433,7 @@ public class AccountCommand implements CommandExecutor {
                     plugin.getTwoFactorManager().invalidateSetup(oldUUID);
 
 
-                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("move-account-success")
+                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.success")
                             .replace("%old%", oldNick)
                             .replace("%new%", newNick));
 
@@ -441,10 +441,25 @@ public class AccountCommand implements CommandExecutor {
                     plugin.getLogManager().log("Player " + oldNick + " has been successfully migrated to " + newNick + " by " + adminName);
 
                 } catch (IOException e) {
-                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("move-account-error-migration"));
+                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.error-migration"));
                     e.printStackTrace();
                 }
             });
+        }
+        else if (command.getName().equalsIgnoreCase("wyloguj") || command.getName().equalsIgnoreCase("logout")) {
+            if (p == null) {
+                sender.sendMessage(plugin.getLanguageManager().getMessage("general.only-players"));
+                return true;
+            }
+
+            if (p.isOnline()) {
+                String kickReason = plugin.getLanguageManager().getMessage("account.logout-success");
+                p.kick(Component.text(kickReason));
+            }
+
+            plugin.getSessionManager().deleteSession(p.getUniqueId());
+            plugin.getLogManager().log("Player " + p.getName() + " has logged out");
+
             return true;
         }
         return false;

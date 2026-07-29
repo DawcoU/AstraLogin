@@ -36,6 +36,38 @@ settings:
 #           Security Settings
 # =====================================
 security:
+  ip-trust:
+    # Should IP trust be enabled?
+    enabled: true
+
+    # Reputation Point Range
+    score:
+      min: -30
+      max: 30
+
+    # Reputation Level Thresholds
+    levels:
+      fatal: -20
+      bad: -5
+      neutral: 5
+      good: 15
+
+    # Points for events
+    points:
+      login:
+        success: 1
+        failed-password: -2
+
+      twofa:
+        success: 3
+        failed-code: -2
+
+      security:
+        active-account-attempt: -1
+        unknown-ip-login: -2
+        ip-spam: -3
+        multi-ip: -1
+
   ip-security:
     # IP-Lock: Prevents login if the player's IP address has changed.
     enabled: true
@@ -131,6 +163,11 @@ features:
       enabled: true
       # How long should a 2FA session last?
       session-time: "2 days"
+
+  # Premium Login
+  auto-login:
+    # Should premium login be enabled?
+    enabled: true
 
   password:
     # Minimum number of characters in a password

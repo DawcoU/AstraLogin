@@ -59,46 +59,48 @@ public class IPManager implements CommandExecutor {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        if (!sender.hasPermission("astralogin.resetip")) {
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (command.getName().equalsIgnoreCase("zresetujip") || command.getName().equalsIgnoreCase("resetip")) {
+            if (!sender.hasPermission("astralogin.resetip")) {
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
+                return true;
+            }
+
+            if (args.length != 1) {
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-reset-ip"));
+                return true;
+            }
+
+            OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
+            String uuid = target.getUniqueId().toString();
+
+            // Sprawdzamy czy IP w ogóle istnieje
+            if (getIP(uuid) == null) {
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-ip-reset"));
+                return true;
+            }
+
+            // Usuwamy IP
+            deleteIP(uuid);
+
+            // Pobieramy obiekt zalogowanego gracza, jeśli jest na serwerze
+            Player onlineTarget = Bukkit.getPlayer(target.getUniqueId());
+            if (onlineTarget != null) {
+                String kickReason = plugin.getLanguageManager().getMessage("player-reset-ip-kick");
+                onlineTarget.kick(Component.text(kickReason));
+            }
+
+            String successMsg = plugin.getLanguageManager().getWithPrefix("admin-reset-ip-success")
+                    .replace("%player%", args[0]);
+
+            sender.sendMessage(successMsg);
+
+            String adminName = sender.getName();
+            String targetName = target.getName() != null ? target.getName() : args[0];
+            plugin.getLogManager().log("Admin " + adminName + " reset IP for player " + targetName);
             return true;
         }
-
-        if (args.length != 1) {
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-reset-ip"));
-            return true;
-        }
-
-        OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
-        String uuid = target.getUniqueId().toString();
-
-        // Sprawdzamy czy IP w ogóle istnieje
-        if (getIP(uuid) == null) {
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-ip-reset"));
-            return true;
-        }
-
-        // Usuwamy IP
-        deleteIP(uuid);
-
-        // Pobieramy obiekt zalogowanego gracza, jeśli jest na serwerze
-        Player onlineTarget = Bukkit.getPlayer(target.getUniqueId());
-        if (onlineTarget != null) {
-            String kickReason = plugin.getLanguageManager().getMessage("player-reset-ip-kick");
-            onlineTarget.kick(Component.text(kickReason));
-        }
-
-        String successMsg = plugin.getLanguageManager().getWithPrefix("admin-reset-ip-success")
-                .replace("%player%", args[0]);
-
-        sender.sendMessage(successMsg);
-
-        String adminName = sender.getName();
-        // Pobieramy nick gracza, któremu resetujemy IP
-        String targetName = target.getName() != null ? target.getName() : args[0];
-        plugin.getLogManager().log("Admin " + adminName + " reset IP for player " + targetName);
-        return true;
+        return false;
     }
 
     public static boolean CheckIP(String savedIP, String currentIP) {
@@ -161,14 +163,6 @@ public class IPManager implements CommandExecutor {
         return ipCountCache.getOrDefault(ip, 0);
     }
 
-    private void save() {
-        try {
-            config.save(file);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     // --- OCHRONA IP ---
     public boolean isIPBanned(String ip) {
         if (!ipBans.containsKey(ip)) return false;
@@ -194,7 +188,7 @@ public class IPManager implements CommandExecutor {
         String path = "security.anti-spam.";
 
         int max = plugin.getConfig().getInt(path + "max-attempts", 5);
-        String timeStr = plugin.getConfig().getString(path + "tempban-time", "10 minutes");
+        String timeStr = plugin.getConfig().getString(path + "tempban-time", "30 minutes");
 
         int current = ipAttempts.getOrDefault(ip, 0) + 1;
         ipAttempts.put(ip, current);
@@ -203,6 +197,10 @@ public class IPManager implements CommandExecutor {
             long banMillis = LoginUtils.parseTime(timeStr, 600000L);
             banIPWithMillis(ip, banMillis, "SPAM");
             ipAttempts.remove(ip);
+            plugin.getIpTrustManager().addTrustScore(
+                    ip,
+                    plugin.getIpTrustManager().getIpSpamPoints()
+            );
         }
     }
 
@@ -232,6 +230,14 @@ public class IPManager implements CommandExecutor {
                     this.ipCountCache.put(ip, this.ipCountCache.getOrDefault(ip, 0) + 1);
                 }
             }
+        }
+    }
+
+    private void save() {
+        try {
+            config.save(file);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }

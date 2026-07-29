@@ -35,27 +35,27 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
 
         if (command.getName().equalsIgnoreCase("zarejestruj") || command.getName().equalsIgnoreCase("register")) {
             if (p == null) {
-                sender.sendMessage(plugin.getLanguageManager().getMessage("only-players"));
+                sender.sendMessage(plugin.getLanguageManager().getMessage("general.only-players"));
                 return true;
             }
 
             if (loggedIn.contains(p.getUniqueId())) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("already-logged"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.already-logged"));
                 return true;
             }
 
             if (plugin.getPasswordManager().getPassword(p.getUniqueId().toString()) != null) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("has-account"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.has-account"));
                 return true;
             }
 
             if (args.length != 2) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-register"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("register.usage"));
                 return true;
             }
 
             if (!args[0].equals(args[1])) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("passwords-not-match"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.not-match"));
                 return true;
             }
 
@@ -74,11 +74,11 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
             }
 
             if (args[0].length() < min) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-too-short").replace("%min%", String.valueOf(min)));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.too-short").replace("%min%", String.valueOf(min)));
                 return true;
             }
             if (args[0].length() > max) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password-too-long").replace("%max%", String.valueOf(max)));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.too-long").replace("%max%", String.valueOf(max)));
                 return true;
             }
 
@@ -110,11 +110,11 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                         // Wrzucamy go do poczekalni 2FA!
                         addWaitingFor2FA(playerUUID, uuidString);
 
-                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-required"));
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.required"));
 
                         Title title2fa = Title.title(
-                                Component.text(plugin.getLanguageManager().getMessage("title-2fa")), // Główny tytuł
-                                Component.text(plugin.getLanguageManager().getMessage("2fa-required")), // Podtytuł
+                                Component.text(plugin.getLanguageManager().getMessage("title.twofactor")), // Główny tytuł
+                                Component.text(plugin.getLanguageManager().getMessage("twofactor.required")), // Podtytuł
                                 Title.Times.times(Duration.ofMillis(500), Duration.ofHours(1), Duration.ofMillis(500))
                         );
                         p.showTitle(title2fa);
@@ -122,11 +122,11 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                     } else {
                         finishLogin(p);
                         p.sendTitle(
-                                plugin.getLanguageManager().getMessage("title-register"),
-                                plugin.getLanguageManager().getMessage("subtitle-register"),
+                                plugin.getLanguageManager().getMessage("title.register"),
+                                plugin.getLanguageManager().getMessage("title.register-subtitle"),
                                 10, 40, 10
                         );
-                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-register"));
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("register.success"));
                         plugin.getLogManager().log("Player " + p.getName() + " registered");
 
                         plugin.getAccountDataManager().recordRegister(playerUUID, playerName, ip);
@@ -138,7 +138,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
 
         if (command.getName().equalsIgnoreCase("zaloguj") || command.getName().equalsIgnoreCase("login")) {
             if (p == null) {
-                sender.sendMessage(plugin.getLanguageManager().getMessage("only-players"));
+                sender.sendMessage(plugin.getLanguageManager().getMessage("general.only-players"));
                 return true;
             }
 
@@ -146,12 +146,12 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
             String password = plugin.getPasswordManager().getPassword(uuid);
 
             if (password == null) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("no-account"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.no-account"));
                 return true;
             }
 
             if (loggedIn.contains(p.getUniqueId())) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("already-logged"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.already-logged"));
                 return true;
             }
 
@@ -163,9 +163,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                 plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
                     if (PasswordManager.verifyPassword(inputPassword, password)) {
 
-                        if (plugin.getIPManager().getIP(uuid) == null) {
-                            plugin.getIPManager().saveIP(uuid, currentIP);
-                        }
+                        plugin.getIPManager().saveIP(uuid, currentIP);
 
                         // POBIERAMY STATUSY: Czy sesje 2FA są aktywne w konfiguracji pluginu?
                         boolean is2FASessionEnabled = plugin.getConfig().getBoolean("features.2fa.session.enabled", true);
@@ -178,10 +176,10 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                         if (is2FAEnabled && !hasActive2FA) {
                             addWaitingFor2FA(playerUUID, uuid);
                             p.getScheduler().run(plugin, (syncTask) -> {
-                                p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-required"));
+                                p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.required"));
                                 Title title2fa = Title.title(
-                                        Component.text(plugin.getLanguageManager().getMessage("title-2fa")), // Główny tytuł
-                                        Component.text(plugin.getLanguageManager().getMessage("2fa-required")), // Podtytuł
+                                        Component.text(plugin.getLanguageManager().getMessage("title.twofactor")), // Główny tytuł
+                                        Component.text(plugin.getLanguageManager().getMessage("twofactor.required")), // Podtytuł
                                         Title.Times.times(Duration.ofMillis(500), Duration.ofHours(1), Duration.ofMillis(500))
                                 );
                                 p.showTitle(title2fa);
@@ -197,19 +195,23 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
 
                                 finishLogin(p);
                                 p.sendTitle(
-                                        plugin.getLanguageManager().getMessage("title-login"),
-                                        plugin.getLanguageManager().getMessage("subtitle-login"),
+                                        plugin.getLanguageManager().getMessage("title.login"),
+                                        plugin.getLanguageManager().getMessage("title.login-subtitle"),
                                         10, 40, 10
                                 );
-                                p.sendMessage(plugin.getLanguageManager().getWithPrefix("success-login"));
+                                p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.success"));
 
                                 plugin.getLogManager().log("Player " + p.getName() + " logged in");
+                                plugin.getIpTrustManager().addTrustScore(
+                                        currentIP,
+                                        plugin.getIpTrustManager().getLoginSuccessPoints()
+                                );
                                 plugin.getAccountDataManager().recordLogin(playerUUID, p.getName(), currentIP);
 
                                 // Zapisujemy sesję hasła
                                 plugin.getSessionManager().saveSession(playerUUID, currentIP);
 
-                                // BEZPIECZNIK: Zapisujemy sesję 2FA na dysk TYLKO jeśli funkcja sesji 2FA jest włączona w config.yml!
+                                // Zapisujemy sesję 2FA na dysk TYLKO jeśli funkcja sesji 2FA jest włączona w config.yml!
                                 if (is2FAEnabled && is2FASessionEnabled) {
                                     plugin.getSessionManager().saveSession2FA(playerUUID, currentIP);
                                 }
@@ -218,8 +220,12 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
 
                     } else {
                         p.getScheduler().run(plugin, synctask -> {
-                            p.sendMessage(plugin.getLanguageManager().getWithPrefix("wrong-password"));
+                            p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.wrong"));
                             plugin.getLogManager().log("Player " + p.getName() + " entered the wrong password");
+                            plugin.getIpTrustManager().addTrustScore(
+                                    currentIP,
+                                    plugin.getIpTrustManager().getFailedPasswordPoints()
+                            );
 
                             if (plugin.getConfig().getInt("features.attempts.max", 3) > 0) {
                                 plugin.getAttemptManager().dodajProbe(p, "Password");
@@ -228,7 +234,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                     }
                 });
             } else {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-login"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.usage"));
             }
             return true;
         }

@@ -8,158 +8,267 @@
 # You can use color codes (e.g., &a, &c, &l), HEX codes, gradients, and placeholders like %time%, %player%, %min%.
 
 messages:
-  # --- General / System ---
-  only-players: "&cThis command is not available for the console!"
-  no-permission: "&cYou don't have permission!"
-  reload-success: "&aConfiguration reloaded successfully!"
-  blocked-action: "&cYou cannot perform this action until you log in!"
 
-  # --- Login & Registration ---
-  already-logged: "&cYou are already logged in/registered!"
-  no-account: "&cYou don't have an account! Type &e/register <password> <repeat>"
-  success-login: "&aLogged in successfully"
-  success-register: "&aRegistered successfully"
-  reminder-login: "&ePlease log in: &f/login <password>"
-  reminder-register: "&ePlease register: &f/register <password> <repeat"
-  usage-login: "&cCorrect usage: &e/login <password>"
-  usage-register: "&cCorrect usage: &e/register <password> <repeat>"
-  has-account: "&cYou already have an account! Type &e/login <password>"
-  already-online: "&cA player with this name is already on the server!"
+  # --- General / System ---
+  general:
+    only-players: "&cThis command can only be executed by players!"
+    no-permission: "&cYou do not have permission!"
+    reload-success: "&aConfiguration reloaded successfully!"
+    blocked-action: "&cYou cannot perform this action until you log in!"
+
+
+  # --- Login ---
+  login:
+    already-logged: "&cYou are already logged in/registered!"
+    no-account: "&cYou do not have an account! Type &e/register <password> <repeat>"
+    success: "&aSuccessfully logged in!"
+    reminder: "&ePlease log in: &f/login <password>"
+    usage: "&cCorrect usage: &e/login <password>"
+    has-account: "&cYou already have an account! Type &e/login <password>"
+    already-online: "&cA player with this nickname is already on the server!"
+
+
+  # --- Register ---
+  register:
+    success: "&aSuccessfully registered!"
+    reminder: "&ePlease register: &f/register <password> <repeat>"
+    usage: "&cCorrect usage: &e/register <password> <repeat>"
+
+
+  # --- Premium Login ---
+  premium:
+    success: "&aPremium account detected, logged in automatically!"
+
 
   # --- Passwords ---
-  wrong-password: "&cIncorrect password!"
-  passwords-not-match: "&cPasswords do not match!"
-  password-too-short: "&cPassword is too short! Minimum &6%min% &ccharacters"
-  password-too-long: "&cPassword is too long! Maximum &6%max% &ccharacters"
-  usage-change-password: "&cCorrect usage: &e/changepassword <old> <new> <repeat>"
-  wrong-old-password: "&cOld password is incorrect!"
-  success-change-password-kick: "&aYour password has been changed! &ePlease log in again"
-  success-change-password: "&aYour password has been successfully changed!"
-  password-is-identical: "&cThe new password is identical to the old one!"
+  password:
+    wrong: "&cIncorrect password!"
+    not-match: "&cPasswords do not match!"
+    too-short: "&cPassword is too short! Minimum &6%min% &ccharacters"
+    too-long: "&cPassword is too long! Maximum &6%max% &ccharacters"
+    change-usage: "&cCorrect usage: &e/changepassword <old> <new> <repeat>"
+    wrong-old: "&cOld password is incorrect!"
+    changed-kick: "&aYour password has been changed! &ePlease log in again"
+    changed: "&aYour password has been successfully changed!"
+    identical: "&cThe new password cannot be the same as the old one!"
 
-  # --- Security & Bans ---
-  kick-timeout: "&cLogin time expired!"
-  kick-max-attempts: "&cToo many failed login attempts! Remaining attempts: &6%remaining%"
-  kick-max-attempts-ban: "&cToo many failed attempts! You are banned for &6%time%"
-  anti-multiaccount-kick: "&cThe account limit for this IP has been reached!"
-  kick-ip-spammed: "&cToo many connection attempts detected from your IP! You have been blocked for &6%time%"
-  ip-lock-kick: "&cYour IP does not match this account!"
 
-  # --- Sessions & UI ---
-  timer-message: "&ePlease log in in &6%time%&e!"
-  title-login: "&a&lLOGGED IN"
-  subtitle-login: "&7Welcome back!"
-  title-register: "&a&lREGISTERED"
-  subtitle-register: "&7Welcome to the server!"
-  session-restored: "&eSession active &aLogged in automatically"
+  # --- Security and Bans ---
+  security:
+    timeout: "&cLogin time has expired!"
+    max-attempts: "&cToo many failed login attempts! Remaining attempts: &6%remaining%"
+    max-attempts-ban: "&cToo many failed attempts! You have been banned for &6%time%"
+    multiaccount: "&cAccount limit for this IP address has been reached!"
+    ip-spam: "&cToo many connection attempts from your IP! You have been blocked for &6%time%"
+    ip-mismatch: "&cYour IP address does not match this account!"
 
-  # --- /resetpassword and /resetip commands ---
-  usage-reset-password: "&cCorrect usage: &e/resetpassword <player>"
-  usage-reset-ip: "&cCorrect usage: &e/resetip <player>"
-  no-account-reset: "&cThis player has no registered password!"
-  no-ip-reset: "&cThis player has no recorded IP address!"
-  admin-reset-password-success: "&aPlayer &6%player%'s password has been reset"
-  admin-reset-ip-success: "&aPlayer &6%player%'s IP has been reset"
-  player-reset-password-kick: "&cYour password has been reset by the administrator!"
-  player-reset-ip-kick: "&cYour IP address has been reset by the administrator!"
 
-  # 2FA Messages
-  2fa-usage: "&cCorrect usage: &6/2fa setup, next, unsetup, confirm | <code>"
-  2fa-already-enabled: "&cYou already have 2FA enabled!"
-  2fa-not-enabled: "&cYou do not have 2FA enabled!"
-  2fa-setup-instructions:
-    - "&7&m--------------------------"
-    - "&6&l2FA - Setup"
-    - "&eKey: &f%secret%"
-    - "&eEnter the code in the app, then: &6/2fa <code>"
-    - "&7&m-------------------------"
-  2fa-setup-backups-codes:
-    - "&eBackup Codes:"
-    - "%codes%"
-    - "&6Use one of these if you lose access to the app!"
-  2fa-timer: "&aTime to setup: &e%seconds%"
-  2fa-expired: "&cVerification time has expired!"
-  2fa-setup-already-active: "&cYou're already setting up 2FA!"
-  2fa-not-in-setup: "&cYou are not in the process of setting up/removing 2FA"
-  2fa-success: "&a2FA security successfully enabled!"
-  title-2fa: "&b&l2FA"
-  2fa-removed-success: "&a2FA successfully removed!"
-  2fa-wrong-code: "&cIncorrect 2FA code"
-  2fa-required: "&eEnter the code from the app: &6/2fa <code>"
-  session-2fa-expired: "&cYour 2FA session has expired! Enter the code"
-  2fa-not-needed: "&cYou do not need to enter the 2FA code at this time"
-  2fa-unsetup-instructions: "&cTo disable 2FA, enter the code: /2fa unsetup <code>"
+  # --- IP Trust ---
+  ip-trust:
+    usage: "&cCorrect usage: &6/iptrust reset, info, set | <IP> | <score>"
+    ip-not-found: "&cIP address not found: &6(%ip%)"
+    invalid-number: "&cThe amount of points can only contain numbers!"
+    reset-success: "&aSuccessfully reset reputation for IP: &e(%ip%)"
+    set-success: "&aSuccessfully set reputation: &6(%score%) &afor IP: &e(%ip%)"
+    ip-info:
+      - "&7&m-------------------------"
+      - "&6&lIP Reputation (%ip%):"
+      - "&eTrust Score: &f%score%"
+      - "&6Rating: %rate%"
+      - "&7&m-------------------------"
+    rate-fatal: "&0Fatal"
+    rate-bad: "&cBad"
+    rate-neutral: "&7Neutral"
+    rate-good: "&aGood"
+    rate-ideal: "&bIdeal"
 
-  # /account Command
-  account-usage: "&cCorrect usage: &e/account <nick>"
-  account-not-found: "&cPlayer &6%target% &cnever registered on the server"
-  account-no-data: "No data"
-  account-stats-header: "&8--- &6Account statistics: &e%target% &8---"
-  account-stats-uuid: "&7UUID: &f%uuid%"
-  account-stats-ip: "&7Last IP: &f%ip%"
-  account-stats-reg-date: "&7Registration date: &f%register_date%"
-  account-stats-login-date: "&7Last login: &f%login_date%"
-  account-status-not-active-register: "&cUnregistered"
-  account-stats-status-2fa: "&72FA Status: %status%"
-  account-status-active-2fa: "&aEnabled"
-  account-status-not-active-2fa: "&cDisabled"
-  account-stats-footer: "&8--------------------------------"
 
-  # /kontalista command
-  accounts-list-generating: "&7Loading list of registered accounts..."
-  accounts-list-empty: "&cAccount database is empty"
-  accounts-list-header: "&7===== &6Registered Accounts &7====="
-  accounts-list-format: "&7- &e{name} &7(&aUUID: &b{uuid}&7)"
-  accounts-list-footer: "&7==================================================="
+  # --- Sessions ---
+  session:
+    timer: "&ePlease log in within &6%time%&e!"
+    restored: "&eSession active. Logged in automatically!"
+    twofactor-expired: "&cYour 2FA session has expired! Please enter the code"
 
-  # /listaip command
-  listaip-generating: "&7Loading IP List..."
-  listaip-empty: "&cIP address database is empty"
-  listaip-header: "&7===== &6Registered IP &7====="
-  listaip-format: "&e{ip} &b(&6Accounts: {count}&b) &7-> &a{players}"
-  listaip-footer: "&7=========================================="
 
-  # /moveaccount command
-  move-account-usage: "&cCorrect usage: &e/moveaccount <old nickname> <new nickname>"
-  move-account-start: "&aStarting the verification and migration process for &e%old% &a--> &e%new%"
-  move-account-success: "&aData successfully transferred from account &e%old% &a to account &e%new%&a!"
-  move-account-error: "§cA fatal error occurred while scanning files. Migration aborted."
-  move-account-error-migration: "§cAn error occurred while saving the migrated files!"
-  move-account-new-player-exists: "§cThe new UUID &6(%uuid%) &c already exists in the plugin database!"
-  move-account-old-player-no-data: "&cPlayer &6%target% &cdoes not have any saved data in this plugin. There is nothing to migrate!"
-  move-account-player-not-exists: "&cPlayer &6%target% &chas never played on this server!"
-  move-account-player-is-the-same: "&cPlayer old and new are the same!"
-  move-account-players-already-online: "&cPlayer &6%old% &club &6%new% &care online! &4They must not be migrating to the server to avoid data corruption!"
-  move-account-confirm: "&cThis action is &4&nIRREVERSIBLE&c!"
-  move-account-button: "&6&l[MOVE]"
-  move-account-hover: "&4Click here to move account"
+  # --- Titles ---
+  title:
+    login: "&a&lLOGGED IN"
+    login-subtitle: "&7Welcome back!"
+    register: "&a&lREGISTERED"
+    register-subtitle: "&7Welcome to the server!"
+    twofactor: "&b&l2FA"
 
-  # /resetaccount command
-  usage-purge-account: "&cCorrect usage: &e/resetaccount <nickname>"
-  admin-purge-success: "&aSuccessfully deleted ALL account data for player &e%player%"
-  player-purge-kick: "&cYour account has been completely removed from the server database by the administrator"
-  account-purge-confirm: "&cThis action is &4&nIRREVERSIBLE&c!"
-  account-purge-button: "&6&l[DELETE]"
-  account-purge-hover: "&4Click here to delete account"
 
-  # /reset2fa Command
-  usage-reset-2fa: "&cCorrect usage: &e/zresetuj2fa <nick>"
-  admin-reset-2fa-success: "&aSuccessfully removed 2-step verification from player &e%player%"
-  2fa-not-found: "&cPlayer &6%target% &cdoes not have 2-step verification (2FA) enabled!"
-  2fa-player-is-waiting: "&cPlayer &6%target% &cis being verified!"
-  2fa-player-is-setting-up: "&cPlayer &6%target% &cis setting up 2FA!"
-  player-reset-2fa: "&cYour 2-step verification has been removed by an administrator"
+  # --- Two-Factor Authentication (2FA) ---
+  twofactor:
+    usage: "&cCorrect usage: &6/2fa setup, next, unsetup, confirm | <code>"
+    already-enabled: "&cYou already have 2FA enabled!"
+    not-enabled: "&cYou do not have 2FA enabled!"
 
-  # --- Spawn System ---
-  spawn-set-success: "&aSuccessfully set location for: &e%type%"
-  spawn-deleted-success: "&aSpawn location removed: &e%type%"
-  loginspawn-usage: "&cCorrect usage: &e/loginspawn <setspawn|delspawn> <before_login|after_login>"
-  spawn-usage: "&cCorrect usage: &e/loginspawn %cmd% <before_login|after_login>"
-  spawn-invalid-type: "&cInvalid type! &eUse: before_login or after_login"
-  spawn-exists: "&cSpawn &6%type% &calready exists!"
-  spawn-does-not-exist: "&cSpawn &6%type% &cdoes not exist!"
-  spawn-overwrite-button: "&e&l[CONFIRM]"
-  spawn-overwrite-hover: "&aClick here to force overwrite the location for: &e%type%"
-  spawn-delete-confirm: "&cAre you sure you want to delete spawn &6%type%&c?"
-  spawn-delete-button: "&4&l[CONFIRM DELETE]"
-  spawn-delete-hover: "&aClick here to permanently remove spawn: &e%type%"
+    setup-instructions:
+      - "&7&m-------------------------"
+      - "&6&l2FA - Setup"
+      - "&eSecret Key: &f%secret%"
+      - "&eEnter the code in your app, then type: &6/2fa <code>"
+      - "&7&m-------------------------"
+
+    setup-backup-codes:
+      - "&eBackup Codes:"
+      - "&7- &f%codes%"
+      - "&6Use one of these if you lose access to your authenticator app!"
+      - "&7&m-------------------------"
+
+    setup-timer: "&aTime remaining for setup: &e%seconds%s"
+    expired: "&cVerification time has expired!"
+    setup-already-active: "&cYou are already setting up 2FA!"
+    not-in-setup: "&cYou are not currently setting up or removing 2FA"
+
+    success: "&a2FA protection has been successfully enabled!"
+    removed-success: "&a2FA has been successfully removed!"
+
+    wrong-code: "&cIncorrect 2FA code!"
+    required: "&eEnter the code from your app: &6/2fa <code>"
+    not-needed: "&cYou do not need to enter a 2FA code right now"
+
+    unsetup-instructions: "&cAby disable 2FA, enter the code: /2fa unsetup <code>"
+
+
+  # --- Account Info Command (/konto) ---
+  account:
+    usage: "&cCorrect usage: &e/account <player>"
+    not-found: "&cPlayer &6%target% &chas never registered on this server"
+    no-data: "No data"
+    logout-success: "&aLogged Out Successfully"
+
+    stats:
+      header: "&8--- &6Account Statistics: &e%target% &8---"
+      uuid: "&7UUID: &f%uuid%"
+      ip: "&7Last IP: &f%ip%"
+      register-date: "&7Registration Date: &f%register_date%"
+      login-date: "&7Last Login: &f%login_date%"
+      status-2fa: "&72FA Status: %status%"
+      footer: "&8--------------------------------"
+
+    status:
+      not-active-register: "&cUnregistered"
+      active-2fa: "&aEnabled"
+      not-active-2fa: "&cDisabled"
+
+
+  # --- Accounts List Command (/kontalista) ---
+  accounts-list:
+    generating: "&7Loading registered accounts list..."
+    empty: "&cThe account database is empty"
+    header: "&7===== &6Registered Accounts &7====="
+    format: "&7- &e%name% &7(&aUUID: &b%uuid%&7)"
+    footer: "&7======================================="
+
+
+  # --- IP List Command (/listaip) ---
+  ip-list:
+    generating: "&7Loading IP List..."
+    empty: "&cThe IP address database is empty"
+    header: "&7===== &6Registered IPs &7====="
+    format: "&e%ip% &b(&6Accounts: %count%&b) &7-> &a%players%"
+    footer: "&7==========================================="
+
+
+  # --- Move Account Command (/przenieskonto) ---
+  account-move:
+    usage: "&cCorrect usage: &e/moveaccount <old nick> <new nick>"
+
+    start: "&aStarting verification and migration process for &e%old% &a--> &e%new%"
+
+    success: "&aSuccessfully transferred data from &e%old% &ato &e%new%&a!"
+
+    error-migration: "§cAn error occurred while saving the migrated files!"
+
+    new-player-exists: "§cThe new UUID &6(%uuid%) &calready exists in the plugin database!"
+
+    old-player-no-data: "&cPlayer &6%target% &chas no data saved in this plugin. Nothing to transfer!"
+
+    player-not-exists: "&cPlayer &6%target% &chas never played on this server!"
+
+    player-is-the-same: "&cThe old and new player nicknames are identical!"
+
+    players-online:
+      "&cPlayer &6%old% &cor &6%new% &cis online! &4They must be offline during migration to prevent data corruption!"
+
+    confirm: "&cThis action is &4&nIRREVERSIBLE&c!"
+    button: "&6&l[TRANSFER]"
+    hover: "&4Click here to transfer the account"
+
+
+  # --- Reset Password (/zresetujhaslo) ---
+  reset-password:
+    usage: "&cCorrect usage: &e/resetpassword <player>"
+    no-account: "&cThis player does not have a registered password!"
+
+    admin-success: "&aPassword for player &6%player% &ahas been successfully reset"
+
+    player-kick: "&cYour password has been reset by an administrator!"
+
+
+  # --- Reset IP (/zresetujip) ---
+  reset-ip:
+    usage: "&cCorrect usage: &e/resetip <player>"
+    no-ip: "&cThis player does not have a saved IP address!"
+
+    admin-success: "&aIP address for player &6%player% &ahas been successfully reset"
+
+    player-kick: "&cYour IP address has been reset by an administrator!"
+
+
+  # --- Purge Account (/zresetujkonto) ---
+  purge-account:
+    usage: "&cCorrect usage: &e/purgeaccount <player>"
+
+    admin-success: "&aSuccessfully purged ALL account data for player &e%player%"
+
+    player-kick: "&cYour account has been completely removed from the server database by an administrator"
+
+    confirm: "&cThis action is &4&nIRREVERSIBLE&c!"
+    button: "&6&l[DELETE]"
+    hover: "&4Click here to delete the account"
+
+
+  # --- Reset 2FA (/zresetuj2fa) ---
+  reset-twofactor:
+    usage: "&cCorrect usage: &e/reset2fa <player>"
+
+    admin-success: "&aSuccessfully removed two-factor authentication from &e%player%'s account"
+
+    not-found: "&cPlayer &6%target% &cdoes not have two-factor authentication (2FA) enabled!"
+
+    player-waiting: "&cPlayer &6%target% &cis currently undergoing verification!"
+
+    player-setting-up: "&cPlayer &6%target% &cis currently setting up 2FA!"
+
+    player-kick: "&cYour two-factor authentication has been removed by an administrator"
+
+
+  # --- Login Spawn System ---
+  spawn:
+    set-success: "&aSuccessfully set spawn location for: &e%type%"
+
+    deleted-success: "&aSuccessfully removed spawn location for: &e%type%"
+
+    login-usage: "&cCorrect usage: &e/loginspawn <setspawn|delspawn> <before_login|after_login>"
+
+    usage: "&cCorrect usage: &e/loginspawn %cmd% <before_login|after_login>"
+
+    invalid-type: "&cInvalid type! &eUse: before_login or after_login"
+
+    exists: "&cSpawn for &6%type% &calready exists!"
+
+    does-not-exist: "&cSpawn for &6%type% &cdoes not exist!"
+
+    overwrite-button: "&e&l[OVERWRITE]"
+
+    overwrite-hover: "&aClick here to force overwrite the location for: &e%type%"
+
+    delete-confirm: "&cAre you sure you want to delete the &6%type% &cspawn?"
+
+    delete-button: "&4&l[CONFIRM DELETE]"
+
+    delete-hover: "&aClick to permanently delete the spawn: &e%type%"

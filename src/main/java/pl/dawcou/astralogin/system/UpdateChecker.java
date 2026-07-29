@@ -1,52 +1,112 @@
 package pl.dawcou.astralogin.system;
 
+import com.google.gson.Gson;
+import org.bukkit.command.CommandSender;
 import pl.dawcou.astralogin.auth.AstraLogin;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.function.Consumer;
 
 public class UpdateChecker {
 
     private final AstraLogin plugin;
     private final String projectId = "sO4dBl28";
+    private final Gson gson = new Gson();
 
     public UpdateChecker(AstraLogin plugin) {
         this.plugin = plugin;
     }
 
-    public void getVersion(final Consumer<String> consumer) {
-        // Od razu odpalamy to asynchronicznie, żeby nie blokować serwera
+    public void checkForUpdates(CommandSender target) {
         plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
             try {
-                // Zapytanie bezpośrednio po ID projektu
-                URL url = new URL("https://api.modrinth.com/v2/project/" + projectId + "/version");
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("GET");
-                connection.setRequestProperty("User-Agent", "AstraLogin-UpdateChecker");
+                URL url = new URL(
+                        "https://api.modrinth.com/v2/project/" + projectId + "/version"
+                );
 
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
-                    StringBuilder response = new StringBuilder();
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+                connection.setRequestMethod("GET");
+                connection.setRequestProperty(
+                        "User-Agent",
+                        "AstraLogin-UpdateChecker"
+                );
+
+                StringBuilder response = new StringBuilder();
+
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(connection.getInputStream()))) {
+
                     String line;
+
                     while ((line = reader.readLine()) != null) {
                         response.append(line);
                     }
-
-                    String json = response.toString();
-                    if (json.contains("\"version_number\":\"")) {
-                        String version = json.split("\"version_number\":\"")[1].split("\"")[0];
-                        // Przekazujemy wersję do consumera (nadal w wątku Async)
-                        consumer.accept(version);
-                    }
                 }
+
+                ModrinthVersion[] versions = gson.fromJson(
+                        response.toString(),
+                        ModrinthVersion[].class
+                );
+
+                if (versions.length == 0) {
+                    return;
+                }
+
+                // Modrinth zwraca najnowszą wersję jako pierwszą
+                ModrinthVersion latest = versions[0];
+
+                String currentVersion = plugin.getDescription().getVersion();
+
+                checkVersion(target, currentVersion, latest.getVersion());
+
             } catch (Exception e) {
-                // Wracamy na główny wątek, żeby bezpiecznie wysłać błąd do konsoli/managera
                 plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
                     plugin.getNoticeManager().sendUpdateCheckError();
                 });
             }
         });
+    }
+
+    private void checkVersion(CommandSender sender, String current, String latest) {
+        String[] currentParts = current.split("\\.");
+        String[] latestParts = latest.split("\\.");
+
+        int currentMajor = Integer.parseInt(currentParts[0]);
+        int currentMinor = Integer.parseInt(currentParts[1]);
+        int currentPatch = Integer.parseInt(currentParts[2]);
+
+        int latestMajor = Integer.parseInt(latestParts[0]);
+        int latestMinor = Integer.parseInt(latestParts[1]);
+        int latestPatch = Integer.parseInt(latestParts[2]);
+
+        if (currentMajor > latestMajor
+                || currentMinor > latestMinor
+                || currentPatch > latestPatch) {
+
+            plugin.getNoticeManager().sendVersionDevNotice(latest);
+
+        } else if (latestMajor > currentMajor) {
+            plugin.getNoticeManager().sendMajorUpdateNotice(sender, latest);
+
+        } else if (latestMinor > currentMinor) {
+            plugin.getNoticeManager().sendMinorUpdateNotice(sender, latest);
+
+        } else if (latestPatch > currentPatch) {
+            plugin.getNoticeManager().sendPatchUpdateNotice(sender, latest);
+
+        } else {
+            plugin.getNoticeManager().sendVersionOk();
+        }
+    }
+
+    private static class ModrinthVersion {
+        private String version_number;
+
+        public String getVersion() {
+            return version_number;
+        }
     }
 }

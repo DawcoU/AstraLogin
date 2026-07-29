@@ -40,7 +40,7 @@ public class LoginBlocks implements Listener {
             }
             // Blokujemy wszystko inne dla gracza oczekującego na kod
             e.setCancelled(true);
-            e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-required"));
+            e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.required"));
             return;
         }
 
@@ -58,7 +58,7 @@ public class LoginBlocks implements Listener {
 
         // Blokada reszty dla całkowicie niezalogowanych
         e.setCancelled(true);
-        e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
+        e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("general.blocked-action"));
     }
 
     @EventHandler
@@ -68,9 +68,9 @@ public class LoginBlocks implements Listener {
             e.setCancelled(true);
             // Jeśli ma hasło z sesji, ale czeka na 2FA, wysyłamy komunikat o 2FA
             if (loginSystem.isWaitingFor2FA(uuid)) {
-                e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-required"));
+                e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.required"));
             } else {
-                e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("blocked-action"));
+                e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("general.blocked-action"));
             }
         }
     }
@@ -95,7 +95,7 @@ public class LoginBlocks implements Listener {
         UUID uuid = p.getUniqueId();
         if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
             e.setCancelled(true);
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "2fa-required" : "blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"));
         }
     }
 
@@ -105,7 +105,7 @@ public class LoginBlocks implements Listener {
         UUID uuid = p.getUniqueId();
         if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
             e.setCancelled(true);
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "2fa-required" : "blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"));
         }
     }
 
@@ -126,7 +126,7 @@ public class LoginBlocks implements Listener {
             UUID uuid = p.getUniqueId();
             if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
                 e.setCancelled(true);
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "2fa-required" : "blocked-action"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"));
             }
         }
     }
@@ -148,7 +148,7 @@ public class LoginBlocks implements Listener {
         UUID uuid = p.getUniqueId();
         if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
             e.setCancelled(true);
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "2fa-required" : "blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"));
         }
     }
 
@@ -158,7 +158,7 @@ public class LoginBlocks implements Listener {
         if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
             e.setCancelled(true);
             Player p = (Player) e.getWhoClicked();
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "2fa-required" : "blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"));
         }
     }
 
@@ -168,7 +168,7 @@ public class LoginBlocks implements Listener {
         UUID uuid = p.getUniqueId();
         if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
             e.setCancelled(true);
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "2fa-required" : "blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"));
         }
     }
 
@@ -178,7 +178,7 @@ public class LoginBlocks implements Listener {
         UUID uuid = p.getUniqueId();
         if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
             e.setCancelled(true);
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "2fa-required" : "blocked-action"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"));
         }
     }
 
@@ -190,7 +190,7 @@ public class LoginBlocks implements Listener {
 
             if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
                 e.setCancelled(true);
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "2fa-required" : "blocked-action"));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"));
             }
         }
     }

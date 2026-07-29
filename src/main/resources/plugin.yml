@@ -13,6 +13,8 @@ commands:
     aliases: [changepassword]
   zresetujip:
     aliases: [resetip]
+  zaufanieip:
+    aliases: [iptrust]
   zaloguj:
     aliases: [login, l]
   zarejestruj:
@@ -33,6 +35,8 @@ commands:
     aliases: [moveaccount]
   spawnlogowania:
     aliases: [loginspawn]
+  wyloguj:
+    aliases: [logout]
 
 permissions:
   astralogin.reload:
@@ -58,4 +62,20 @@ permissions:
   astralogin.accountslist:
     default: op
   astralogin.moveaccount:
+    default: op
+
+  astralogin.iptrust.*:
+    default: op
+  astralogin.iptrust.info:
+    default: op
+  astralogin.iptrust.reset:
+    default: op
+  astralogin.iptrust.set:
+    default: op
+
+  astralogin.spawn.*:
+    default: op
+  astralogin.spawn.set:
+    default: op
+  astralogin.spawn.delete:
     default: op

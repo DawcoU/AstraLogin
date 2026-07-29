@@ -36,7 +36,7 @@ public class AttemptManager {
 
             plugin.getLogManager().log("Player " + p.getName() + " (" + ip + ") was IP banned. Reason: Too many failed " + type + " attempts");
 
-            String msg = plugin.getLanguageManager().getMessage("kick-max-attempts-ban")
+            String msg = plugin.getLanguageManager().getMessage("security.max-attempts-ban")
                     .replace("%time%", timeStr);
             p.kick(Component.text(msg));
             return;
@@ -46,7 +46,7 @@ public class AttemptManager {
             int remaining = threshold - aktualne;
             plugin.getLogManager().log("Player " + p.getName() + " (" + ip + ") was kicked for incorrect " + type + ". Attempts: " + aktualne + "/" + threshold);
 
-            String msg = plugin.getLanguageManager().getMessage("kick-max-attempts")
+            String msg = plugin.getLanguageManager().getMessage("security.max-attempts")
                     .replace("%remaining%", String.valueOf(remaining));
             p.kick(Component.text(msg));
             return;

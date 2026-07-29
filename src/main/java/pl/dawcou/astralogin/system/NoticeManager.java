@@ -41,16 +41,6 @@ public class NoticeManager {
         plugin.getLogger().severe(msg);
     }
 
-    public void sendUpdateCheckError() {
-        String msg = getLang().equalsIgnoreCase("pl") ? "§cNie udało się sprawdzić aktualizacji na Modrinth" : "§cFailed to check for updates on Modrinth";
-        plugin.getLogger().warning(msg);
-    }
-
-    public void sendVersionOk(String version) {
-        String msg = getLang().equalsIgnoreCase("pl") ? "§aAstraLogin jest aktualny §f(§ev" + version + "§f)" : "§aAstraLogin is up to date §f(§ev" + version + "§f)";
-        Bukkit.getConsoleSender().sendMessage(PREFIX2 + " " + msg);
-    }
-
     public void sendLoggerSuccess() {
         String msg = getLang().equalsIgnoreCase("pl") ?
                 "§aFiltr haseł został pomyślnie aktywowany" :
@@ -63,6 +53,14 @@ public class NoticeManager {
                 "§4KRYTYCZNY BŁĄD: §cNie udało się aktywować filtra logów! Hasła mogą być widoczne w konsoli Błąd: " + e.getMessage() :
                 "§4CRITICAL ERROR: §cFailed to activate log filter! Passwords may be visible in console Error: " + e.getMessage();
         plugin.getLogger().severe((msg)
+        );
+    }
+
+    public void sendPremiumCheckError(String player, Exception e) {
+        String msg = getLang().equalsIgnoreCase("pl") ?
+                "§cNie udało się zweryfikować gracza: §6(" + player + ") §cBłąd: " + e.getMessage() :
+                "§cFailed to verify player: §6(" + player + ") §cError: " + e.getMessage();
+        plugin.getLogger().warning((msg)
         );
     }
 
@@ -115,30 +113,6 @@ public class NoticeManager {
         plugin.getLogger().severe(msg + " " + error);
     }
 
-    public void sendUpdateNotice(CommandSender target, String version) {
-        String title = getLang().equalsIgnoreCase("pl") ? "§eDostępna jest nowa wersja AstraLogin: §fv" : "§eA new version of AstraLogin is available: §fv";
-        String download = getLang().equalsIgnoreCase("pl") ? "§aPobierz: " : "§aDownload: ";
-        target.sendMessage("");
-        target.sendMessage("§7------------ " + PREFIX2 + " §7------------");
-        target.sendMessage(title + version);
-        target.sendMessage(download + "§f§nhttps://modrinth.com/plugin/astralogin/version/" + version);
-        target.sendMessage("§7----------------------------------------------");
-        target.sendMessage("");
-    }
-
-    public void sendDevNotice(String currentVersion, String latestStable) {
-        String devTitle = getLang().equalsIgnoreCase("pl") ? "§bUżywasz wersji testowej: §f§nv" : "§bYou are using a Development version: §f§nv";
-        String stableInfo = getLang().equalsIgnoreCase("pl") ? "§eNa Modrinth najnowsza stabilna to: §fv" : "§eThe latest stable on Modrinth is: §fv";
-        String warning = getLang().equalsIgnoreCase("pl") ? "§bUważaj na błędy, kod jest w fazie rozwoju!" : "§bWatch out for bugs, the code is in development!";
-        Bukkit.getConsoleSender().sendMessage("");
-        Bukkit.getConsoleSender().sendMessage("§7------------ " + PREFIX2 + " §7------------");
-        Bukkit.getConsoleSender().sendMessage(devTitle + currentVersion);
-        Bukkit.getConsoleSender().sendMessage(stableInfo + latestStable);
-        Bukkit.getConsoleSender().sendMessage(warning);
-        Bukkit.getConsoleSender().sendMessage("§7-------------------------------------------");
-        Bukkit.getConsoleSender().sendMessage("");
-    }
-
     public void sendStartupLogo() {
         String v = plugin.getDescription().getVersion();
         String version = getLang().equalsIgnoreCase("pl") ? "   §6Wersja" : "   §aVersion";
@@ -169,5 +143,83 @@ public class NoticeManager {
         Bukkit.getConsoleSender().sendMessage("§6   Status: " + status + " §7- " + farewell);
         Bukkit.getConsoleSender().sendMessage("§7----------------------------------------------");
         Bukkit.getConsoleSender().sendMessage("");
+    }
+
+    // METODY JĘZYKOWE PONIŻEJ
+
+    public void sendVersionOk() {
+        String msg = getLang().equalsIgnoreCase("pl") ? "§aAstraLogin jest aktualny §f(§ev" + plugin.getDescription().getVersion() + "§f)" : "§aAstraLogin is up to date §f(§ev" + plugin.getDescription().getVersion() + "§f)";
+        Bukkit.getConsoleSender().sendMessage(PREFIX2 + " " + msg);
+    }
+
+    public void sendVersionDevNotice(String latestStable) {
+        String devTitle = getLang().equalsIgnoreCase("pl") ? "§bUżywasz wersji testowej: §fv" : "§bYou are using a Development version: §fv";
+        String stableInfo = getLang().equalsIgnoreCase("pl") ? "§eNajnowsza wersja AstraLogin to: §fv" : "§eThe latest version of AstraLogin is: §fv";
+        String warning = getLang().equalsIgnoreCase("pl") ? "§cUważaj na błędy, kod jest w fazie rozwoju!" : "§cWatch out for bugs, the code is in development!";
+        Bukkit.getConsoleSender().sendMessage("");
+        Bukkit.getConsoleSender().sendMessage("§7------------ " + PREFIX2 + " §7------------");
+        Bukkit.getConsoleSender().sendMessage(devTitle + plugin.getDescription().getVersion());
+        Bukkit.getConsoleSender().sendMessage(stableInfo + latestStable);
+        Bukkit.getConsoleSender().sendMessage(warning);
+        Bukkit.getConsoleSender().sendMessage("§7-------------------------------------------");
+        Bukkit.getConsoleSender().sendMessage("");
+    }
+
+    public void sendMajorUpdateNotice(CommandSender target, String version) {
+        String title = getLang().equalsIgnoreCase("pl")
+                ? "§cDostępna jest WIELKA aktualizacja AstraLogin: §fv"
+                : "§cA MAJOR AstraLogin update is available: §fv";
+
+        String download = getLang().equalsIgnoreCase("pl")
+                ? "§aPobierz: "
+                : "§aDownload: ";
+
+        target.sendMessage("");
+        target.sendMessage("§7------------ " + PREFIX2 + " §7------------");
+        target.sendMessage(title + version);
+        target.sendMessage(download + "§f§nhttps://modrinth.com/plugin/astralogin/version/" + version);
+        target.sendMessage("§7----------------------------------------------");
+        target.sendMessage("");
+    }
+
+    public void sendMinorUpdateNotice(CommandSender target, String version) {
+        String title = getLang().equalsIgnoreCase("pl")
+                ? "§eDostępna jest nowa aktualizacja AstraLogin: §fv"
+                : "§eA new AstraLogin update is available: §fv";
+
+        String download = getLang().equalsIgnoreCase("pl")
+                ? "§aPobierz: "
+                : "§aDownload: ";
+
+        target.sendMessage("");
+        target.sendMessage("§7------------ " + PREFIX2 + " §7------------");
+        target.sendMessage(title + version);
+        target.sendMessage(download + "§f§nhttps://modrinth.com/plugin/astralogin/version/" + version);
+        target.sendMessage("§7----------------------------------------------");
+        target.sendMessage("");
+    }
+
+    public void sendPatchUpdateNotice(CommandSender target, String version) {
+        String title = getLang().equalsIgnoreCase("pl")
+                ? "§bDostępna jest poprawka AstraLogin: §fv"
+                : "§bAn AstraLogin bug fix is available: §fv";
+
+        String download = getLang().equalsIgnoreCase("pl")
+                ? "§aPobierz: "
+                : "§aDownload: ";
+
+        target.sendMessage("");
+        target.sendMessage("§7------------ " + PREFIX2 + " §7------------");
+        target.sendMessage(title + version);
+        target.sendMessage(download + "§f§nhttps://modrinth.com/plugin/astralogin/version/" + version);
+        target.sendMessage("§7----------------------------------------------");
+        target.sendMessage("");
+    }
+
+    public void sendUpdateCheckError() {
+        String msg = getLang().equalsIgnoreCase("pl")
+                ? "§cNie udało się sprawdzić aktualizacji na Modrinth"
+                : "§cFailed to check for updates on Modrinth";
+        plugin.getLogger().warning(msg);
     }
 }

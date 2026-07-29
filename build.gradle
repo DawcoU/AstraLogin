@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'pl.dawcou'
-version = '4.1.1'
+version = '4.2.0-pre1'
 
 repositories {
     mavenCentral()

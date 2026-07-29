@@ -10,6 +10,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import pl.dawcou.astralogin.auth.manage.InventoryManager;
 import pl.dawcou.astralogin.accounts.AccountManager;
 import pl.dawcou.astralogin.accounts.AccountCommand;
+import pl.dawcou.astralogin.auth.security.IPTrustManager;
 import pl.dawcou.astralogin.file.BackupManager;
 import pl.dawcou.astralogin.file.FilesConverter;
 import pl.dawcou.astralogin.file.FilesUpdater;
@@ -40,7 +41,10 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
     private InventoryManager inventoryManager;
     private LoginSystem loginSystem;
     private FilesUpdater filesUpdater;
+    private UpdateChecker updateChecker;
     private LoginListeners loginListeners;
+    private PremiumManager premiumManager;
+    private IPTrustManager ipTrustManager;
     private SpawnManager spawnManager;
     private PasswordManager passwordManager;
     private IPManager ipManager;
@@ -57,26 +61,33 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
     public LanguageManager getLanguageManager() { return languageManager; }
     public PasswordManager getPasswordManager() { return passwordManager; }
     public LoginSystem getLoginSystem() { return loginSystem; }
-    public void setLanguageManager(LanguageManager languageManager) { this.languageManager = languageManager; }
+    public PremiumManager getPremiumManager() { return premiumManager; }
     public IPManager getIPManager() { return ipManager; }
-    public NoticeManager getNoticeManager() {
-        return noticeManager;
-    }
+    public IPTrustManager getIpTrustManager() { return ipTrustManager; }
+    public NoticeManager getNoticeManager() {return noticeManager; }
     public InventoryManager getInventoryManager() { return inventoryManager; }
     public SpawnManager getSpawnManager() { return spawnManager; }
     public SessionManager getSessionManager() { return sessionManager; }
     public AttemptManager getAttemptManager() { return attemptManager; }
     public LogManager getLogManager() { return logManager; }
+    public UpdateChecker getUpdateChecker() { return updateChecker; }
     public AccountManager getAccountDataManager() { return accountManager; }
     public TwoFactorManager getTwoFactorManager() { return twoFactorManager; }
 
     @Override
     public void onEnable() {
+        if (Bukkit.getOnlineMode()) {
+            getLogger().warning("Server is running in online-mode. Premium Login has been disabled because Mojang already verifies player accounts");
+        }
+
         // 1. Pliki na dysk
         saveDefaultConfig();
 
         int pluginId = 31501;
         new Metrics(this, pluginId);
+
+        // Tworzenie serca pluginu - LoginSystem
+        loginSystem = new LoginSystem(this);
 
         IPManager.ipCheckOctets = getConfig().getInt("security.ip-security.ip-check-octets", 4);
 
@@ -90,6 +101,7 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
 
         // 3. Infrastruktura diagnostyczna i językowa
         logManager = new LogManager(this);
+        updateChecker = new UpdateChecker(this);
         languageManager = new LanguageManager(this);
         languageManager.reload(); // Ładujemy języki od razu, aby komunikaty były dostępne
 
@@ -100,8 +112,10 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
         spawnManager = new SpawnManager(this);
         passwordManager = new PasswordManager(this);
         ipManager = new IPManager(this);
+        ipTrustManager = new IPTrustManager(this);
         sessionManager = new SessionManager(this);
         attemptManager = new AttemptManager(this);
+        premiumManager = new PremiumManager(this);
         loginListeners = new LoginListeners(this);
         backupManager = new BackupManager(this);
         AccountCommand accountCommand = new AccountCommand(this);
@@ -126,9 +140,6 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
             Class.forName("pl.dawcou.astralogin.system.LoginUtils");
         } catch (ClassNotFoundException ignored) {}
 
-        // Tworzenie serca pluginu - LoginSystem
-        loginSystem = new LoginSystem(this);
-
         // --- 4. REJESTRACJA EVENTÓW I KOMEND ---
         // Ten zajmuje się Join, Quit i PreLogin
         getServer().getPluginManager().registerEvents(this.loginListeners, this);
@@ -142,12 +153,14 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
         registerCommand("astralogin", this, this);
         registerCommand("zresetujhaslo", passwordManager);
         registerCommand("zmienhaslo", passwordManager, passwordManager);
+        registerCommand("wyloguj", accountCommand);
 
         // Komendy administracyjne
         registerCommand("zresetujip", ipManager);
         registerCommand("konto", accountCommand);
         registerCommand("zresetujkonto", accountCommand);
         registerCommand("listaip", accountCommand);
+        registerCommand("zaufanieip", ipTrustManager, ipTrustManager);
         registerCommand("listakont", accountCommand);
         registerCommand("przenieskonto", accountCommand);
         registerCommand("spawnlogowania", spawnManager, spawnManager);
@@ -158,11 +171,12 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
         sessionManager.loadSessionsFromConfig();
         sessionManager.load2FAFromConfig();
 
-        // Zapisuje sesje co 10 minut
+        // Zapisuje sesje i sprawdza czy można wyczyścić mapy z premium graczami co 10 minut
         getServer().getAsyncScheduler().runAtFixedRate(this, task -> {
             if (sessionManager != null) {
                 sessionManager.saveSessionsToConfig();
             }
+            premiumManager.cleanCache();
         }, 10, 10, java.util.concurrent.TimeUnit.MINUTES);
 
         // Odpala tworzenie backupów co 15 minut
@@ -175,28 +189,16 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
         );
 
         // --- 5. LOGO STARTOWE I SPRAWDZANIE WERSJI ---
-        // Odpalamy scheduler asynchroniczny, który najpierw sprawdzi internet, a na koniec wypluje logo i status wersji!
         getServer().getAsyncScheduler().runNow(this, task -> {
-            // Najpierw sprawdzamy aktualizacje, jeśli opcja jest włączona
+            // Logo zawsze przy starcie
+            noticeManager.sendStartupLogo();
+
+            // Sprawdzanie aktualizacji
             if (getConfig().getBoolean("settings.check-updates", true)) {
-                new UpdateChecker(this).getVersion(version -> {
-                    String currentVersion = getDescription().getVersion();
+                updateChecker.checkForUpdates(Bukkit.getConsoleSender());
 
-                    // 1. NAJPIERW DRUKUJEMY LOGO (Zawsze jako pierwsze, niezależnie od wyniku sieci)
-                    noticeManager.sendStartupLogo();
-
-                    // 2. ZARAZ POD LOGO DORZUCAMY INFO O WERSJI
-                    if (currentVersion.equals(version)) {
-                        noticeManager.sendVersionOk(version);
-                    } else if (currentVersion.compareTo(version) > 0) {
-                        noticeManager.sendDevNotice(currentVersion, version);
-                    } else {
-                        noticeManager.sendUpdateNotice(Bukkit.getConsoleSender(), version);
-                    }
-                });
             } else {
-                // Jeśli admin wyłączył sprawdzanie aktualizacji, po prostu drukujemy samo logo
-                noticeManager.sendStartupLogo();
+                noticeManager.sendVersionOk();
             }
         });
     }
@@ -210,6 +212,9 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
         for (Player p : Bukkit.getOnlinePlayers()) {
             this.loginListeners.handleQuit(p);
         }
+
+        languageManager.printMissingKeys();
+
         noticeManager.sendShutdownLogo();
     }
 
@@ -218,13 +223,14 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
         if (command.getName().equalsIgnoreCase("astralogin") || command.getName().equalsIgnoreCase("al")) {
             if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
                 if (!sender.hasPermission("astralogin.reload")) {
-                    sender.sendMessage(languageManager.getWithPrefix("no-permission"));
+                    sender.sendMessage(languageManager.getWithPrefix("general.no-permission"));
                     return true;
                 }
                 reloadConfig();
                 IPManager.ipCheckOctets = getConfig().getInt("security.ip-security.ip-check-octets", 4);
-                setLanguageManager(new LanguageManager(this));
-                sender.sendMessage(getLanguageManager().getWithPrefix("reload-success"));
+                languageManager.reload();
+                ipTrustManager.reload();
+                sender.sendMessage(getLanguageManager().getWithPrefix("general.reload-success"));
                 return true;
             }
 

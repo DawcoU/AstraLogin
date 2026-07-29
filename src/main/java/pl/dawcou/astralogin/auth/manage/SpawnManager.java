@@ -222,18 +222,18 @@ public class SpawnManager implements CommandExecutor, TabCompleter {
 
         if (command.getName().equalsIgnoreCase("loginspawn") || command.getName().equalsIgnoreCase("spawnlogowania")) {
             if (p == null) {
-                sender.sendMessage(plugin.getLanguageManager().getMessage("only-players"));
+                sender.sendMessage(plugin.getLanguageManager().getMessage("general.only-players"));
                 return true;
             }
 
             if (args.length > 0 && args[0].equalsIgnoreCase("setspawn")) {
-                if (!p.hasPermission("astralogin.setspawn")) {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
+                if (!p.hasPermission("astralogin.spawn.set")) {
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
                     return true;
                 }
 
                 if (args.length < 2) {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-usage").replace("%cmd%", "setspawn"));
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.login-usage"));
                     return true;
                 }
 
@@ -241,7 +241,7 @@ public class SpawnManager implements CommandExecutor, TabCompleter {
 
                 // Sprawdzamy czy typ jest poprawny
                 if (!type.equals("before_login") && !type.equals("after_login")) {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-invalid-type"));
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.invalid-type"));
                     return true;
                 }
 
@@ -249,11 +249,10 @@ public class SpawnManager implements CommandExecutor, TabCompleter {
                 boolean confirmed = (args.length > 2 && args[2].equalsIgnoreCase("confirm"));
 
                 if (plugin.getSpawnManager().hasSpawn(type) && !confirmed) {
-                    String baseMsgStr = plugin.getLanguageManager().getWithPrefix("spawn-exists").replace("%type%", type);
-                    String btnTextStr = plugin.getLanguageManager().getMessage("spawn-overwrite-button");
-                    String hoverTextStr = plugin.getLanguageManager().getMessage("spawn-overwrite-hover").replace("%type%", type);
+                    String baseMsgStr = plugin.getLanguageManager().getWithPrefix("spawn.exists").replace("%type%", type);
+                    String btnTextStr = plugin.getLanguageManager().getMessage("spawn.overwrite-button");
+                    String hoverTextStr = plugin.getLanguageManager().getMessage("spawn.overwrite-hover").replace("%type%", type);
 
-                    // Poprawione na legacySection(), żeby zachować kolory prefiksu
                     Component baseMsg = LegacyComponentSerializer.legacySection()
                             .deserialize(baseMsgStr + " ");
 
@@ -268,18 +267,18 @@ public class SpawnManager implements CommandExecutor, TabCompleter {
 
                 // 2. WŁAŚCIWE USTAWIENIE SPAWNU
                 plugin.getSpawnManager().setSpawn(type, p);
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-set-success").replace("%type%", type));
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.set-success").replace("%type%", type));
                 return true;
             }
 
             if (args.length > 0 && args[0].equalsIgnoreCase("delspawn")) {
-                if (!p.hasPermission("astralogin.delspawn")) {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("no-permission"));
+                if (!p.hasPermission("astralogin.spawn.delete")) {
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
                     return true;
                 }
 
                 if (args.length < 2) {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-usage").replace("%cmd%", "delspawn"));
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.login-usage"));
                     return true;
                 }
 
@@ -291,23 +290,23 @@ public class SpawnManager implements CommandExecutor, TabCompleter {
                 if (confirmed) {
                     if (plugin.getSpawnManager().hasSpawn(type)) {
                         plugin.getSpawnManager().delSpawn(type);
-                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-deleted-success").replace("%type%", type));
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.deleted-success").replace("%type%", type));
                     } else {
-                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-does-not-exist").replace("%type%", type));
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.does-not-exist").replace("%type%", type));
                     }
                     return true;
                 }
 
                 // 2. SPRAWDZAMY CZY W OGÓLE ISTNIEJE
                 if (!plugin.getSpawnManager().hasSpawn(type)) {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn-does-not-exist").replace("%type%", type));
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.does-not-exist").replace("%type%", type));
                     return true;
                 }
 
-                // 3. POKAZYWANIE PRZYCISKU Z POPRAWNYM HOVEREM I KOLORAMI
-                String baseMsgStr = plugin.getLanguageManager().getWithPrefix("spawn-delete-confirm").replace("%type%", type);
-                String btnTextStr = plugin.getLanguageManager().getMessage("spawn-delete-button");
-                String hoverTextStr = plugin.getLanguageManager().getMessage("spawn-delete-hover").replace("%type%", type);
+                // 3. POKAZYWANIE PRZYCISKU
+                String baseMsgStr = plugin.getLanguageManager().getWithPrefix("spawn.delete-confirm").replace("%type%", type);
+                String btnTextStr = plugin.getLanguageManager().getMessage("spawn.delete-button");
+                String hoverTextStr = plugin.getLanguageManager().getMessage("spawn.delete-hover").replace("%type%", type);
 
                 Component baseMsg = LegacyComponentSerializer.legacySection()
                         .deserialize(baseMsgStr + " ");
@@ -321,7 +320,7 @@ public class SpawnManager implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("loginspawn-usage"));
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.usage"));
             return true;
         }
         return false;
@@ -334,10 +333,10 @@ public class SpawnManager implements CommandExecutor, TabCompleter {
 
         if (cmd.equalsIgnoreCase("spawnlogowania") || cmd.equalsIgnoreCase("loginspawn")) {
             if (args.length == 1) {
-                if (sender.hasPermission("astralogin.setspawn")) {
+                if (sender.hasPermission("astralogin.spawn.set")) {
                     hints.add("setspawn");
                 }
-                if (sender.hasPermission("astralogin.delspawn")) {
+                if (sender.hasPermission("astralogin.spawn.delete")) {
                     hints.add("delspawn");
                 }
             } else if (args.length == 2 && (args[0].equalsIgnoreCase("setspawn") || args[0].equalsIgnoreCase("delspawn"))) {

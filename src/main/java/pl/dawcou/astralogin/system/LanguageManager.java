@@ -10,13 +10,15 @@ import org.bukkit.plugin.java.JavaPlugin;
 import pl.dawcou.astralogin.auth.AstraLogin;
 
 import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class LanguageManager {
 
     private final JavaPlugin plugin;
+
     private final Map<String, String> messages = new HashMap<>();
+    private final Map<String, List<String>> lists = new HashMap<>();
+    private final Set<String> missingKeys = new HashSet<>();
     private final MiniMessage miniMessage = MiniMessage.builder().strict(false).build();
 
     public LanguageManager(JavaPlugin plugin) {
@@ -28,6 +30,7 @@ public class LanguageManager {
     public void reload() {
         // Czyścimy mapę
         messages.clear();
+        lists.clear();
 
         String lang = plugin.getConfig().getString("settings.language", "en");
         File langFile = new File(plugin.getDataFolder(), "languages/" + lang + ".yml");
@@ -42,17 +45,54 @@ public class LanguageManager {
         ConfigurationSection msgSection = langConfig.getConfigurationSection("messages");
 
         if (msgSection != null) {
-            for (String key : msgSection.getKeys(false)) {
-                String msg = msgSection.getString(key);
-                if (msg != null) {
-                    messages.put(key, parseToLegacy(msg));
+            loadMessages(msgSection, "");
+        }
+    }
+
+    public void printMissingKeys() {
+        if (missingKeys.isEmpty()) {
+            return;
+        }
+
+        plugin.getLogger().warning("==============================");
+        plugin.getLogger().warning("Missing language keys:");
+
+        for (String key : missingKeys) {
+            plugin.getLogger().warning("- " + key);
+        }
+
+        plugin.getLogger().warning("==============================");
+    }
+
+    private void loadMessages(ConfigurationSection section, String path) {
+        for (String key : section.getKeys(false)) {
+            String fullPath = path.isEmpty()
+                    ? key
+                    : path + "." + key;
+
+            if (section.isConfigurationSection(key)) {
+                loadMessages(
+                        section.getConfigurationSection(key),
+                        fullPath
+                );
+            } else if (section.isList(key)) {
+                // Obsługa list w plikach językowych
+                List<String> rawList = section.getStringList(key);
+                List<String> parsedList = new ArrayList<>();
+
+                for (String line : rawList) {
+                    parsedList.add(parseToLegacy(line));
                 }
-            }
-        } else {
-            // Jeśli plik nie ma sekcji "messages:", czytamy wszystko z głównego poziomu
-            for (String key : langConfig.getKeys(false)) {
-                if (langConfig.isString(key)) {
-                    messages.put(key, parseToLegacy(langConfig.getString(key)));
+
+                lists.put(fullPath, parsedList);
+            } else {
+                String message = section.getString(key);
+
+                if (message != null) {
+                    messages.put(
+                            fullPath,
+                            parseToLegacy(message)
+                    );
                 }
             }
         }
@@ -100,13 +140,32 @@ public class LanguageManager {
         return text.replace("&", "§");
     }
 
-    // Pobiera czystą wiadomość z mapy i od razu ją konwertuje (BEZ PREFIX'U)
+    // Pobiera czystą wiadomość z mapy i od razu ją konwertuje
     public String getMessage(String path) {
-        String rawMessage = messages.getOrDefault(path, "§cNo message: " + path);
+        String rawMessage = messages.get(path);
+
+        if (rawMessage == null) {
+            missingKeys.add(path);
+            return "§cMissing message: " + path;
+        }
+
         return parseToLegacy(rawMessage);
     }
 
-    // Pobiera wiadomość z prefixem SZTYWNO na początku (zostawiamy)
+    public List<String> getMessageList(String path) {
+        List<String> rawList = lists.get(path);
+
+        if (rawList == null) {
+            missingKeys.add(path);
+            List<String> errorList = new ArrayList<>();
+            errorList.add("§cMissing message list: " + path);
+            return errorList;
+        }
+
+        return rawList;
+    }
+
+    // Pobiera wiadomość z prefixem
     public String getWithPrefix(String path) {
         return parseToLegacy(AstraLogin.PREFIX) + " " + getMessage(path);
     }
