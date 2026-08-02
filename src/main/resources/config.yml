@@ -1,6 +1,6 @@
-# +--------------------------------------------------------------------------------------------+
-# |                     AstraLogin - Configuration file - Modern Auth System                   |
-# +--------------------------------------------------------------------------------------------+
+# +-----------------------------------------------------------------------+
+# |                     AstraLogin - Configuration file                   |
+# +-----------------------------------------------------------------------+
 
 # =========================================
 #             General Settings
@@ -12,6 +12,9 @@ settings:
 
   # Should the plugin check for newer versions of the plugin?
   check-updates: true
+
+  # Should debug mode be enabled?
+  debug-mode: false
 
   # Should the plugin save events (logins, registrations, etc.) to .log files?
   logs:

@@ -67,7 +67,7 @@ public class IPManager implements CommandExecutor {
             }
 
             if (args.length != 1) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-reset-ip"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-ip.usage"));
                 return true;
             }
 
@@ -76,7 +76,7 @@ public class IPManager implements CommandExecutor {
 
             // Sprawdzamy czy IP w ogóle istnieje
             if (getIP(uuid) == null) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-ip-reset"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-ip.no-ip"));
                 return true;
             }
 
@@ -86,11 +86,11 @@ public class IPManager implements CommandExecutor {
             // Pobieramy obiekt zalogowanego gracza, jeśli jest na serwerze
             Player onlineTarget = Bukkit.getPlayer(target.getUniqueId());
             if (onlineTarget != null) {
-                String kickReason = plugin.getLanguageManager().getMessage("player-reset-ip-kick");
+                String kickReason = plugin.getLanguageManager().getMessage("reset-ip.player-kick");
                 onlineTarget.kick(Component.text(kickReason));
             }
 
-            String successMsg = plugin.getLanguageManager().getWithPrefix("admin-reset-ip-success")
+            String successMsg = plugin.getLanguageManager().getWithPrefix("reset-ip.admin-success")
                     .replace("%player%", args[0]);
 
             sender.sendMessage(successMsg);

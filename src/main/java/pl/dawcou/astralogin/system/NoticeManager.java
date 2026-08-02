@@ -146,23 +146,51 @@ public class NoticeManager {
     }
 
     // METODY JĘZYKOWE PONIŻEJ
-
     public void sendVersionOk() {
         String msg = getLang().equalsIgnoreCase("pl") ? "§aAstraLogin jest aktualny §f(§ev" + plugin.getDescription().getVersion() + "§f)" : "§aAstraLogin is up to date §f(§ev" + plugin.getDescription().getVersion() + "§f)";
         Bukkit.getConsoleSender().sendMessage(PREFIX2 + " " + msg);
     }
 
-    public void sendVersionDevNotice(String latestStable) {
-        String devTitle = getLang().equalsIgnoreCase("pl") ? "§bUżywasz wersji testowej: §fv" : "§bYou are using a Development version: §fv";
-        String stableInfo = getLang().equalsIgnoreCase("pl") ? "§eNajnowsza wersja AstraLogin to: §fv" : "§eThe latest version of AstraLogin is: §fv";
+    public void sendExperimentalNotice(CommandSender target) {
+        String devTitle = getLang().equalsIgnoreCase("pl") ? "§bUżywasz eksperymentalną wersję: §fv" : "§bYou are using an experimental version: §fv";
+        String warning = getLang().equalsIgnoreCase("pl") ? "§cUżywaj tylko dla testów! kod jest w fazie rozwoju!" : "§cUse only for testing! the code is in development!";
+
+        target.sendMessage("");
+        target.sendMessage("§7------------ " + PREFIX2 + " §7------------");
+        target.sendMessage(devTitle + plugin.getDescription().getVersion());
+        target.sendMessage(warning);
+        target.sendMessage("§7-------------------------------------------");
+        target.sendMessage("");
+    }
+
+    public void sendPreReleaseNotice(CommandSender target, String version) {
+        String title = getLang().equalsIgnoreCase("pl") ? "§6[Pre-Release] §eDostępna jest wersja testowa: §b" + plugin.getDescription().getVersion() : "§6[Pre-Release] §eTest version available: §b" + plugin.getDescription().getVersion();
+        String info = getLang().equalsIgnoreCase("pl") ? "§cUwaga: Wersja wyłącznie do celów testowych! Może zawierać błędy." : "§cNotice: For testing purposes only! May contain bugs.";
+
+        String download = getLang().equalsIgnoreCase("pl")
+                ? "§aPobierz: "
+                : "§aDownload: ";
+
+        target.sendMessage("");
+        target.sendMessage("§7------------ " + PREFIX2 + " §7------------");
+        target.sendMessage(title);
+        target.sendMessage(info);
+        target.sendMessage(download + "§f§nhttps://modrinth.com/plugin/astralogin/version/" + version);
+        target.sendMessage("§7-------------------------------------------");
+        target.sendMessage("");
+    }
+
+    public void sendVersionDevNotice(CommandSender target, String latestStable) {
+        String devTitle = getLang().equalsIgnoreCase("pl") ? "§bUżywasz nowszej wersji nie publicznej: §fv" : "§bYou are using a newer, non-public version: §fv";
+        String stableInfo = getLang().equalsIgnoreCase("pl") ? "§eNajnowsza publiczna wersja AstraLogin to: §fv" : "§eThe latest public version of AstraLogin is: §fv";
         String warning = getLang().equalsIgnoreCase("pl") ? "§cUważaj na błędy, kod jest w fazie rozwoju!" : "§cWatch out for bugs, the code is in development!";
-        Bukkit.getConsoleSender().sendMessage("");
-        Bukkit.getConsoleSender().sendMessage("§7------------ " + PREFIX2 + " §7------------");
-        Bukkit.getConsoleSender().sendMessage(devTitle + plugin.getDescription().getVersion());
-        Bukkit.getConsoleSender().sendMessage(stableInfo + latestStable);
-        Bukkit.getConsoleSender().sendMessage(warning);
-        Bukkit.getConsoleSender().sendMessage("§7-------------------------------------------");
-        Bukkit.getConsoleSender().sendMessage("");
+        target.sendMessage("");
+        target.sendMessage("§7------------ " + PREFIX2 + " §7------------");
+        target.sendMessage(devTitle + plugin.getDescription().getVersion());
+        target.sendMessage(stableInfo + latestStable);
+        target.sendMessage(warning);
+        target.sendMessage("§7-------------------------------------------");
+        target.sendMessage("");
     }
 
     public void sendMajorUpdateNotice(CommandSender target, String version) {

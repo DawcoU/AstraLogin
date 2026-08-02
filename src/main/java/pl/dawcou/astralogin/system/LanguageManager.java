@@ -50,6 +50,9 @@ public class LanguageManager {
     }
 
     public void printMissingKeys() {
+        if (!plugin.getConfig().getBoolean("settings.debug-mode", false)) {
+            return;
+        }
         if (missingKeys.isEmpty()) {
             return;
         }

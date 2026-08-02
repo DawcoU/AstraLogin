@@ -49,7 +49,6 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-
         Player p = (sender instanceof Player) ? (Player) sender : null;
 
         if (command.getName().equalsIgnoreCase("zresetujhaslo")) {
@@ -58,7 +57,7 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
                 return true;
             }
             if (args.length < 1) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("usage-reset-password"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-password.usage"));
                 return true;
             }
 
@@ -88,7 +87,7 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
 
             // 3. Sprawdzamy hasło i usuwamy dane
             if (!isRegistered(uuidString)) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("no-account-reset"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-password.no-account"));
                 return true;
             }
 
@@ -98,7 +97,7 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
             plugin.getAccountDataManager().invalidateRegistration(targetUUID);
 
             // 4. Sukces, logi i wiadomości
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("admin-reset-password-success")
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-password.admin-success")
                     .replace("%player%", targetName));
 
             String adminName = sender.getName();
@@ -113,7 +112,7 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
                 plugin.getIPManager().resetIPAttempts(playerIP);
 
                 // Wyrzucamy gracza z serwera
-                targetP.kick(Component.text(plugin.getLanguageManager().getMessage("player-reset-password-kick")));
+                targetP.kick(Component.text(plugin.getLanguageManager().getMessage("reset-password.player-kick")));
             }
 
             return true;
