@@ -1,6 +1,5 @@
 package pl.dawcou.astralogin.auth.twofactor;
 
-import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -73,7 +72,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             Player targetP = offlineP.getPlayer();
             if (targetP != null && targetP.isOnline()) {
                 String MessageReset2FA = plugin.getLanguageManager().getMessage("reset-twofactor.player-message");
-                targetP.sendMessage(Component.text(MessageReset2FA));
+                targetP.sendMessage((MessageReset2FA));
             }
 
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.admin-success").replace("%player%", targetName));
@@ -140,7 +139,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             String timerFormat = plugin.getLanguageManager().getMessage("twofactor.setup-timer");
             String expiredMessage = plugin.getLanguageManager().getWithPrefix("twofactor.expired");
 
-            plugin.getServer().getAsyncScheduler().runAtFixedRate(plugin, (task) -> {
+            plugin.getSchedulerManager().runAsyncRepeating(task -> {
                 // Jeśli gracz wyjdzie, po prostu anulujemy bez wysyłania wiadomości
                 if (!p.isOnline()) {
                     task.cancel();
@@ -157,8 +156,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
                 String secondsLeft = twoFactorManager.getRemainingTime(uuid);
 
-                p.sendActionBar(Component.text(
-                        timerFormat.replace("%seconds%", secondsLeft)));
+                p.sendActionBar((timerFormat.replace("%seconds%", secondsLeft)));
             }, 0, 1, TimeUnit.SECONDS);
             return true;
         }
@@ -282,13 +280,13 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             String secret = twoFactorManager.getPendingSecret(uuid);
 
             if (twoFactorManager.verifyCode(secret, code)) {
-                plugin.getServer().getAsyncScheduler().runNow(plugin, saveTask -> {
+                plugin.getSchedulerManager().runAsync(() -> {
                     twoFactorManager.save2FA(uuid, secret);
                     plugin.getLogManager().log("Player " + p.getName() + " successfully completed 2FA setup");
-                    p.getScheduler().run(plugin, syncTask -> {
+                    plugin.getSchedulerManager().runSync(() -> {
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.success"));
                         p.sendTitle("", "", 0, 10, 0);
-                    }, null);
+                    });
                 });
             } else {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.wrong-code"));

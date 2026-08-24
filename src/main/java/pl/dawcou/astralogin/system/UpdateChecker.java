@@ -20,7 +20,7 @@ public class UpdateChecker {
     }
 
     public void checkForUpdates(CommandSender target) {
-        plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
+        plugin.getSchedulerManager().runAsync(() -> {
             try {
                 URL url = new URL(
                         "https://api.modrinth.com/v2/project/" + projectId + "/version"
@@ -57,7 +57,7 @@ public class UpdateChecker {
                 checkVersion(target, currentVersion, latest);
 
             } catch (Exception e) {
-                plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+                plugin.getSchedulerManager().runSync(() -> {
                     plugin.getNoticeManager().sendUpdateCheckError();
                 });
             }
@@ -67,7 +67,7 @@ public class UpdateChecker {
     private void checkVersion(CommandSender sender, String current, ModrinthVersion latest) {
         // 1. Idealne dopasowanie - masz DOKŁADNIE to, co jest najnowsze na Modrintha
         if (current.equalsIgnoreCase(latest.getVersion())) {
-            plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+            plugin.getSchedulerManager().runSync(() -> {
                 if (current.contains("-")) {
                     // Masz najnowszy pre-release -> przypadek 1C: tylko info o wersji eksperymentalnej
                     plugin.getNoticeManager().sendExperimentalNotice(sender);
@@ -98,7 +98,7 @@ public class UpdateChecker {
         boolean isCurrentExperimental = current.contains("-");
         boolean isLatestPreRelease = latest.isPrerelease();
 
-        plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+        plugin.getSchedulerManager().runSync(() -> {
 
             // ==========================================
             // KROK 1: Obsługa wydań Pre-Release z sieci

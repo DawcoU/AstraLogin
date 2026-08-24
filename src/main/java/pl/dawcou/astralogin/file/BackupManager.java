@@ -31,7 +31,7 @@ public class BackupManager {
             return;
         }
 
-        plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
+        plugin.getSchedulerManager().runAsync(() -> {
             File dataFolder = plugin.getDataFolder();
             File backupDirectory = new File(dataFolder, "backups");
 

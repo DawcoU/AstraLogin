@@ -1,10 +1,10 @@
 plugins {
     id 'java'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'com.gradleup.shadow' version '8.3.9'
 }
 
 group = 'pl.dawcou'
-version = '4.2.0'
+version = '4.3.0'
 
 repositories {
     mavenCentral()
@@ -15,18 +15,37 @@ dependencies {
     // API serwera (zawsze provided)
     compileOnly 'io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT'
 
-    // Log4j (zawsze provided, bo Paper to posiada)
+    // Pełny Netty z handlerami i pipelinem
+    compileOnly 'io.netty:netty-all:4.1.97.Final'
+
+    // Log4j
     compileOnly 'org.apache.logging.log4j:log4j-api:2.20.0'
     compileOnly 'org.apache.logging.log4j:log4j-core:2.20.0'
 
+    // LOKALNE JAR-Y z folderu /libs - Na wypadek
+    //compileOnly fileTree(dir: 'libs', include: ['*.jar'])
+
+    // Biblioteka ProtocolLib wymagana do skompilowania importów
+    compileOnly 'net.dmulloy2:ProtocolLib:5.4.0'
+
     // Biblioteki do załączenia w środku (shadow)
+    implementation "com.googlecode.json-simple:json-simple:1.1.1"
     implementation 'org.mindrot:jbcrypt:0.4'
     implementation 'org.bstats:bstats-bukkit:3.2.1'
     implementation 'com.warrenstrange:googleauth:1.5.0'
+
+    // Kyori Adventure API oraz Minidown/Legacy text (dla pełnego wsparcia komponentów)
+    implementation 'net.kyori:adventure-platform-bukkit:4.3.3'
+    implementation 'net.kyori:adventure-api:4.17.0'
+    implementation 'net.kyori:adventure-text-minimessage:4.17.0'
+    implementation 'net.kyori:adventure-text-serializer-legacy:4.17.0'
+    implementation 'net.kyori:adventure-text-serializer-plain:4.17.0'
 }
 
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(17)
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }
 
 processResources {
@@ -42,4 +61,6 @@ shadowJar {
     relocate 'com.warrenstrange.googleauth', 'pl.dawcou.astralogin.googleauth'
     relocate 'org.bstats', 'pl.dawcou.astralogin.bstats'
     relocate 'org.mindrot.jbcrypt', 'pl.dawcou.astralogin.jbcrypt'
+    relocate 'org.json.simple', 'pl.dawcou.astralogin.json'
+    relocate 'net.kyori', 'pl.dawcou.astralogin.libs.kyori'
 }

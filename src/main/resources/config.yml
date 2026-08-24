@@ -102,7 +102,7 @@ security:
 
   bcrypt:
     # The cost factor for the BCrypt algorithm.
-    # Determines the number of iterations for password hashing.
+    # Determines the number of iterations for password and PIN hashing.
     # Recommended range: 10-12 (Optimal balance between security and performance).
     # WARNING: Values above 14 may cause severe lag or server crashes on shared hosting.
     # Default value: 10
@@ -124,19 +124,20 @@ features:
 
   timer:
     # Enable or disable the login timer
-    login-time-enabled: true
+    enabled: true
 
     # Set your login time
-    login-time-limit: "2 minutes"
+    time-limit: "2 minutes"
 
-    # Should the login time be displayed on the boss bar?
-    use-bossbar: true
+    boss-bar:
+      # Should the login time be displayed on the boss bar?
+      use: true
 
-    # Colors: BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
-    bossbar-color: "RED"
+      # Colors: BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
+      color: "RED"
 
-    # Styles: PROGRESS, NOTCHED_6, NOTCHED_10, NOTCHED_12, NOTCHED_20
-    bossbar-style: "PROGRESS"
+      # Styles: PROGRESS, NOTCHED_6, NOTCHED_10, NOTCHED_12, NOTCHED_20
+      style: "PROGRESS"
 
   session:
     # Should Sessions be enabled?
@@ -170,7 +171,12 @@ features:
   # Premium Login
   auto-login:
     # Should premium login be enabled?
-    enabled: true
+    enabled: false
+
+    # Available modes:
+    # FULL - Uses new experimental full player authentication (requires ProtocolLib installed, 100% secure)
+    # NATIVE - Native AstraLogin system (Uses Mojang API + IP verification. NOTE: Less secure with variable IPs!)
+    mode: FULL
 
   password:
     # Minimum number of characters in a password
@@ -178,6 +184,15 @@ features:
 
     # Maximum number of characters in a password
     max-password-length: 24
+
+  pin:
+    # How should the PIN be generated?
+    # RANDOM – Generates a random PIN code
+    # TYPING - Manually entered code during creation
+    method: RANDOM
+
+    # Specifies the length of the automatically generated PIN or the manually entered PIN. 4 Minimum 9 Maximum
+    length: 6
 
 # =========================
 #          VISUALS

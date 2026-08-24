@@ -83,12 +83,12 @@ public class IPTrustManager implements CommandExecutor, TabCompleter {
     public IPTrustManager(AstraLogin plugin) {
         this.plugin = plugin;
 
-        File dataDir = new File(plugin.getDataFolder(), "global_data");
+        File dataDir = new File(plugin.getDataFolder(), "data/global");
         if (!dataDir.exists()) {
             dataDir.mkdirs();
         }
 
-        this.file = new File(dataDir, "ip-trust.yml");
+        file = new File(dataDir, "ip-trust.yml");
         if (!file.exists()) {
             try {
                 file.createNewFile();
@@ -320,15 +320,17 @@ public class IPTrustManager implements CommandExecutor, TabCompleter {
     }
 
     private void save() {
-        try {
-            config.save(file);
-        } catch (IOException e) {
-            e.printStackTrace();
+        synchronized (config) {
+            try {
+                config.save(file);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
     public void reload() {
-        this.config = YamlConfiguration.loadConfiguration(file);
+        config = YamlConfiguration.loadConfiguration(file);
 
         loadSettings();
         validateLevels();

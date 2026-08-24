@@ -23,7 +23,7 @@ public class LogManager {
         this.plugin = plugin;
 
         // Tworzymy folder 'logs' wewnątrz głównego folderu pluginu
-        this.logsFolder = new File(plugin.getDataFolder(), "logs");
+        logsFolder = new File(plugin.getDataFolder(), "logs");
         if (!logsFolder.exists()) {
             logsFolder.mkdirs();
         }
@@ -44,8 +44,8 @@ public class LogManager {
 
         String fullLogLine = timePrefix + message;
 
-        // Odpalamy asynchroniczny scheduler z Paper API, który zapisze to na dysku w tle
-        plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
+        // Odpalamy asynchroniczny scheduler, który zapisze to na dysku w tle
+        plugin.getSchedulerManager().runAsync(() -> {
             try (FileWriter fw = new FileWriter(new File(logsFolder, fileName), true);
                  PrintWriter pw = new PrintWriter(fw)) {
 

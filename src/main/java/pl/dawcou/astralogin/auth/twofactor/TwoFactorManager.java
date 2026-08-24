@@ -25,7 +25,7 @@ public class TwoFactorManager {
 
     public TwoFactorManager(AstraLogin plugin) {
         this.plugin = plugin;
-        this.gAuth = new GoogleAuthenticator();
+        gAuth = new GoogleAuthenticator();
     }
 
     /**

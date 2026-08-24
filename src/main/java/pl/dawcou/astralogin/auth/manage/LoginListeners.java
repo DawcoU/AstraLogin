@@ -5,6 +5,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -17,6 +18,7 @@ import org.bukkit.potion.PotionEffectType;
 import pl.dawcou.astralogin.auth.AstraLogin;
 import pl.dawcou.astralogin.auth.LoginSystem;
 import pl.dawcou.astralogin.auth.SessionManager;
+import pl.dawcou.astralogin.auth.security.premium.listener.PremiumProtocolListener;
 import pl.dawcou.astralogin.auth.security.IPManager;
 import pl.dawcou.astralogin.auth.security.IPTrustManager;
 import pl.dawcou.astralogin.system.LoginUtils;
@@ -24,19 +26,22 @@ import pl.dawcou.astralogin.auth.twofactor.TwoFactorManager;
 
 import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 public class LoginListeners implements Listener {
 
     private final AstraLogin plugin;
 
-    public LoginListeners(AstraLogin plugin) {
-        this.plugin = plugin;
+    private final PremiumProtocolListener premiumProtocolListener;
 
+    public LoginListeners(AstraLogin plugin, PremiumProtocolListener premiumProtocolListener) {
+        this.plugin = plugin;
+        this.premiumProtocolListener = premiumProtocolListener;
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
-        this.handleQuit(e.getPlayer());
+        handleQuit(e.getPlayer());
     }
 
     @EventHandler
@@ -62,15 +67,15 @@ public class LoginListeners implements Listener {
             }
         }
 
-        plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
+        plugin.getSchedulerManager().runAsync(() -> {
             boolean premium = plugin.getPremiumManager().isPremium(p);
 
-            plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+            plugin.getSchedulerManager().runSync(() -> {
                 IPTrustManager.TrustLevel level = plugin.getIpTrustManager().getTrustLevel(ip);
                 if (premium && (level != IPTrustManager.TrustLevel.FATAL)) {
                     p.sendMessage(plugin.getLanguageManager().getWithPrefix("premium.success"));
                     plugin.getLogManager().log("Premium account detected for player " + p.getName());
-                    loginSystem.finishLogin(p);
+                    loginSystem.finishSession(p);
                     return;
                 }
 
@@ -78,7 +83,7 @@ public class LoginListeners implements Listener {
                 boolean passwordBypassedBySession = false;
 
                 // --- LOGIKA SESJI ---
-                if (plugin.getConfig().getBoolean("features.session.enabled")
+                if (plugin.getConfig().getBoolean("features.session.enabled") && plugin.getPasswordManager().isRegistered(uuid.toString())
                         && level != IPTrustManager.TrustLevel.FATAL
                         && level != IPTrustManager.TrustLevel.BAD) {
                     if (p.getAddress() != null) {
@@ -109,17 +114,17 @@ public class LoginListeners implements Listener {
                                             Component.text(plugin.getLanguageManager().getMessage("twofactor.required")), // Podtytuł
                                             Title.Times.times(Duration.ofMillis(500), Duration.ofHours(1), Duration.ofMillis(500))
                                     );
-                                    p.showTitle(title2fa);
+                                    plugin.getAdventure().player(p).showTitle(title2fa);
                                 } else {
                                     // [Kombinacja: Pełna sesja - Oba aktywne]
-                                    loginSystem.finishLogin(p);
+                                    loginSystem.finishSession(p);
                                     p.sendMessage(plugin.getLanguageManager().getWithPrefix("session.restored"));
                                     plugin.getLogManager().log("Player " + p.getName() + " had an active session (Password + 2FA)");
                                     return; // Gracz gra!
                                 }
                             } else {
                                 // GRACZ NIE MA WŁĄCZONEGO 2FA -> skoro sesja hasła jest aktywna, logujemy go od razu!
-                                loginSystem.finishLogin(p);
+                                loginSystem.finishSession(p);
                                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("session.restored"));
                                 plugin.getLogManager().log("Player " + p.getName() + " had an active session (Password only)");
                                 return; // Gracz gra!
@@ -160,7 +165,7 @@ public class LoginListeners implements Listener {
                             Component.text(plugin.getLanguageManager().getMessage("twofactor.required")), // Podtytuł
                             Title.Times.times(Duration.ofMillis(500), Duration.ofHours(1), Duration.ofMillis(500))
                     );
-                    p.showTitle(title2fa);
+                    plugin.getAdventure().player(p).showTitle(title2fa);
                 } else {
                     if (plugin.getPasswordManager().isRegistered(uuid.toString())) {
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.reminder"));
@@ -171,7 +176,7 @@ public class LoginListeners implements Listener {
                                 Component.text(plugin.getLanguageManager().getMessage("login.reminder")), // Wiadomość ląduje w podtytule
                                 Title.Times.times(Duration.ofMillis(500), Duration.ofHours(1), Duration.ofMillis(500))
                         );
-                        p.showTitle(titleLogin);
+                        plugin.getAdventure().player(p).showTitle(titleLogin);
                     } else {
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("register.reminder"));
 
@@ -181,14 +186,14 @@ public class LoginListeners implements Listener {
                                 Component.text(plugin.getLanguageManager().getMessage("register.reminder")), // Wiadomość ląduje w podtytule
                                 Title.Times.times(Duration.ofMillis(500), Duration.ofHours(1), Duration.ofMillis(500))
                         );
-                        p.showTitle(titleRegister);
+                        plugin.getAdventure().player(p).showTitle(titleRegister);
                     }
                 }
 
                 // Timer logowania / wpisania kodu 2FA
-                if (plugin.getConfig().getBoolean("features.timer.login-time-enabled")) {
+                if (plugin.getConfig().getBoolean("features.timer.enabled")) {
                     // 1. Pobieramy wartość z configu jako String
-                    String rawTime = plugin.getConfig().getString("features.timer.login-time-limit", "1 minute");
+                    String rawTime = plugin.getConfig().getString("features.timer.time-limit", "2 minutes");
                     long parsedMillis = LoginUtils.parseTime(rawTime, 60000L);
 
                     // 3. Nakładamy surowe limity w milisekundach: min 40 000 ms, max 240 000 ms
@@ -197,25 +202,28 @@ public class LoginListeners implements Listener {
                     // 4. Konwertujemy bezpieczny czas z milisekund na sekundy dla reszty timera
                     final int maxTime = (int) (clampedMillis / 1000);
                     final int[] time = {maxTime};
-                    boolean useBossBar = plugin.getConfig().getBoolean("features.timer.use-bossbar", true);
+                    boolean useBossBar = plugin.getConfig().getBoolean("features.timer.boss-bar.use", true);
 
                     BossBar.Color color;
                     try {
-                        color = BossBar.Color.valueOf(plugin.getConfig().getString("features.timer.bossbar-color", "RED").toUpperCase());
+                        color = BossBar.Color.valueOf(plugin.getConfig().getString("features.timer.boss-bar.color", "RED").toUpperCase());
                     } catch (IllegalArgumentException ex) { color = BossBar.Color.RED; }
 
                     BossBar.Overlay overlay;
                     try {
-                        overlay = BossBar.Overlay.valueOf(plugin.getConfig().getString("features.timer.bossbar-style", "PROGRESS").toUpperCase());
+                        overlay = BossBar.Overlay.valueOf(plugin.getConfig().getString("features.timer.boss-bar.style", "PROGRESS").toUpperCase());
                     } catch (IllegalArgumentException ex) { overlay = BossBar.Overlay.PROGRESS; }
 
                     final BossBar bossBar = BossBar.bossBar(Component.empty(), 1.0f, color, overlay);
-                    if (useBossBar) p.showBossBar(bossBar);
 
-                    p.getScheduler().runAtFixedRate(plugin, vtask -> {
+                    if (useBossBar) {
+                        plugin.getAdventure().player(p).showBossBar(bossBar);
+                    }
+
+                    plugin.getSchedulerManager().runAsyncRepeating(task -> {
                         if (!p.isOnline() || (loginSystem.getLoggedIn().contains(p.getUniqueId()) && !loginSystem.isWaitingFor2FA(p.getUniqueId()))) {
                             if (useBossBar) {
-                                p.hideBossBar(bossBar);
+                                plugin.getAdventure().player(p).hideBossBar(bossBar);
                             }
                             task.cancel();
                             return;
@@ -223,10 +231,11 @@ public class LoginListeners implements Listener {
 
                         if (time[0] <= 0) {
                             if (useBossBar) {
-                                p.hideBossBar(bossBar);
+                                plugin.getAdventure().player(p).hideBossBar(bossBar);
                             }
 
-                            p.kick(Component.text(plugin.getLanguageManager().getMessage("security.timeout")));
+                            String timeoutReason = plugin.getLanguageManager().getMessage("security.timeout");
+                            p.kickPlayer(timeoutReason);
 
                             task.cancel();
                             plugin.getLogManager().log("Player " + p.getName() + " Was kicked for exceeding the login timeout");
@@ -237,20 +246,19 @@ public class LoginListeners implements Listener {
                                 .getMessage("session.timer")
                                 .replace("%time%", LoginUtils.formatTime(time[0]));
 
-                        Component message = Component.text(rawMsg);
+                        Component message = LegacyComponentSerializer.legacySection().deserialize(rawMsg);
 
                         if (useBossBar) {
                             float progress = (float) time[0] / maxTime;
                             bossBar.progress(Math.max(0.0f, Math.min(1.0f, progress)));
                             bossBar.name(message);
-                            p.showBossBar(bossBar);
+                            // Pasek już wisi u gracza, odświeży się sam po bossBar.name(...)!
                         } else {
-                            p.sendActionBar(message);
+                            plugin.getAdventure().player(p).sendActionBar(message);
                         }
 
                         time[0]--;
-
-                    }, () -> {}, 1L, 20L);
+                    }, 0, 1, TimeUnit.SECONDS);
                 }
             });
         });
@@ -263,21 +271,36 @@ public class LoginListeners implements Listener {
         IPManager ipManager = plugin.getIPManager();
         String playerName = e.getName();
 
-        // Sprawdzamy, czy gracz o tym nicku jest już na serwerze
-        if (Bukkit.getPlayerExact(playerName) != null) {
-            // 1. Pobieramy surowy tekst jako String
-            String rawMessage = plugin.getLanguageManager().getMessage("login.already-online");
+        // Sprawdzamy, czy ktoś o tym nicku (bez względu na wielkość liter) gra już teraz na serwerze
+        boolean isAlreadyOnline = Bukkit.getOnlinePlayers().stream()
+                .anyMatch(p -> p.getName().equalsIgnoreCase(playerName));
 
-            // 2. Zamieniamy String z paragrafami na Component (bez używania MiniMessage)
-            Component kickComponent = LegacyComponentSerializer.legacySection().deserialize(rawMessage);
+        if (isAlreadyOnline) {
+            String kickReason = plugin.getLanguageManager().getMessage("login.already-online");
 
-            // 3. Wrzucamy gotowy Component
-            e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, kickComponent);
+            e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, kickReason);
             plugin.getLogManager().log("Someone tried to join the account of an active player (" + playerName + ") with IP (" + currentIP + ")");
             plugin.getIpTrustManager().addTrustScore(
                     currentIP,
                     plugin.getIpTrustManager().getActiveAccountAttemptPoints()
             );
+            return;
+        }
+
+        String registeredName = plugin.getAccountDataManager().getRegisteredNameIgnoreCase(playerName);
+
+        // Jeśli znaleziono nick w pliku kont
+        if (registeredName != null) {
+
+            // Porównanie wielkości liter
+            if (!registeredName.equals(playerName)) {
+                String kickReason = plugin.getLanguageManager().getMessage("login.wrong-casing")
+                        .replace("%registered%", registeredName);
+
+                e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, kickReason);
+                plugin.getLogManager().log("Player " + playerName + " tried to join with wrong casing. Registered name: " + registeredName);
+                return;
+            }
         }
 
         // 1. JEDYNE SPRAWDZENIE BANA
@@ -302,7 +325,7 @@ public class LoginListeners implements Listener {
             // Ktoś z banem na IP próbuje wbić
             plugin.getLogManager().log("Player " + playerName + " (" + currentIP + ") tried to connect but is IP banned. Reason: " + reason);
 
-            e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, Component.text(msg));
+            e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, (msg));
             return;
         }
 
@@ -324,7 +347,7 @@ public class LoginListeners implements Listener {
                         plugin.getIpTrustManager().getUnknownIpLoginPoints()
                 );
 
-                e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, Component.text(msg));
+                e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, (msg));
                 return;
             }
         }
@@ -343,7 +366,7 @@ public class LoginListeners implements Listener {
                             plugin.getIpTrustManager().getMultiIpPoints()
                     );
 
-                    e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, Component.text(plugin.getLanguageManager().getMessage("security.multiaccount")));
+                    e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, (plugin.getLanguageManager().getMessage("security.multiaccount")));
                     return;
                 }
             }
@@ -403,5 +426,7 @@ public class LoginListeners implements Listener {
         if (twoFactorManager != null) {
             twoFactorManager.invalidateSetup(uuid);
         }
+
+        plugin.getPremiumManager().removeAuthenticatedPlayer(uuid);
     }
 }

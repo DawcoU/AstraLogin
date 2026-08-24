@@ -1,6 +1,5 @@
-package pl.dawcou.astralogin.auth;
+package pl.dawcou.astralogin.auth.security.passwords;
 
-import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -11,6 +10,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.mindrot.jbcrypt.BCrypt;
+import pl.dawcou.astralogin.auth.AstraLogin;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,12 +30,12 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
     public PasswordManager(AstraLogin plugin) {
         this.plugin = plugin;
 
-        File dataDir = new File(plugin.getDataFolder(), "player_data");
+        File dataDir = new File(plugin.getDataFolder(), "data/players");
         if (!dataDir.exists()) {
             dataDir.mkdirs();
         }
 
-        this.file = new File(dataDir, "passwords.yml");
+        file = new File(dataDir, "passwords.yml");
         if (!file.exists()) {
             try {
                 file.createNewFile();
@@ -92,7 +92,6 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
             }
 
             deletePassword(uuidString);
-            plugin.getIPManager().deleteIP(uuidString);
 
             plugin.getAccountDataManager().invalidateRegistration(targetUUID);
 
@@ -112,8 +111,64 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
                 plugin.getIPManager().resetIPAttempts(playerIP);
 
                 // Wyrzucamy gracza z serwera
-                targetP.kick(Component.text(plugin.getLanguageManager().getMessage("reset-password.player-kick")));
+                targetP.kickPlayer(plugin.getLanguageManager().getMessage("reset-password.player-kick"));
             }
+
+            return true;
+        }
+
+        if (command.getName().equalsIgnoreCase("niepamietamhasla") || command.getName().equalsIgnoreCase("forgotpassword")) {
+            if (p == null) {
+                sender.sendMessage(plugin.getLanguageManager().getMessage("general.only-players"));
+                return true;
+            }
+
+            if (args.length != 1) {
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("forgot-password.usage"));
+                return true;
+            }
+
+            String PIN = args[0];
+            String uuidString = p.getUniqueId().toString();
+
+            // Sprawdzamy, czy gracz w ogóle posiada PIN
+            String hashedPIN = plugin.getPinManager().getPIN(uuidString);
+
+            if (hashedPIN == null) {
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix("forgot-password.no-has-pin"));
+                return true;
+            }
+
+            // BCrypt ASYNC
+            plugin.getSchedulerManager().runAsync(() -> {
+
+                if (!PasswordManager.verifyPassword(PIN, hashedPIN)) {
+                    plugin.getSchedulerManager().runSync(() -> {
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("forgot-password.wrong-pin"));
+
+                        String ip = p.getAddress().getAddress().getHostAddress();
+                        plugin.getIpTrustManager().addTrustScore(ip, plugin.getIpTrustManager().getFailedPasswordPoints());
+
+                        if (plugin.getConfig().getInt("features.attempts.max", 3) > 0) {
+                            plugin.getAttemptManager().dodajProbe(p, "PIN");
+                        }
+                    });
+                    return;
+                }
+
+                plugin.getSchedulerManager().runSync(() -> {
+                    p.kickPlayer(plugin.getLanguageManager().getMessage("forgot-password.player-kick"));
+
+                });
+
+                // PIN poprawny -> usuwamy hasło
+                deletePassword(uuidString);
+
+                // Konto nie jest już oznaczone jako zarejestrowane
+                plugin.getAccountDataManager().invalidateRegistration(p.getUniqueId());
+
+                plugin.getLogManager().log("Player " + p.getName() + " reset his password using PIN");
+            });
 
             return true;
         }
@@ -142,16 +197,8 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
 
             // 2. Sprawdzamy stare hasło
             String obecneHasloWPliku = getPassword(p.getUniqueId().toString());
-            if (obecneHasloWPliku == null || !PasswordManager.verifyPassword(oldPassword, obecneHasloWPliku)) {
+            if (obecneHasloWPliku == null) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.wrong-old"));
-                plugin.getIpTrustManager().addTrustScore(
-                        ip,
-                        plugin.getIpTrustManager().getFailedPasswordPoints()
-                );
-
-                if (plugin.getConfig().getInt("features.attempts.max", 3) > 0) {
-                    plugin.getAttemptManager().dodajProbe(p, "Password");
-                }
                 return true;
             }
 
@@ -162,15 +209,13 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
             }
 
             // 4. Sprawdzamy długość
-            // Pobieramy min z configu, ale Math.max pilnuje, żeby wartość NIGDY nie była mniejsza niż 5
             int min = plugin.getConfig().getInt("features.password.min-password-length");
             min = Math.max(5, min);
 
-            // Pobieramy max z configu, ale Math.min pilnuje, żeby wartość NIGDY nie przekroczyła 32
             int max = plugin.getConfig().getInt("features.password.max-password-length");
             max = Math.min(32, max);
 
-            // Dodatkowe zabezpieczenie: gdyby admin w configu ustawił min większe niż max (np. min: 20, max: 10)
+            // Dodatkowe zabezpieczenie: gdyby admin w configu ustawił min większe niż max
             if (min > max) {
                 min = 6;
                 max = 24;
@@ -180,30 +225,54 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.too-short").replace("%min%", String.valueOf(min)));
                 return true;
             }
+
             if (newPassword.length() > max) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.too-long").replace("%max%", String.valueOf(max)));
                 return true;
             }
 
-            // 5. HASZUJEMY RAZ I ZAPISUJEMY
-            String newHashPassword = hashPassword(plugin, newPassword);
-            savePassword(p.getUniqueId().toString(), newHashPassword);
+            // 5. BCrypt wykonujemy asynchronicznie
+            plugin.getSchedulerManager().runAsync(() -> {
+                if (!PasswordManager.verifyPassword(oldPassword, obecneHasloWPliku)) {
+                    plugin.getSchedulerManager().runSync(() -> {
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.wrong-old"));
+                        plugin.getIpTrustManager().addTrustScore(ip, plugin.getIpTrustManager().getFailedPasswordPoints());
 
-            if (plugin.getLoginSystem().getLoggedIn().contains(p.getUniqueId())) {
-                p.kick(Component.text(plugin.getLanguageManager().getMessage("password.changed-kick")));
-            } else {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.changed"));
-            }
+                        if (plugin.getConfig().getInt("features.attempts.max", 3) > 0) {
+                            plugin.getAttemptManager().dodajProbe(p, "Password");
+                        }
+                    });
+                    return;
+                }
 
-            plugin.getLogManager().log("Player " + p.getName() + " changed his password");
+                String newHashPassword = PasswordManager.hashPassword(plugin, newPassword);
+
+                if (newHashPassword == null) {
+                    plugin.getSchedulerManager().runSync(() -> p.sendMessage(plugin.getLanguageManager().getWithPrefix("general.error")));
+                    return;
+                }
+
+                savePassword(p.getUniqueId().toString(), newHashPassword);
+
+                plugin.getSchedulerManager().runSync(() -> {
+                    if (plugin.getLoginSystem().getLoggedIn().contains(p.getUniqueId())) {
+                        p.kickPlayer(plugin.getLanguageManager().getMessage("password.changed-kick"));
+                    } else {
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.changed"));
+                    }
+
+                    plugin.getLogManager().log("Player " + p.getName() + " changed his password");
+                });
+            });
+
             return true;
         }
         return false;
     }
 
-    public void savePassword(String uuid, String haslo) {
-        passwordCache.put(uuid, haslo);
-        config.set("passwords." + uuid, haslo);
+    public void savePassword(String uuid, String password) {
+        passwordCache.put(uuid, password);
+        config.set("passwords." + uuid + ".password", password);
         save();
     }
 
@@ -217,27 +286,32 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
 
     public void deletePassword(String uuid) {
         passwordCache.remove(uuid);
-        config.set("passwords." + uuid, null);
+        config.set("passwords." + uuid + ".password", null);
         save();
     }
 
     public void reload() {
-        this.config = YamlConfiguration.loadConfiguration(file);
-        this.passwordCache.clear();
+        config = YamlConfiguration.loadConfiguration(file);
+        passwordCache.clear();
 
-        // Ładujemy wszystkie hasła do pamięci RAM przy starcie/przeładowaniu
         if (config.getConfigurationSection("passwords") != null) {
             for (String key : config.getConfigurationSection("passwords").getKeys(false)) {
-                this.passwordCache.put(key, config.getString("passwords." + key));
+                String password = config.getString("passwords." + key + ".password");
+
+                if (password != null) {
+                    passwordCache.put(key, password);
+                }
             }
         }
     }
 
     private void save() {
-        try {
-            config.save(file);
-        } catch (IOException e) {
-            e.printStackTrace();
+        synchronized (config) {
+            try {
+                config.save(file);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -245,9 +319,8 @@ public class PasswordManager implements CommandExecutor, TabCompleter {
         int cost = plugin.getConfig().getInt("security.bcrypt.cost", 10);
 
         // Walidacja kosztu
-        if (cost < 8 || cost > 16) {
-            cost = 10;
-        }
+        cost = Math.max(8, cost);
+        cost = Math.min(16, cost);
 
         try {
             return BCrypt.hashpw(password, BCrypt.gensalt(cost));

@@ -1,5 +1,6 @@
 package pl.dawcou.astralogin.accounts;
 
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import pl.dawcou.astralogin.auth.AstraLogin;
@@ -22,11 +23,11 @@ public class AccountManager {
     }
 
     /**
-     * Tworzy folder global_data oraz plik accounts.yml, jeśli nie istnieją,
+     * Tworzy folder data/global oraz plik accounts.yml, jeśli nie istnieją,
      * a następnie ładuje je do pamięci.
      */
     public void setup() {
-        File globalDataDir = new File(plugin.getDataFolder(), "global_data");
+        File globalDataDir = new File(plugin.getDataFolder(), "data/global");
         if (!globalDataDir.exists()) {
             globalDataDir.mkdirs();
         }
@@ -47,14 +48,14 @@ public class AccountManager {
      * Zwraca aktualną konfigurację kont.
      */
     public FileConfiguration getConfig() {
-        return this.accountsConfig;
+        return accountsConfig;
     }
 
     /**
      * Zapisuje konfigurację na dysk asynchronicznie, aby nie blokować głównego wątku serwera.
      */
     public void saveConfig() {
-        plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
+        plugin.getSchedulerManager().runAsync(() -> {
             synchronized (configFile) { // Synchronizacja, żeby uniknąć uszkodzenia pliku przy wielu zapisach naraz
                 try {
                     accountsConfig.save(configFile);
@@ -118,5 +119,35 @@ public class AccountManager {
             accountsConfig.set(path, null);
             saveConfig();
         }
+    }
+
+    /**
+     * Pobiera nick gracza z danych konta
+     */
+    public String getPlayerName(String uuid) {
+        String path = "accounts." + uuid + ".last-known-name";
+        return accountsConfig.getString(path);
+    }
+
+    public String getRegisteredNameIgnoreCase(String inputName) {
+        if (accountsConfig == null) {
+            return null;
+        }
+
+        ConfigurationSection accountsSection = accountsConfig.getConfigurationSection("accounts");
+        if (accountsSection == null) {
+            return null;
+        }
+
+        // Pętla przechodzi po każdym UUID (np. ea6a445b-cda3-3f77-baab-9760c1e58202)
+        for (String uuidKey : accountsSection.getKeys(false)) {
+            String savedName = accountsSection.getString(uuidKey + ".last-known-name");
+
+            if (savedName != null && savedName.equalsIgnoreCase(inputName)) {
+                return savedName; // Zwróci dokładny zarejestrowany nick, np. "DawcoU"
+            }
+        }
+
+        return null; // Brak gracza w pliku
     }
 }

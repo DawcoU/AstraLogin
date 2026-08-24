@@ -16,6 +16,8 @@ public class LanguageManager {
 
     private final JavaPlugin plugin;
 
+    private String currentLang;
+
     private final Map<String, String> messages = new HashMap<>();
     private final Map<String, List<String>> lists = new HashMap<>();
     private final Set<String> missingKeys = new HashSet<>();
@@ -25,6 +27,11 @@ public class LanguageManager {
         this.plugin = plugin;
         setupFiles(); // Najpierw upewniamy się, że pliki są na dysku
         reload();
+    }
+
+    // Pomocnicza metoda do pobierania języka
+    public String getLang() {
+        return currentLang;
     }
 
     public void reload() {
@@ -39,6 +46,8 @@ public class LanguageManager {
             langFile = new File(plugin.getDataFolder(), "languages/en.yml");
         }
 
+        currentLang = plugin.getConfig().getString("settings.language", "en");
+
         FileConfiguration langConfig = YamlConfiguration.loadConfiguration(langFile);
 
         // Pobieramy sekcję "messages" z pliku YAML
@@ -50,7 +59,7 @@ public class LanguageManager {
     }
 
     public void printMissingKeys() {
-        if (!plugin.getConfig().getBoolean("settings.debug-mode", false)) {
+        if (((AstraLogin) plugin).debugMode) {
             return;
         }
         if (missingKeys.isEmpty()) {

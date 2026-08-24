@@ -27,12 +27,12 @@ public class SessionManager {
 
     public SessionManager(AstraLogin plugin) {
         this.plugin = plugin;
-        File dataDir = new File(plugin.getDataFolder(), "player_data");
+        File dataDir = new File(plugin.getDataFolder(), "data/players");
         if (!dataDir.exists()) {
             dataDir.mkdirs();
         }
-        this.sessionFile = new File(dataDir, "session_data.yml");
-        this.sessionConfig = YamlConfiguration.loadConfiguration(sessionFile);
+        sessionFile = new File(dataDir, "session_data.yml");
+        sessionConfig = YamlConfiguration.loadConfiguration(sessionFile);
     }
 
     // ==========================================
@@ -43,11 +43,11 @@ public class SessionManager {
         long now = System.currentTimeMillis();
         long limit = getSessionLimitMillis();
 
-        this.sesje.forEach((uuid, timestamp) -> {
+        sesje.forEach((uuid, timestamp) -> {
             if (now - timestamp < limit) {
                 String path = "sessions." + uuid;
                 sessionConfig.set(path + ".timestamp", timestamp);
-                sessionConfig.set(path + ".ip", this.sesjeIP.get(uuid));
+                sessionConfig.set(path + ".ip", sesjeIP.get(uuid));
             } else {
                 String path = "sessions." + uuid;
                 sessionConfig.set(path + ".timestamp", null);
@@ -55,22 +55,18 @@ public class SessionManager {
             }
         });
 
-        try {
-            sessionConfig.save(sessionFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        save();
     }
 
     public void save2FAToConfig() {
         long now = System.currentTimeMillis();
         long limit = get2FALimitMillis();
 
-        this.dfaSesje.forEach((uuid, timestamp) -> {
+        dfaSesje.forEach((uuid, timestamp) -> {
             if (now - timestamp < limit) {
                 String path = "sessions." + uuid;
                 sessionConfig.set(path + ".2fa-timestamp", timestamp);
-                sessionConfig.set(path + ".2fa-ip", this.dfaIP.get(uuid));
+                sessionConfig.set(path + ".2fa-ip", dfaIP.get(uuid));
             } else {
                 String path = "sessions." + uuid;
                 sessionConfig.set(path + ".2fa-timestamp", null);
@@ -78,11 +74,7 @@ public class SessionManager {
             }
         });
 
-        try {
-            sessionConfig.save(sessionFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        save();
     }
 
     public void loadSessionsFromConfig() {
@@ -96,8 +88,8 @@ public class SessionManager {
         long now = System.currentTimeMillis();
         int count = 0;
 
-        this.sesje.clear();
-        this.sesjeIP.clear();
+        sesje.clear();
+        sesjeIP.clear();
 
         for (String uuidStr : section.getKeys(false)) {
             try {
@@ -106,12 +98,11 @@ public class SessionManager {
                 String ip = sessionConfig.getString("sessions." + uuidStr + ".ip");
 
                 if (timestamp > 0 && (now - timestamp < sessionLimit)) {
-                    this.sesje.put(uuid, timestamp);
-                    this.sesjeIP.put(uuid, ip);
+                    sesje.put(uuid, timestamp);
+                    sesjeIP.put(uuid, ip);
                     count++;
                 }
-            } catch (IllegalArgumentException e) {
-                // Ignorowanie uszkodzonych rekordow
+            } catch (IllegalArgumentException ignored) {
             }
         }
 
@@ -128,8 +119,8 @@ public class SessionManager {
     public void deleteSession(UUID uuid) {
         if (uuid == null) return;
 
-        this.sesje.remove(uuid);
-        this.sesjeIP.remove(uuid);
+        sesje.remove(uuid);
+        sesjeIP.remove(uuid);
 
         String path = "sessions." + uuid;
         if (sessionConfig.contains(path)) {
@@ -142,25 +133,21 @@ public class SessionManager {
                 sessionConfig.set(path, null);
             }
 
-            try {
-                sessionConfig.save(sessionFile);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            save();
         }
     }
 
     public boolean hasActiveSession(UUID uuid, String currentIP) {
         if (uuid == null || currentIP == null) return false;
-        if (!this.sesje.containsKey(uuid) || !this.sesjeIP.containsKey(uuid)) return false;
+        if (!sesje.containsKey(uuid) || !sesjeIP.containsKey(uuid)) return false;
 
-        String savedIP = this.sesjeIP.get(uuid);
+        String savedIP = sesjeIP.get(uuid);
         if (!currentIP.equals(savedIP)) {
             deleteSession(uuid);
             return false;
         }
 
-        long lastLogout = this.sesje.get(uuid);
+        long lastLogout = sesje.get(uuid);
         long now = System.currentTimeMillis();
 
         if (now - lastLogout <= getSessionLimitMillis()) {
@@ -177,17 +164,13 @@ public class SessionManager {
         long now = System.currentTimeMillis();
         String path = "sessions." + uuid;
 
-        this.sesje.put(uuid, now);
-        this.sesjeIP.put(uuid, ip);
+        sesje.put(uuid, now);
+        sesjeIP.put(uuid, ip);
 
         sessionConfig.set(path + ".timestamp", now);
         sessionConfig.set(path + ".ip", ip);
 
-        try {
-            sessionConfig.save(sessionFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        save();
     }
 
     public void saveSession2FA(UUID uuid, String ip) {
@@ -196,24 +179,20 @@ public class SessionManager {
         long now = System.currentTimeMillis();
         String path = "sessions." + uuid;
 
-        this.dfaSesje.put(uuid, now);
-        this.dfaIP.put(uuid, ip);
+        dfaSesje.put(uuid, now);
+        dfaIP.put(uuid, ip);
 
         sessionConfig.set(path + ".2fa-timestamp", now);
         sessionConfig.set(path + ".2fa-ip", ip);
 
-        try {
-            sessionConfig.save(sessionFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        save();
     }
 
     public void deleteSession2FA(UUID uuid) {
         if (uuid == null) return;
 
-        this.dfaSesje.remove(uuid);
-        this.dfaIP.remove(uuid);
+        dfaSesje.remove(uuid);
+        dfaIP.remove(uuid);
 
         String path = "sessions." + uuid;
         if (sessionConfig.contains(path)) {
@@ -226,11 +205,7 @@ public class SessionManager {
                 sessionConfig.set(path, null);
             }
 
-            try {
-                sessionConfig.save(sessionFile);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            save();
         }
     }
 
@@ -244,8 +219,8 @@ public class SessionManager {
         long dfaLimit = get2FALimitMillis();
         long now = System.currentTimeMillis();
 
-        this.dfaSesje.clear();
-        this.dfaIP.clear();
+        dfaSesje.clear();
+        dfaIP.clear();
 
         for (String uuidStr : section.getKeys(false)) {
             try {
@@ -254,8 +229,8 @@ public class SessionManager {
                 String ip = sessionConfig.getString("sessions." + uuidStr + ".2fa-ip");
 
                 if (timestamp > 0 && (now - timestamp < dfaLimit)) {
-                    this.dfaSesje.put(uuid, timestamp);
-                    this.dfaIP.put(uuid, ip);
+                    dfaSesje.put(uuid, timestamp);
+                    dfaIP.put(uuid, ip);
                 }
             } catch (IllegalArgumentException e) {
                 // Ignorowanie blednych struktur UUID
@@ -269,9 +244,9 @@ public class SessionManager {
     }
 
     public boolean hasActive2FASession(UUID uuid) {
-        if (uuid == null || !this.dfaSesje.containsKey(uuid)) return false;
+        if (uuid == null || !dfaSesje.containsKey(uuid)) return false;
 
-        long timestamp = this.dfaSesje.get(uuid);
+        long timestamp = dfaSesje.get(uuid);
         long now = System.currentTimeMillis();
 
         if (now - timestamp >= get2FALimitMillis()) {
@@ -283,9 +258,19 @@ public class SessionManager {
 
     public void reload() {
         // Wczytujemy plik z dysku na nowo do obiektu konfiguracyjnego
-        this.sessionConfig = YamlConfiguration.loadConfiguration(sessionFile);
+        sessionConfig = YamlConfiguration.loadConfiguration(sessionFile);
 
         loadSessionsFromConfig();
         load2FAFromConfig();
+    }
+
+    private void save() {
+        synchronized (sessionConfig) {
+            try {
+                sessionConfig.save(sessionFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

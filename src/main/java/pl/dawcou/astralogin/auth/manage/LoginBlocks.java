@@ -1,8 +1,8 @@
 package pl.dawcou.astralogin.auth.manage;
 
-import io.papermc.paper.event.player.AsyncChatEvent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
@@ -22,176 +22,278 @@ public class LoginBlocks implements Listener {
 
     public LoginBlocks(AstraLogin plugin) {
         this.plugin = plugin;
-        this.loginSystem = plugin.getLoginSystem();
+        loginSystem = plugin.getLoginSystem();
     }
 
-    // --- BLOKADY (ROZBITA LOGIKA) ---
+    // Helper ułatwiający czytelność i optymalizację
+    private boolean isNotAuthenticated(UUID uuid) {
+        return !loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid);
+    }
 
-    @EventHandler
+    private void sendBlockedMessage(Player p, UUID uuid) {
+        p.sendMessage(plugin.getLanguageManager().getWithPrefix(
+                loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"
+        ));
+    }
+
+    /*
+     * ==========================================
+     * 1. KOMENDY (HIGHEST - Priorytet dla bezpieczeństwa)
+     * ==========================================
+     */
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onCommand(PlayerCommandPreprocessEvent e) {
         UUID uuid = e.getPlayer().getUniqueId();
-        String message = e.getMessage().toLowerCase();
+        if (!isNotAuthenticated(uuid)) return;
+
+        String message = e.getMessage().toLowerCase().trim();
         String cmd = message.split(" ")[0];
 
-        // 1. Jeśli jest w trakcie 2FA -> pozwalamy TYLKO na /2fa
+        // Normalizacja pod kątem prefiksów np. /minecraft:tell -> /tell
+        if (cmd.contains(":")) {
+            cmd = "/" + cmd.substring(cmd.indexOf(":") + 1);
+        }
+
+        // 1. Jeśli czeka na 2FA
         if (loginSystem.isWaitingFor2FA(uuid)) {
-            if (cmd.startsWith("/2fa") || cmd.startsWith("/tfa") || cmd.startsWith("/auth")) {
+            if (cmd.equals("/2fa") || cmd.startsWith("/2fa ") ||
+                    cmd.equals("/tfa") || cmd.startsWith("/tfa ") ||
+                    cmd.equals("/auth") || cmd.startsWith("/auth ")) {
                 return;
             }
-            // Blokujemy wszystko inne dla gracza oczekującego na kod
             e.setCancelled(true);
             e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.required"));
             return;
         }
 
-        // 2. Jeśli jest w pełni zalogowany i nie czeka na 2FA -> przepuszczamy
-        if (loginSystem.getLoggedIn().contains(uuid)) {
+        // 2. Jeśli jest całkowicie niezalogowany
+        if (cmd.equals("/login") || cmd.startsWith("/login ") ||
+                cmd.equals("/l") || cmd.startsWith("/l ") ||
+                cmd.equals("/zaloguj") || cmd.startsWith("/zaloguj ") ||
+                cmd.equals("/register") || cmd.startsWith("/register ") ||
+                cmd.equals("/reg") || cmd.startsWith("/reg ") ||
+                cmd.equals("/zarejestruj") || cmd.startsWith("/zarejestruj ") ||
+                cmd.equals("/zmienhaslo") || cmd.startsWith("/zmienhaslo ") ||
+                cmd.equals("/changepassword") || cmd.startsWith("/changepassword ") ||
+                cmd.equals("/niepamietamhasla") || cmd.startsWith("/niepamietamhasla ") ||
+                cmd.equals("/forgotpassword") || cmd.startsWith("/forgotpassword ") ||
+                cmd.equals("/forgotpass") || cmd.startsWith("/forgotpass ")) {
             return;
         }
 
-        // 3. Jeśli nie jest zalogowany i NIE jest w trakcie 2FA -> pozwalamy TYLKO na login/register
-        if (cmd.startsWith("/login") || cmd.startsWith("/l ") || cmd.startsWith("/zaloguj") ||
-                cmd.startsWith("/register") || cmd.startsWith("/reg ") || cmd.startsWith("/zarejestruj") ||
-                cmd.startsWith("/zmienhaslo") || cmd.startsWith("/changepassword")) {
-            return;
-        }
-
-        // Blokada reszty dla całkowicie niezalogowanych
         e.setCancelled(true);
         e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("general.blocked-action"));
     }
 
-    @EventHandler
-    public void onChat(AsyncChatEvent e) {
-        UUID uuid = e.getPlayer().getUniqueId();
-        if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
+    /*
+     * ==========================================
+     * 2. CZAT, RUCH I PORTALE (LOWEST)
+     * ==========================================
+     */
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onChat(AsyncPlayerChatEvent e) {
+        Player p = e.getPlayer();
+        UUID uuid = p.getUniqueId();
+        if (isNotAuthenticated(uuid)) {
             e.setCancelled(true);
-            // Jeśli ma hasło z sesji, ale czeka na 2FA, wysyłamy komunikat o 2FA
-            if (loginSystem.isWaitingFor2FA(uuid)) {
-                e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.required"));
-            } else {
-                e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("general.blocked-action"));
-            }
+            sendBlockedMessage(p, uuid);
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onMove(PlayerMoveEvent e) {
         if (e.getFrom().getX() == e.getTo().getX() &&
                 e.getFrom().getY() == e.getTo().getY() &&
                 e.getFrom().getZ() == e.getTo().getZ()) {
-            return; // Jeśli zmienił tylko kierunek patrzenia (myszkę), pozwól mu na to
+            return; // Obracanie głową dozwolone
         }
 
-        UUID uuid = e.getPlayer().getUniqueId();
-        if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
+        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onPortal(PlayerPortalEvent e) {
+        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+            e.setCancelled(true);
+        }
+    }
+
+    /*
+     * ==========================================
+     * 3. BLOKI I INTERAKCJE (LOWEST)
+     * ==========================================
+     */
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onBreak(BlockBreakEvent e) {
         Player p = e.getPlayer();
-        UUID uuid = p.getUniqueId();
-        if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
+        if (isNotAuthenticated(p.getUniqueId())) {
             e.setCancelled(true);
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"));
+            sendBlockedMessage(p, p.getUniqueId());
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onPlace(BlockPlaceEvent e) {
         Player p = e.getPlayer();
-        UUID uuid = p.getUniqueId();
-        if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
+        if (isNotAuthenticated(p.getUniqueId())) {
             e.setCancelled(true);
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"));
+            sendBlockedMessage(p, p.getUniqueId());
         }
     }
 
-    @EventHandler
-    public void onDmg(EntityDamageByEntityEvent e) {
-        // 1. Blokada otrzymywania obrażeń (niezalogowany/w trakcie 2FA jest nieśmiertelny)
-        if (e.getEntity() instanceof Player) {
-            UUID uuid = e.getEntity().getUniqueId();
-            if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
-                e.setCancelled(true);
-                return;
-            }
-        }
-
-        // 2. Blokada zadawania obrażeń (niezalogowany/w trakcie 2FA nikogo nie uderzy)
-        if (e.getDamager() instanceof Player) {
-            Player p = (Player) e.getDamager();
-            UUID uuid = p.getUniqueId();
-            if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
-                e.setCancelled(true);
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"));
-            }
-        }
-    }
-
-    @EventHandler
-    public void onMobTarget(EntityTargetLivingEntityEvent e) {
-        // 3. Moby ignorują gracza bez pełnego loginu
-        if (e.getTarget() instanceof Player) {
-            UUID uuid = e.getTarget().getUniqueId();
-            if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
-                e.setCancelled(true);
-            }
-        }
-    }
-
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onInteract(PlayerInteractEvent e) {
         Player p = e.getPlayer();
-        UUID uuid = p.getUniqueId();
-        if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
+        if (isNotAuthenticated(p.getUniqueId())) {
             e.setCancelled(true);
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"));
+            sendBlockedMessage(p, p.getUniqueId());
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onInteractAtEntity(PlayerInteractAtEntityEvent e) {
+        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+            e.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onInteractEntity(PlayerInteractEntityEvent e) {
+        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+            e.setCancelled(true);
+        }
+    }
+
+    /*
+     * ==========================================
+     * 4. WALKA, OBRAŻENIA I PROJECTILE (LOWEST)
+     * ==========================================
+     */
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onDamage(EntityDamageEvent e) {
+        if (e.getEntity() instanceof Player) {
+            if (isNotAuthenticated(e.getEntity().getUniqueId())) {
+                e.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onAttack(EntityDamageByEntityEvent e) {
+        if (e.getDamager() instanceof Player) {
+            Player p = (Player) e.getDamager();
+            if (isNotAuthenticated(p.getUniqueId())) {
+                e.setCancelled(true);
+                sendBlockedMessage(p, p.getUniqueId());
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onMobTarget(EntityTargetLivingEntityEvent e) {
+        if (e.getTarget() instanceof Player) {
+            if (isNotAuthenticated(e.getTarget().getUniqueId())) {
+                e.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onProjectileLaunch(ProjectileLaunchEvent e) {
+        if (e.getEntity().getShooter() instanceof Player) {
+            Player p = (Player) e.getEntity().getShooter();
+            if (isNotAuthenticated(p.getUniqueId())) {
+                e.setCancelled(true);
+            }
+        }
+    }
+
+    /*
+     * ==========================================
+     * 5. EKWIPUNEK I PRZEDMIOTY (LOWEST)
+     * ==========================================
+     */
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onInventoryClick(InventoryClickEvent e) {
-        UUID uuid = e.getWhoClicked().getUniqueId();
-        if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
+        if (isNotAuthenticated(e.getWhoClicked().getUniqueId())) {
             e.setCancelled(true);
-            Player p = (Player) e.getWhoClicked();
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"));
+            sendBlockedMessage((Player) e.getWhoClicked(), e.getWhoClicked().getUniqueId());
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onInventoryOpen(InventoryOpenEvent e) {
-        Player p = (Player) e.getPlayer();
-        UUID uuid = p.getUniqueId();
-        if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
+        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"));
+            sendBlockedMessage((Player) e.getPlayer(), e.getPlayer().getUniqueId());
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onDrop(PlayerDropItemEvent e) {
         Player p = e.getPlayer();
-        UUID uuid = p.getUniqueId();
-        if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
+        if (isNotAuthenticated(p.getUniqueId())) {
             e.setCancelled(true);
-            p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"));
+            sendBlockedMessage(p, p.getUniqueId());
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onPickup(EntityPickupItemEvent e) {
         if (e.getEntity() instanceof Player) {
             Player p = (Player) e.getEntity();
-            UUID uuid = p.getUniqueId();
-
-            if (!loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid)) {
+            if (isNotAuthenticated(p.getUniqueId())) {
                 e.setCancelled(true);
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix(loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"));
             }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onSwapHand(PlayerSwapHandItemsEvent e) {
+        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+            e.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onItemHeld(PlayerItemHeldEvent e) {
+        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+            e.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onConsume(PlayerItemConsumeEvent e) {
+        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+            e.setCancelled(true);
+        }
+    }
+
+    /*
+     * ==========================================
+     * 6. FIZJOLOGIA I STANY GRACZA (LOWEST)
+     * ==========================================
+     */
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onSneak(PlayerToggleSneakEvent e) {
+        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+            e.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onSprint(PlayerToggleSprintEvent e) {
+        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+            e.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onBedEnter(PlayerBedEnterEvent e) {
+        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+            e.setCancelled(true);
         }
     }
 }

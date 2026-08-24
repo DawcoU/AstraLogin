@@ -143,7 +143,7 @@ public class AccountCommand implements CommandExecutor {
                             .clickEvent(ClickEvent.runCommand("/resetaccount " + targetName + " confirm"))
                             .hoverEvent(LegacyComponentSerializer.legacySection().deserialize(hoverTextStr.replace("&", "§")));
 
-                    sender.sendMessage(baseMsg.append(confirmBtn));
+                    plugin.getAdventure().sender(sender).sendMessage(baseMsg.append(confirmBtn));
                     return true;
                 }
             }
@@ -153,11 +153,12 @@ public class AccountCommand implements CommandExecutor {
             Player targetP = Bukkit.getPlayer(targetUUID);
             if (targetP != null && targetP.isOnline()) {
                 plugin.getLoginSystem().getLoggedIn().remove(targetUUID);
-                String purgeReason = plugin.getLanguageManager().getMessage("account-purge.player-kick");
-                targetP.kick(Component.text(purgeReason));
+                String purgeReason = plugin.getLanguageManager().getMessage("purge-account.player-kick");
+                targetP.kickPlayer(purgeReason);
             }
 
             plugin.getPasswordManager().deletePassword(uuidString);
+            plugin.getPinManager().deletePIN(uuidString);
             plugin.getIPManager().deleteIP(uuidString);
             plugin.getInventoryManager().deleteInventoryCache(uuidString);
             plugin.getSpawnManager().deletePlayerSpawn(uuidString);
@@ -166,7 +167,7 @@ public class AccountCommand implements CommandExecutor {
 
             plugin.getAccountDataManager().purgeAccountData(targetUUID);
 
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-purge.admin-success").replace("%player%", targetName));
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("purge-account.admin-success").replace("%player%", targetName));
 
             String adminName = sender.getName();
             plugin.getLogManager().log("Admin " + adminName + " PURGED all account data for player " + targetName);
@@ -182,7 +183,7 @@ public class AccountCommand implements CommandExecutor {
 
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-list.generating"));
 
-            plugin.getServer().getAsyncScheduler().runNow(plugin, (task) -> {
+            plugin.getSchedulerManager().runAsync(() -> {
                 Map<String, List<String>> ipToNamesMap = new HashMap<>();
                 IPManager ipManager = plugin.getIPManager();
 
@@ -232,7 +233,7 @@ public class AccountCommand implements CommandExecutor {
 
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("accounts-list.generating"));
 
-            plugin.getServer().getAsyncScheduler().runNow(plugin, (task) -> {
+            plugin.getSchedulerManager().runAsync(() -> {
                 FileConfiguration config = plugin.getAccountDataManager().getConfig();
 
                 if (config.getConfigurationSection("accounts") == null) {
@@ -317,10 +318,10 @@ public class AccountCommand implements CommandExecutor {
                     .replace("%old%", oldNick)
                     .replace("%new%", newNick));
 
-            plugin.getServer().getAsyncScheduler().runNow(plugin, task -> {
+            plugin.getSchedulerManager().runAsync(() -> {
                 Path pluginFolder = plugin.getDataFolder().toPath();
 
-                // --- NOWY KROK: SPRAWDZANIE CZY STARY GRACZ MA JAKIEKOLWIEK DANE ---
+                // --- SPRAWDZANIE CZY STARY GRACZ MA JAKIEKOLWIEK DANE ---
                 boolean oldPlayerHasData = false;
                 try (var stream = Files.walk(pluginFolder)) {
                     var files = stream
@@ -343,7 +344,7 @@ public class AccountCommand implements CommandExecutor {
                     return;
                 }
 
-                // Jeśli stary nick nie ma żadnych danych - blokujemy za pomocą javowego replace
+                // Jeśli stary nick nie ma żadnych danych blokujemy
                 if (!oldPlayerHasData) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.old-player-no-data")
                             .replace("%target%", oldNick));
@@ -389,11 +390,12 @@ public class AccountCommand implements CommandExecutor {
                                 .deserialize(baseMsgStr + " ");
 
                         Component confirmBtn = LegacyComponentSerializer.legacySection()
-                                .deserialize(btnTextStr.replace("&", "§"))
+                                .deserialize(btnTextStr)
                                 .clickEvent(ClickEvent.runCommand("/moveaccount " + oldNick + " " + newNick + " confirm"))
-                                .hoverEvent(LegacyComponentSerializer.legacySection().deserialize(hoverTextStr.replace("&", "§")));
+                                .hoverEvent(LegacyComponentSerializer.legacySection().deserialize(hoverTextStr));
 
-                        sender.sendMessage(baseMsg.append(confirmBtn));
+                        // Wysyłka bezpiecznie przez BukkitAudiences (obsługuje gracza i konsole):
+                        plugin.getAdventure().sender(sender).sendMessage(baseMsg.append(confirmBtn));
                         return;
                     }
                 }
@@ -454,7 +456,7 @@ public class AccountCommand implements CommandExecutor {
 
             if (p.isOnline()) {
                 String kickReason = plugin.getLanguageManager().getMessage("account.logout-success");
-                p.kick(Component.text(kickReason));
+                p.kickPlayer(kickReason);
             }
 
             plugin.getSessionManager().deleteSession(p.getUniqueId());

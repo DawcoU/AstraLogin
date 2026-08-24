@@ -1,6 +1,5 @@
 package pl.dawcou.astralogin.auth.security;
 
-import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.auth.AstraLogin;
 import pl.dawcou.astralogin.system.LoginUtils;
@@ -38,7 +37,7 @@ public class AttemptManager {
 
             String msg = plugin.getLanguageManager().getMessage("security.max-attempts-ban")
                     .replace("%time%", timeStr);
-            p.kick(Component.text(msg));
+            p.kickPlayer(msg);
             return;
         }
 
@@ -48,7 +47,7 @@ public class AttemptManager {
 
             String msg = plugin.getLanguageManager().getMessage("security.max-attempts")
                     .replace("%remaining%", String.valueOf(remaining));
-            p.kick(Component.text(msg));
+            p.kickPlayer(msg);
             return;
         }
     }
@@ -61,7 +60,7 @@ public class AttemptManager {
         try {
             if (oldUUIDStr != null) {
                 UUID oldUUID = UUID.fromString(oldUUIDStr);
-                this.attempts.remove(oldUUID);
+                attempts.remove(oldUUID);
             }
         } catch (IllegalArgumentException ignored) {
         }

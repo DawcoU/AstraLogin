@@ -20,12 +20,13 @@ messages:
   # --- Login ---
   login:
     already-logged: "&cYou are already logged in/registered!"
+    already-online: "&cA player with this nickname is on the server!"
+    wrong-casing: "&cJoin the server using the correct case!\n&7Correct nickname: &6%registered%"
     no-account: "&cYou do not have an account! Type &e/register <password> <repeat>"
     success: "&aSuccessfully logged in!"
     reminder: "&ePlease log in: &f/login <password>"
     usage: "&cCorrect usage: &e/login <password>"
     has-account: "&cYou already have an account! Type &e/login <password>"
-    already-online: "&cA player with this nickname is already on the server!"
 
 
   # --- Register ---
@@ -40,6 +41,15 @@ messages:
     success: "&aPremium account detected, logged in automatically!"
 
 
+  # --- /forgotpassword ---
+  forgot-password:
+    usage: "&cCorrect usage: &e/forgotpassword <PIN>"
+    wrong-pin: "&cWrong PIN!"
+    no-has-pin: "&cYou don't have a registered PIN!"
+
+    player-kick: "&aYour password has been successfully reset!"
+
+
   # --- Passwords ---
   password:
     wrong: "&cIncorrect password!"
@@ -51,6 +61,17 @@ messages:
     changed-kick: "&aYour password has been changed! &ePlease log in again"
     changed: "&aYour password has been successfully changed!"
     identical: "&cThe new password cannot be the same as the old one!"
+
+
+  # --- PINs ---
+  pin:
+    usage: "&cCorrect usage: &e/pin <set>"
+    set-usage: "&cCorrect usage: &e/pin <set> <PIN>"
+    invalid-length: "&cPIN must be exactly &6%length% &cdigits long!"
+    contains-letters: "&cPIN can only contain numbers!"
+    already-set: "&cYou already have a PIN set!"
+    set-success: "&aPIN code successfully generated, &eSave it: &6%pin%"
+    typed-success: "&aYour PIN code has been successfully set!"
 
 
   # --- Security and Bans ---
@@ -176,23 +197,18 @@ messages:
   # --- Move Account Command (/przenieskonto) ---
   account-move:
     usage: "&cCorrect usage: &e/moveaccount <old nick> <new nick>"
-
     start: "&aStarting verification and migration process for &e%old% &a--> &e%new%"
 
     success: "&aSuccessfully transferred data from &e%old% &ato &e%new%&a!"
-
     error-migration: "§cAn error occurred while saving the migrated files!"
 
     new-player-exists: "§cThe new UUID &6(%uuid%) &calready exists in the plugin database!"
-
     old-player-no-data: "&cPlayer &6%target% &chas no data saved in this plugin. Nothing to transfer!"
 
     player-not-exists: "&cPlayer &6%target% &chas never played on this server!"
-
     player-is-the-same: "&cThe old and new player nicknames are identical!"
 
-    players-online:
-      "&cPlayer &6%old% &cor &6%new% &cis online! &4They must be offline during migration to prevent data corruption!"
+    players-online: "&cPlayer &6%old% &cor &6%new% &cis online! &4They must be offline during migration to prevent data corruption!"
 
     confirm: "&cThis action is &4&nIRREVERSIBLE&c!"
     button: "&6&l[TRANSFER]"
@@ -209,6 +225,16 @@ messages:
     player-kick: "&cYour password has been reset by an administrator!"
 
 
+  # --- PIN Reset /resetpin ---
+  reset-pin:
+    usage: "&cCorrect usage: &e/resetpin <player>"
+    no-has-pin: "&cThis player does not have a registered PIN!"
+
+    admin-success: "&aPlayer &6%player%'s PIN has been reset"
+
+    player-message: "&cYour PIN has been reset by the administrator!"
+
+
   # --- Reset IP (/zresetujip) ---
   reset-ip:
     usage: "&cCorrect usage: &e/resetip <player>"
@@ -222,7 +248,6 @@ messages:
   # --- Purge Account (/zresetujkonto) ---
   purge-account:
     usage: "&cCorrect usage: &e/purgeaccount <player>"
-
     admin-success: "&aSuccessfully purged ALL account data for player &e%player%"
 
     player-kick: "&cYour account has been completely removed from the server database by an administrator"
@@ -232,43 +257,31 @@ messages:
     hover: "&4Click here to delete the account"
 
 
-  # --- Reset 2FA (/zresetuj2fa) ---
+  # --- Reset 2FA (/reset2fa) ---
   reset-twofactor:
     usage: "&cCorrect usage: &e/reset2fa <player>"
-
     admin-success: "&aSuccessfully removed two-factor authentication from &e%player%'s account"
 
     not-found: "&cPlayer &6%target% &cdoes not have two-factor authentication (2FA) enabled!"
 
     player-waiting: "&cPlayer &6%target% &cis currently undergoing verification!"
-
     player-setting-up: "&cPlayer &6%target% &cis currently setting up 2FA!"
-
     player-kick: "&cYour two-factor authentication has been removed by an administrator"
 
 
   # --- Login Spawn System ---
   spawn:
     set-success: "&aSuccessfully set spawn location for: &e%type%"
-
     deleted-success: "&aSuccessfully removed spawn location for: &e%type%"
-
     login-usage: "&cCorrect usage: &e/loginspawn <setspawn|delspawn> <before_login|after_login>"
 
     usage: "&cCorrect usage: &e/loginspawn %cmd% <before_login|after_login>"
-
     invalid-type: "&cInvalid type! &eUse: before_login or after_login"
-
     exists: "&cSpawn for &6%type% &calready exists!"
-
     does-not-exist: "&cSpawn for &6%type% &cdoes not exist!"
 
     overwrite-button: "&e&l[OVERWRITE]"
-
     overwrite-hover: "&aClick here to force overwrite the location for: &e%type%"
-
     delete-confirm: "&cAre you sure you want to delete the &6%type% &cspawn?"
-
     delete-button: "&4&l[CONFIRM DELETE]"
-
     delete-hover: "&aClick to permanently delete the spawn: &e%type%"

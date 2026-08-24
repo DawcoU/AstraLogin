@@ -1,14 +1,18 @@
 name: AstraLogin
 version: '${version}'
 main: pl.dawcou.astralogin.auth.AstraLogin
-api-version: '1.20'
-load: POSTWORLD
+api-version: '1.18'
+load: STARTUP
+author: DawcoU
+softdepend: [ProtocolLib]
 
 commands:
   astralogin:
     aliases: [al]
   zresetujhaslo:
     aliases: [resetpassword]
+  zresetujpin:
+    aliases: [resetpin]
   zmienhaslo:
     aliases: [changepassword]
   zresetujip:
@@ -37,6 +41,10 @@ commands:
     aliases: [loginspawn]
   wyloguj:
     aliases: [logout]
+  niepamietamhasla:
+    aliases: [forgotpassword, forgotpass]
+  pin:
+
 
 permissions:
   astralogin.reload:
@@ -48,6 +56,8 @@ permissions:
   astralogin.delspawn:
     default: op
   astralogin.resetpassword:
+    default: op
+  astralogin.resetpin:
     default: op
   astralogin.resetip:
     default: op

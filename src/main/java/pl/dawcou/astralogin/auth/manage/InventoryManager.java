@@ -19,13 +19,13 @@ public class InventoryManager {
     public InventoryManager(AstraLogin plugin) {
         this.plugin = plugin;
 
-        File dataFolder = new File(plugin.getDataFolder(), "player_data");
+        File dataFolder = new File(plugin.getDataFolder(), "data/players");
         if (!dataFolder.exists()) {
             dataFolder.mkdirs();
         }
 
-        this.file = new File(dataFolder, "inventory_data.yml");
-        this.config = YamlConfiguration.loadConfiguration(file);
+        file = new File(dataFolder, "inventory_data.yml");
+        config = YamlConfiguration.loadConfiguration(file);
     }
 
     public void save(Player p) {
@@ -142,13 +142,19 @@ public class InventoryManager {
     public void reload() {
         try {
             // Całkowicie porzucamy stary stan z RAM-u i ładujemy plik od nowa
-            this.config = YamlConfiguration.loadConfiguration(file);
+            config = YamlConfiguration.loadConfiguration(file);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     private void save() {
-        try { config.save(file); } catch (IOException e) { e.printStackTrace(); }
+        synchronized (file) {
+            try {
+                config.save(file);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

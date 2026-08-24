@@ -25,7 +25,7 @@ public class SpawnManager implements CommandExecutor, TabCompleter {
 
     private final AstraLogin plugin;
 
-    // Plik 1: Globalne spawny serwera (w podfolderze global_data)
+    // Plik 1: Globalne spawny serwera (w podfolderze data/global)
     private final File spawnsFile;
     private FileConfiguration spawnsConfig;
 
@@ -40,34 +40,34 @@ public class SpawnManager implements CommandExecutor, TabCompleter {
     public SpawnManager(AstraLogin plugin) {
         this.plugin = plugin;
 
-        // 1. Inicjalizacja globalnego folderu i pliku ze spawnami (AstraLogin/global_data/spawns.yml)
-        File globalDir = new File(plugin.getDataFolder(), "global_data");
+        // 1. Inicjalizacja globalnego folderu i pliku ze spawnami (AstraLogin/data/global/spawns.yml)
+        File globalDir = new File(plugin.getDataFolder(), "data/global");
         if (!globalDir.exists()) {
             globalDir.mkdirs();
         }
 
-        this.spawnsFile = new File(globalDir, "spawns.yml");
-        if (!this.spawnsFile.exists()) {
+        spawnsFile = new File(globalDir, "spawns.yml");
+        if (!spawnsFile.exists()) {
             try {
-                this.spawnsFile.createNewFile();
+                spawnsFile.createNewFile();
 
-                this.spawnsConfig = YamlConfiguration.loadConfiguration(spawnsFile);
-                this.spawnsConfig.save(spawnsFile);
+                spawnsConfig = YamlConfiguration.loadConfiguration(spawnsFile);
+                spawnsConfig.save(spawnsFile);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
-        // 2. Inicjalizacja pliku z danymi graczy (AstraLogin/player_data/locations_data.yml)
-        File dataDir = new File(plugin.getDataFolder(), "player_data");
+        // 2. Inicjalizacja pliku z danymi graczy (AstraLogin/data/players/locations_data.yml)
+        File dataDir = new File(plugin.getDataFolder(), "data/players");
         if (!dataDir.exists()) {
             dataDir.mkdirs();
         }
 
-        this.playerDataFile = new File(dataDir, "locations_data.yml");
-        if (!this.playerDataFile.exists()) {
+        playerDataFile = new File(dataDir, "locations_data.yml");
+        if (!playerDataFile.exists()) {
             try {
-                this.playerDataFile.createNewFile();
+                playerDataFile.createNewFile();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -77,7 +77,7 @@ public class SpawnManager implements CommandExecutor, TabCompleter {
         reload();
     }
 
-    // --- SEKCJA SPAWNÓW SERWEROWYCH (global_data/spawns.yml) ---
+    // --- SEKCJA SPAWNÓW SERWEROWYCH (data/global/spawns.yml) ---
     public void setSpawn(String type, Player p) {
         Location loc = p.getLocation();
         spawnsCache.put(type, loc);
@@ -137,12 +137,12 @@ public class SpawnManager implements CommandExecutor, TabCompleter {
 
     public void reload() {
         // Ładowanie plików z dysku
-        this.spawnsConfig = YamlConfiguration.loadConfiguration(spawnsFile);
-        this.playerDataConfig = YamlConfiguration.loadConfiguration(playerDataFile);
+        spawnsConfig = YamlConfiguration.loadConfiguration(spawnsFile);
+        playerDataConfig = YamlConfiguration.loadConfiguration(playerDataFile);
 
         // Czyszczenie starego cache
-        this.spawnsCache.clear();
-        this.lastLocationsCache.clear();
+        spawnsCache.clear();
+        lastLocationsCache.clear();
 
         // Przebudowanie Cache dla spawnów serwera
         if (spawnsConfig.getConfigurationSection("spawns") != null) {
@@ -187,29 +187,33 @@ public class SpawnManager implements CommandExecutor, TabCompleter {
     }
 
     private void saveSpawns() {
-        try {
-            spawnsConfig.save(spawnsFile);
-        } catch (IOException e) {
-            plugin.getNoticeManager().sendSpawnSaveError();
+        synchronized (spawnsConfig) {
+            try {
+                spawnsConfig.save(spawnsFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
     private void savePlayerData() {
-        try {
-            playerDataConfig.save(playerDataFile);
-        } catch (IOException e) {
-            e.printStackTrace();
+        synchronized (playerDataConfig) {
+            try {
+                playerDataConfig.save(playerDataFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
     public void deletePlayerSpawn(String uuidString) {
         // 1. Bezkompromisowe czyszczenie z pamięci RAM (Cache)
-        this.lastLocationsCache.remove(uuidString);
+        lastLocationsCache.remove(uuidString);
 
         // 2. Czyszczenie sekcji z pliku konfiguracyjnego
         String path = "last_locations." + uuidString;
-        if (this.playerDataConfig.contains(path)) {
-            this.playerDataConfig.set(path, null);
+        if (playerDataConfig.contains(path)) {
+            playerDataConfig.set(path, null);
 
             // 3. Zapisujemy zaktualizowany plik na dysku
             savePlayerData();
@@ -257,11 +261,11 @@ public class SpawnManager implements CommandExecutor, TabCompleter {
                             .deserialize(baseMsgStr + " ");
 
                     Component confirmBtn = LegacyComponentSerializer.legacySection()
-                            .deserialize(btnTextStr.replace("&", "§"))
+                            .deserialize(btnTextStr)
                             .clickEvent(ClickEvent.runCommand("/loginspawn setspawn " + type + " confirm"))
-                            .hoverEvent(LegacyComponentSerializer.legacySection().deserialize(hoverTextStr.replace("&", "§")));
+                            .hoverEvent(LegacyComponentSerializer.legacySection().deserialize(hoverTextStr));
 
-                    p.sendMessage(baseMsg.append(confirmBtn));
+                    plugin.getAdventure().player(p).sendMessage(baseMsg.append(confirmBtn));
                     return true;
                 }
 
@@ -312,11 +316,11 @@ public class SpawnManager implements CommandExecutor, TabCompleter {
                         .deserialize(baseMsgStr + " ");
 
                 Component confirmBtn = LegacyComponentSerializer.legacySection()
-                        .deserialize(btnTextStr.replace("&", "§"))
+                        .deserialize(btnTextStr)
                         .clickEvent(ClickEvent.runCommand("/loginspawn delspawn " + type + " confirm"))
-                        .hoverEvent(LegacyComponentSerializer.legacySection().deserialize(hoverTextStr.replace("&", "§")));
+                        .hoverEvent(LegacyComponentSerializer.legacySection().deserialize(hoverTextStr));
 
-                p.sendMessage(baseMsg.append(confirmBtn));
+                plugin.getAdventure().player(p).sendMessage(baseMsg.append(confirmBtn));
                 return true;
             }
 

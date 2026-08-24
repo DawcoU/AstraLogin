@@ -1,6 +1,5 @@
 package pl.dawcou.astralogin.auth.security;
 
-import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -35,18 +34,18 @@ public class IPManager implements CommandExecutor {
     private final Map<String, String> banReasons = new HashMap<>();
 
     public Map<String, String> getUuidToIpCache() {
-        return this.uuidToIpCache;
+        return uuidToIpCache;
     }
 
     public IPManager(AstraLogin plugin) {
         this.plugin = plugin;
 
-        File dataDir = new File(plugin.getDataFolder(), "player_data");
+        File dataDir = new File(plugin.getDataFolder(), "data/players");
         if (!dataDir.exists()) {
             dataDir.mkdirs();
         }
 
-        this.file = new File(dataDir, "ips.yml");
+        file = new File(dataDir, "ips.yml");
         if (!file.exists()) {
             try {
                 file.createNewFile();
@@ -87,7 +86,7 @@ public class IPManager implements CommandExecutor {
             Player onlineTarget = Bukkit.getPlayer(target.getUniqueId());
             if (onlineTarget != null) {
                 String kickReason = plugin.getLanguageManager().getMessage("reset-ip.player-kick");
-                onlineTarget.kick(Component.text(kickReason));
+                onlineTarget.kickPlayer(kickReason);
             }
 
             String successMsg = plugin.getLanguageManager().getWithPrefix("reset-ip.admin-success")
@@ -217,27 +216,29 @@ public class IPManager implements CommandExecutor {
     }
 
     public void reload() {
-        this.config = YamlConfiguration.loadConfiguration(file);
+        config = YamlConfiguration.loadConfiguration(file);
 
-        this.uuidToIpCache.clear();
-        this.ipCountCache.clear();
+        uuidToIpCache.clear();
+        ipCountCache.clear();
 
         if (config.getConfigurationSection("ips") != null) {
             for (String key : config.getConfigurationSection("ips").getKeys(false)) {
                 String ip = config.getString("ips." + key);
                 if (ip != null) {
-                    this.uuidToIpCache.put(key, ip);
-                    this.ipCountCache.put(ip, this.ipCountCache.getOrDefault(ip, 0) + 1);
+                    uuidToIpCache.put(key, ip);
+                    ipCountCache.put(ip, ipCountCache.getOrDefault(ip, 0) + 1);
                 }
             }
         }
     }
 
     private void save() {
-        try {
-            config.save(file);
-        } catch (IOException e) {
-            e.printStackTrace();
+        synchronized (config) {
+            try {
+                config.save(file);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }

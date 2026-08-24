@@ -20,12 +20,13 @@ messages:
   # --- Logowanie ---
   login:
     already-logged: "&cJesteś już zalogowany/zarejestrowany!"
+    already-online: "&cGracz o tym nicku jest na serwerze!"
+    wrong-casing: "&cWejdź na serwer używając poprawnej wielkości liter!\n&7Prawidłowy nick: &6%registered%"
     no-account: "&cNie masz konta! Wpisz &e/zarejestruj <hasło> <powtórz>"
     success: "&aZalogowano"
     reminder: "&eZaloguj się: &f/zaloguj <hasło>"
     usage: "&cPoprawne użycie: &e/zaloguj <hasło>"
     has-account: "&cMasz już konto! Wpisz &e/zaloguj <hasło>"
-    already-online: "&cGracz o tym nicku jest już na serwerze!"
 
 
   # --- Rejestracja ---
@@ -40,6 +41,15 @@ messages:
     success: "&aWykryto konto &ePremium &azalogowano automatycznie!"
 
 
+  # ---  /niepamietamhasla ---
+  forgot-password:
+    usage: "&cPoprawne użycie: &e/niepamietamhasla <PIN>"
+    wrong-pin: "&cBłędny PIN!"
+    no-has-pin: "&cNie masz zarejestrowanego PIN'u!"
+
+    player-kick: "&aTwoje hasło zostało pomyślnie zresetowane!"
+
+
   # --- Hasła ---
   password:
     wrong: "&cBłędne hasło!"
@@ -51,6 +61,17 @@ messages:
     changed-kick: "&aTwoje hasło zostało zmienione! &eZaloguj się ponownie"
     changed: "&aTwoje hasło zostało pomyślnie zmienione!"
     identical: "&cWpisane nowe hasło jest identyczne ze starym!"
+
+
+  # --- PIN'y ---
+  pin:
+    usage: "&cPoprawne użycie: &e/pin <set>"
+    set-usage: "&cPoprawne użycie: &e/pin <set> <PIN>"
+    invalid-length: "&cPIN musi mieć dokładnie &6%length% &ccyfr!"
+    contains-letters: "&cPIN może zawierać tylko cyfry!"
+    already-set: "&cMasz już ustawiony PIN!"
+    set-success: "&aPomyślnie wygenerowano kod PIN, &eZapisz go: &6%pin%"
+    typed-success: "&aPomyślnie ustawiono Twój kod PIN!"
 
 
   # --- Bezpieczeństwo i bany ---
@@ -176,23 +197,18 @@ messages:
   # --- Komenda /przenieskonto ---
   account-move:
     usage: "&cPoprawne użycie: &e/przenieskonto <stary nick> <nowy nick>"
-
     start: "&aRozpoczynam proces weryfikacji i migracji dla &e%old% &a--> &e%new%"
 
     success: "&aPomyślnie przeniesiono dane z konta &e%old% &ana konto &e%new%&a!"
-
     error-migration: "§cWystąpił błąd podczas zapisywania zmigrowanych plików!"
 
     new-player-exists: "§cNowe UUID &6(%uuid%) &cistnieje już w bazie danych pluginu!"
-
     old-player-no-data: "&cGracz &6%target% &cnie posiada żadnych zapisanych danych w tym pluginie. Nie ma czego przenosić!"
 
     player-not-exists: "&cGracz &6%target% &cnigdy nie grał na tym serwerze!"
-
     player-is-the-same: "&cGracz stary i nowy jest taki sam!"
 
-    players-online:
-      "&cGracz &6%old% &club &6%new% &csą online! &4Nie mogą być w trakcie migracji na serwerze aby nie uszkodzić danych!"
+    players-online: "&cGracz &6%old% &club &6%new% &csą online! &4Nie mogą być w trakcie migracji na serwerze aby nie uszkodzić danych!"
 
     confirm: "&cTo działanie jest &4&nNIEODWRACALNE&c!"
     button: "&6&l[PRZENIEŚ]"
@@ -209,6 +225,16 @@ messages:
     player-kick: "&cTwoje hasło zostało zresetowane przez administratora!"
 
 
+  # --- Reset PIN'u /zresetujpin ---
+  reset-pin:
+    usage: "&cPoprawne użycie: &e/zresetujpin <gracz>"
+    no-has-pin: "&cTen gracz nie ma zarejestrowanego PIN'u!"
+
+    admin-success: "&aPIN gracza &6%player% &azostał zresetowany"
+
+    player-message: "&cTwój PIN został zresetowany przez administratora!"
+
+
   # --- Reset IP /zresetujip ---
   reset-ip:
     usage: "&cPoprawne użycie: &e/zresetujip <gracz>"
@@ -222,7 +248,6 @@ messages:
   # --- Reset całego konta /zresetujkonto ---
   purge-account:
     usage: "&cPoprawne użycie: &e/zresetujkonto <nick>"
-
     admin-success: "&aPomyślnie usunięto WSZYSTKIE dane konta gracza &e%player%"
 
     player-kick: "&cTwoje konto zostało całkowicie usunięte z bazy danych serwera przez administratora"
@@ -235,40 +260,28 @@ messages:
   # --- Reset 2FA /zresetuj2fa ---
   reset-twofactor:
     usage: "&cPoprawne użycie: &e/zresetuj2fa <nick>"
-
     admin-success: "&aPomyślnie usunięto weryfikację dwuetapową z konta gracza &e%player%"
 
     not-found: "&cGracz &6%target% &cnie ma włączonej weryfikacji dwuetapowej (2FA)!"
 
     player-waiting: "&cGracz &6%target% &cjest w trakcie weryfikacji!"
-
     player-setting-up: "&cGracz &6%target% &cjest w trakcie konfiguracji 2FA!"
-
     player-kick: "&cTwoja weryfikacja dwuetapowa została usunięta przez administratora"
 
 
   # --- System spawnów logowania ---
   spawn:
     set-success: "&aPomyślnie ustawiono lokalizację dla: &e%type%"
-
     deleted-success: "&aUsunięto lokalizację spawna: &e%type%"
-
     login-usage: "&cPoprawne użycie: &e/spawnlogowania <setspawn|delspawn> <before_login|after_login>"
 
     usage: "&cPoprawne użycie: &e/spawnlogowania %cmd% <before_login|after_login>"
-
     invalid-type: "&cNieprawidłowy typ! &eUżyj: before_login lub after_login"
-
     exists: "&cSpawn &6%type% &cjuż istnieje!"
-
     does-not-exist: "&cSpawn &6%type% &cnie istnieje!"
 
     overwrite-button: "&e&l[NADPISZ]"
-
     overwrite-hover: "&aKliknij tutaj, aby wymusić nadpisanie lokalizacji dla: &e%type%"
-
     delete-confirm: "&cCzy na pewno chcesz usunąć spawn &6%type%&c?"
-
     delete-button: "&4&l[POTWIERDŹ USUNIĘCIE]"
-
     delete-hover: "&aKliknij, aby bezpowrotnie usunąć spawn: &e%type%"
