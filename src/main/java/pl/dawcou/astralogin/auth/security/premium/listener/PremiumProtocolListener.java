@@ -6,18 +6,22 @@ import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
+import com.mojang.authlib.GameProfile;
 import io.netty.channel.Channel;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
-import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.security.premium.api.MojangApiService;
 import pl.dawcou.astralogin.auth.security.premium.crypto.EncryptionUtil;
 import pl.dawcou.astralogin.auth.security.premium.netty.NettyChannelExtractor;
+import pl.dawcou.astralogin.auth.security.premium.nms.LoginCompleter;
 import pl.dawcou.astralogin.auth.security.premium.session.PremiumSessionManager;
 
 import javax.crypto.SecretKey;
+import java.math.BigInteger;
+import java.net.InetSocketAddress;
 import java.security.KeyPair;
-import java.security.PublicKey;
+import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -44,20 +48,20 @@ public class PremiumProtocolListener implements Listener {
         registerListeners();
     }
 
-    private void debug(String message) {
-        if (plugin.isDebugMode()) {
+    public void debug(String message) {
+        if (plugin.isDebugEnabled()) {
             plugin.getLogger().info(message);
         }
     }
 
-    private void debugWarning(String message) {
-        if (plugin.isDebugMode()) {
+    public void debugWarning(String message) {
+        if (plugin.isDebugEnabled()) {
             plugin.getLogger().warning(message);
         }
     }
 
-    private void debugSevere(String message) {
-        if (plugin.isDebugMode()) {
+    public void debugSevere(String message) {
+        if (plugin.isDebugEnabled()) {
             plugin.getLogger().severe(message);
         }
     }
@@ -67,9 +71,9 @@ public class PremiumProtocolListener implements Listener {
         protocolManager.addPacketListener(new PacketAdapter(plugin, PacketType.Login.Client.START) {
             @Override
             public void onPacketReceiving(PacketEvent event) {
-                debug("Odebrano Pakiet START!");
+                debug("START packet received");
 
-                boolean premiumAllowed = PremiumProtocolListener.this.plugin.getPremiumManager().premiumLoginRequirements();
+                boolean premiumAllowed = PremiumProtocolListener.this.plugin.getPremiumManager().premiumLoginRequirements("FULL");
                 if (!premiumAllowed) return;
 
                 Player player = event.getPlayer();
@@ -82,20 +86,13 @@ public class PremiumProtocolListener implements Listener {
                     return;
                 }
 
-                // Wyciągamy adres i Channel OD RAZU na głównym wątku!
+                // Wyciągamy adres i Channel na głównym wątku
                 Channel channel = nettyExtractor.extractChannelFromEvent(event);
 
-                String addr = "UNKNOWN";
-                if (player != null && player.getAddress() != null) {
-                    addr = player.getAddress().getAddress().getHostAddress();
-                } else if (channel != null && channel.remoteAddress() != null) {
-                    addr = channel.remoteAddress().toString().replace("/", "");
-                }
-
-                final String clientAddress = addr;
                 String offlineUuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
 
                 if (!PremiumProtocolListener.this.plugin.getPasswordManager().isRegistered(offlineUuid)) {
+                    debugWarning("Player " + username+ " is not registered");
                     return;
                 }
 
@@ -116,41 +113,53 @@ public class PremiumProtocolListener implements Listener {
 
                     PremiumProtocolListener.this.plugin.getSchedulerManager().runSync(() -> {
                         if (channel != null) {
-                            plugin.getLogger().info("[NETTY] BEFORE ENCRYPTION_BEGIN pipeline=" + channel.pipeline().names());
+                            debug("[NETTY] BEFORE ENCRYPTION_BEGIN pipeline=" + channel.pipeline().names());
+                        } else {
+                            debugSevere("[NETTY] Could not extract channel for " + username);
+                            return;
                         }
 
-                        sessionManager.createSession(clientAddress, username);
-                        byte[] verifyToken = sessionManager.getVerifyToken(clientAddress);
+                        sessionManager.createSession(channel, username);
+                        byte[] verifyToken = sessionManager.getVerifyToken(channel);
 
                         PacketContainer encryptionRequest = protocolManager.createPacket(PacketType.Login.Server.ENCRYPTION_BEGIN);
 
                         try {
-                            // 1. Server ID (zawsze pusty)
-                            encryptionRequest.getStrings().writeSafely(0, "");
+                            // 1. Server ID – zawsze pusty string
+                            encryptionRequest.getStrings().write(0, "");
 
-                            // 2. Klucz Publiczny RSA i Token
-                            PublicKey pubKey = keyPair.getPublic();
-                            byte[] pubKeyBytes = pubKey.getEncoded();
+                            // 2. Public Key – zawsze raw bajty (najbezpieczniejsze z Via + PacketEvents)
+                            byte[] pubKeyBytes = keyPair.getPublic().getEncoded();
+                            encryptionRequest.getByteArrays().write(0, pubKeyBytes);
 
-                            // Sprawdzamy jak ProtocolLib operuje na tym pakiecie w danej wersji
-                            if (encryptionRequest.getSpecificModifier(PublicKey.class).size() > 0) {
-                                encryptionRequest.getSpecificModifier(PublicKey.class).write(0, pubKey);
-                                encryptionRequest.getByteArrays().writeSafely(0, verifyToken);
-                            } else if (encryptionRequest.getByteArrays().size() >= 2) {
-                                encryptionRequest.getByteArrays().writeSafely(0, pubKeyBytes);
-                                encryptionRequest.getByteArrays().writeSafely(1, verifyToken);
-                            } else {
-                                encryptionRequest.getByteArrays().writeSafely(0, pubKeyBytes);
-                                encryptionRequest.getByteArrays().writeSafely(1, verifyToken);
-                            }
+                            // 3. Verify Token
+                            encryptionRequest.getByteArrays().write(1, verifyToken);
 
-                            // Wymuszamy uwierzytelnianie klienta przez Mojang
+                            // 4. ShouldAuthenticate
                             if (encryptionRequest.getBooleans().size() > 0) {
                                 encryptionRequest.getBooleans().write(0, true);
                                 debug("[ENCRYPTION-REQUEST] shouldAuthenticate=true");
                             }
 
+                            // === DEBUG ===
+                            debug("[KEY-DEBUG] Our public key length: " + pubKeyBytes.length);
+                            try {
+                                MessageDigest md = MessageDigest.getInstance("SHA-1");
+                                debug("[KEY-DEBUG] Our public key SHA1: " +
+                                        String.format("%040x", new BigInteger(1, md.digest(pubKeyBytes))));
+
+                                byte[] packetKey = encryptionRequest.getByteArrays().read(0);
+                                debug("[KEY-DEBUG] Packet public key length: " + packetKey.length);
+                                debug("[KEY-DEBUG] Packet public key SHA1: " +
+                                        String.format("%040x", new BigInteger(1, md.digest(packetKey))));
+                                debug("[KEY-DEBUG] Keys match: " + java.util.Arrays.equals(pubKeyBytes, packetKey));
+                            } catch (Exception ex) {
+                                debugWarning("[KEY-DEBUG] Failed to verify key: " + ex.getMessage());
+                            }
+                            // === KONIEC DEBUG ===
+
                             protocolManager.sendServerPacket(player, encryptionRequest);
+
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -171,39 +180,52 @@ public class PremiumProtocolListener implements Listener {
 
                 Player player = event.getPlayer();
 
-                if (player == null || player.getAddress() == null) {
-                    debugWarning("DEBUG [4.1/6] ❌ Player or address is null!");
+                if (player == null) {
+                    debugWarning("DEBUG [4.1/6] ❌ Player is null!");
                     return;
                 }
 
-                String clientAddress = player.getAddress().getAddress().getHostAddress();
-                String username = sessionManager.getUsername(clientAddress);
-                byte[] expectedToken = sessionManager.getVerifyToken(clientAddress);
+                // Pobieramy Channel od razu
+                Channel channel = nettyExtractor.extractChannelFromEvent(event);
 
-                debug("DEBUG [4.2/6] 🔎 Session lookup: IP=" + clientAddress + ", pendingUsername=" + username + ", tokenPresent=" + (expectedToken != null));
+                if (channel == null) {
+                    debugSevere("DEBUG [ERR] ❌ Could not extract Netty channel");
+                    return;
+                }
+
+                // Channel jest teraz identyfikatorem sesji
+                InetSocketAddress socketAddress = player.getAddress();
+
+                String clientAddress = socketAddress != null
+                        && socketAddress.getAddress() != null
+                        ? socketAddress.getAddress().getHostAddress()
+                        : "UNKNOWN";
+
+                String username = sessionManager.getUsername(channel);
+                byte[] expectedToken = sessionManager.getVerifyToken(channel);
+
+                debug("DEBUG [4.2/6] 🔎 Session lookup: " +
+                        "channel=" + channel +
+                        ", pendingUsername=" + username +
+                        ", tokenPresent=" + (expectedToken != null));
 
                 if (username == null || expectedToken == null) {
-                    debug("DEBUG [4.3/6] ⏭️ No premium session for " + clientAddress + " - bypassing.");
+                    debug("DEBUG [4.3/6] ⏭️ No premium session for channel - bypassing.");
                     return;
                 }
 
-                // Anulujemy pakiet natychmiast na głównym wątku, aby serwer offline go nie przetwarzał
+                // Anulujemy pakiet natychmiast
                 event.setCancelled(true);
 
-                // Pobieramy Channel oraz bajty od razu, zanim ProtocolLib wyczyści event
-                Channel channel = nettyExtractor.extractChannelFromEvent(event);
-                if (channel == null) {
-                    debugSevere("DEBUG [ERR] ❌ Could not extract Netty channel for " + username);
-                    sessionManager.removeSession(clientAddress);
-                    return;
-                }
-
+                // Pobieramy dane pakietu
                 PacketContainer packet = event.getPacket();
-                byte[] encryptedSecret = null;
-                byte[] encryptedToken = null;
+
+                byte[] encryptedSecret;
+                byte[] encryptedToken;
 
                 try {
                     List<byte[]> byteArrays = packet.getByteArrays().getValues();
+
                     if (byteArrays.size() >= 2) {
                         encryptedSecret = byteArrays.get(0);
                         encryptedToken = byteArrays.get(1);
@@ -212,14 +234,21 @@ public class PremiumProtocolListener implements Listener {
                         encryptedToken = packet.getSpecificModifier(byte[].class).read(1);
                     }
                 } catch (Exception e) {
-                    sessionManager.removeSession(clientAddress);
-                    debugSevere("DEBUG [ERR] ❌ Failed to read byte arrays from packet: " + e.getClass().getName() + ": " + e.getMessage());
+                    sessionManager.removeSession(channel);
+
+                    debugSevere(
+                            "DEBUG [ERR] ❌ Failed to read byte arrays from packet: "
+                                    + e.getClass().getName()
+                                    + ": "
+                                    + e.getMessage()
+                    );
+
                     e.printStackTrace();
                     return;
                 }
 
                 if (encryptedSecret == null || encryptedToken == null) {
-                    sessionManager.removeSession(clientAddress);
+                    sessionManager.removeSession(channel);
                     debugWarning("DEBUG [ERR] ❌ Null encryption data received from " + clientAddress);
                     return;
                 }
@@ -238,7 +267,7 @@ public class PremiumProtocolListener implements Listener {
                         sharedSecret = EncryptionUtil.decryptSharedSecret(keyPair.getPrivate(), finalEncryptedSecret);
                         decryptedToken = EncryptionUtil.decrypt(keyPair.getPrivate(), finalEncryptedToken);
                     } catch (Exception e) {
-                        sessionManager.removeSession(clientAddress);
+                        sessionManager.removeSession(channel);
                         debugSevere("DEBUG [ERR] ❌ Exception during RSA decryption: " + e.getClass().getName() + ": " + e.getMessage());
                         e.printStackTrace();
                         channel.close();
@@ -246,7 +275,7 @@ public class PremiumProtocolListener implements Listener {
                     }
 
                     if (sharedSecret == null || decryptedToken == null) {
-                        sessionManager.removeSession(clientAddress);
+                        sessionManager.removeSession(channel);
                         debugWarning("DEBUG [ERR] ❌ Failed to decrypt keys for " + clientAddress);
                         channel.close();
                         return;
@@ -255,15 +284,15 @@ public class PremiumProtocolListener implements Listener {
                     boolean tokenMatches = Arrays.equals(expectedToken, decryptedToken);
 
                     if (!tokenMatches) {
-                        sessionManager.removeSession(clientAddress);
+                        sessionManager.removeSession(channel);
                         debugWarning("DEBUG [ERR] ❌ Verify token mismatch for " + clientAddress + "!");
                         channel.close();
                         return;
                     }
 
-                    sessionManager.removeSession(clientAddress);
+                    sessionManager.removeSession(channel);
 
-                    debug("DEBUG [KEYS-CHECK] 🔑 SharedSecret raw bytes length: " + (sharedSecret != null ? sharedSecret.getEncoded().length : "null"));
+                    debug("DEBUG [KEYS-CHECK] 🔑 SharedSecret raw bytes length: " + sharedSecret.getEncoded().length);
                     debug("DEBUG [KEYS-CHECK] 🔑 PublicKey raw bytes length: " + (keyPair.getPublic() != null ? keyPair.getPublic().getEncoded().length : "null"));
 
                     try {
@@ -282,19 +311,52 @@ public class PremiumProtocolListener implements Listener {
                         WrappedGameProfile mojangProfile = mojangApi.fetchMojangProfile(username, serverHash);
 
                         if (mojangProfile == null) {
-                            debugWarning("DEBUG [FAIL] ❌ Mojang hasJoined returned no profile for " + username);
-                            if (channel.isOpen()) {
-                                channel.close();
-                            }
+                            debugWarning("DEBUG [NON-PREMIUM] ⚠️ No Mojang session found for " + username + ". Encrypting connection and falling back to offline login.");
+
+                            sessionManager.removeSession(channel);
+
+                            // Generate standard offline profile (v3 UUID)
+                            UUID offlineUuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                            GameProfile offlineNmsProfile = new GameProfile(offlineUuid, username);
+                            WrappedGameProfile offlineWrappedProfile = WrappedGameProfile.fromHandle(offlineNmsProfile);
+
+                            // Mark as non-premium so AstraLogin forces password check
+                            PremiumProtocolListener.this.plugin.getPremiumManager().setAuthenticated(offlineUuid, false);
+
+                            // CRITICAL: We MUST enable AES encryption on Netty pipeline, because client already enabled it!
+                            nettyExtractor.enableEncryptionOnChannel(channel, sharedSecret, () -> {
+                                new LoginCompleter(PremiumProtocolListener.this.plugin)
+                                        .complete(channel, offlineWrappedProfile);
+
+                                debug("DEBUG [NON-PREMIUM] 🔓 Encryption injected and offline login completed for " + username);
+                            });
+
                             return;
                         }
 
-                        PremiumProtocolListener.this.plugin.getPremiumManager().setAuthenticated(mojangProfile.getUUID(), true);
+                        GameProfile nmsHandle = (GameProfile) mojangProfile.getHandle();
+                        UUID uuid = null;
+
+                        try {
+                            java.lang.reflect.Field idField = GameProfile.class.getDeclaredField("id");
+                            idField.setAccessible(true);
+                            uuid = (UUID) idField.get(nmsHandle);
+                        } catch (Exception e) {
+                            // Fallback gdyby pole nazywało się inaczej
+                            plugin.getLogger().severe("Could not extract UUID from GameProfile: " + e.getMessage());
+                        }
+
+                        if (uuid != null) {
+                            PremiumProtocolListener.this.plugin.getPremiumManager().setAuthenticated(uuid, true);
+                        }
 
                         // Wstrzykujemy szyfrowanie bezpośrednio do obiektu Channel
                         nettyExtractor.enableEncryptionOnChannel(channel, sharedSecret, () -> {
-                            sendLoginSuccess(player, mojangProfile);
-                            debug("DEBUG [SUCCESS] 🔓 Player " + username + " (" + mojangProfile.getUUID() + ") successfully verified by Mojang!");
+                            // Oddajemy flow Paper'owi
+                            new LoginCompleter(PremiumProtocolListener.this.plugin)
+                                    .complete(channel, mojangProfile);
+
+                            debug("DEBUG [SUCCESS] 🔓 Player " + username + " successfully verified by Mojang!");
                         });
 
                     } catch (Exception e) {
@@ -307,16 +369,5 @@ public class PremiumProtocolListener implements Listener {
                 });
             }
         });
-    }
-
-    private void sendLoginSuccess(Player player, WrappedGameProfile profile) {
-        PacketContainer success = protocolManager.createPacket(PacketType.Login.Server.SUCCESS);
-        success.getGameProfiles().write(0, profile);
-
-        try {
-            protocolManager.sendServerPacket(player, success);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 }

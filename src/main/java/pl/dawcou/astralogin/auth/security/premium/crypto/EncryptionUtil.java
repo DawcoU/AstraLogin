@@ -49,7 +49,7 @@ public final class EncryptionUtil {
             byte[] aesKeyBytes = decrypted;
             if (decrypted.length != 16) {
                 if (decrypted.length > 16) {
-                    // Jeśli padding dodał bajty z przodu, bierzesz dokładnie ostatnie 16 bajtów
+                    // Jeśli padding dodał bajty z przodu, bierzemy dokładnie ostatnie 16 bajtów
                     aesKeyBytes = new byte[16];
                     System.arraycopy(decrypted, decrypted.length - 16, aesKeyBytes, 0, 16);
                 } else {

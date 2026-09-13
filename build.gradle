@@ -1,10 +1,11 @@
 plugins {
     id 'java'
     id 'com.gradleup.shadow' version '8.3.9'
+    id 'io.papermc.paperweight.userdev' version '1.7.2'
 }
 
 group = 'pl.dawcou'
-version = '4.3.0'
+version = '4.4.0-rc1'
 
 repositories {
     mavenCentral()
@@ -12,34 +13,36 @@ repositories {
 }
 
 dependencies {
-    // API serwera (zawsze provided)
-    compileOnly 'io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT'
+    paperweight.paperDevBundle("1.20.4-R0.1-SNAPSHOT")
+
+    // Biblioteka Mojang
+    compileOnly 'com.mojang:authlib:6.0.54'
 
     // Pełny Netty z handlerami i pipelinem
-    compileOnly 'io.netty:netty-all:4.1.97.Final'
+    compileOnly 'io.netty:netty-all:4.2.18.Final'
 
-    // Log4j
-    compileOnly 'org.apache.logging.log4j:log4j-api:2.20.0'
-    compileOnly 'org.apache.logging.log4j:log4j-core:2.20.0'
-
-    // LOKALNE JAR-Y z folderu /libs - Na wypadek
-    //compileOnly fileTree(dir: 'libs', include: ['*.jar'])
+    // LOKALNE JAR-Y z folderu /libs
+    // compileOnly fileTree(dir: 'libs', include: ['*.jar'])
 
     // Biblioteka ProtocolLib wymagana do skompilowania importów
     compileOnly 'net.dmulloy2:ProtocolLib:5.4.0'
 
-    // Biblioteki do załączenia w środku (shadow)
-    implementation "com.googlecode.json-simple:json-simple:1.1.1"
+    // Biblioteki do hashowania
     implementation 'org.mindrot:jbcrypt:0.4'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.85.2'
+
+    // Biblioteka bStats
     implementation 'org.bstats:bstats-bukkit:3.2.1'
+
+    // Biblioteka 2FA
     implementation 'com.warrenstrange:googleauth:1.5.0'
 
     // Kyori Adventure API oraz Minidown/Legacy text (dla pełnego wsparcia komponentów)
-    implementation 'net.kyori:adventure-platform-bukkit:4.3.3'
-    implementation 'net.kyori:adventure-api:4.17.0'
-    implementation 'net.kyori:adventure-text-minimessage:4.17.0'
-    implementation 'net.kyori:adventure-text-serializer-legacy:4.17.0'
-    implementation 'net.kyori:adventure-text-serializer-plain:4.17.0'
+    implementation 'net.kyori:adventure-platform-bukkit:4.4.1'
+    implementation 'net.kyori:adventure-api:4.26.1'
+    implementation 'net.kyori:adventure-text-minimessage:4.26.1'
+    implementation 'net.kyori:adventure-text-serializer-legacy:4.26.1'
+    implementation 'net.kyori:adventure-text-serializer-plain:4.26.1'
 }
 
 java {
@@ -56,11 +59,41 @@ processResources {
 }
 
 shadowJar {
-    archiveClassifier.set('')
+    archiveFileName = "${project.name}-${project.version}.jar"
 
-    relocate 'com.warrenstrange.googleauth', 'pl.dawcou.astralogin.googleauth'
-    relocate 'org.bstats', 'pl.dawcou.astralogin.bstats'
-    relocate 'org.mindrot.jbcrypt', 'pl.dawcou.astralogin.jbcrypt'
-    relocate 'org.json.simple', 'pl.dawcou.astralogin.json'
+    // Relokacje bibliotek
+    relocate 'com.warrenstrange.googleauth', 'pl.dawcou.astralogin.libs.googleauth'
+    relocate 'org.bstats', 'pl.dawcou.astralogin.libs.bstats'
+    relocate 'org.json.simple', 'pl.dawcou.astralogin.libs.json'
     relocate 'net.kyori', 'pl.dawcou.astralogin.libs.kyori'
+    relocate 'org.mindrot.jbcrypt', 'pl.dawcou.astralogin.libs.jbcrypt'
+    relocate 'org.bouncycastle', 'pl.dawcou.astralogin.libs.bouncycastle'
+
+    // Wyrzucenie zbędnego balastu
+    exclude 'org/bouncycastle/math/**'
+    exclude 'org/bouncycastle/internal/**'
+    exclude 'org/bouncycastle/jcajce/**'
+    exclude 'org/bouncycastle/jce/**'
+    exclude 'org/bouncycastle/pqc/**'
+    exclude 'org/bouncycastle/x509/**'
+    exclude 'org/bouncycastle/i18n/**'
+    exclude 'org/bouncycastle/iana/**'
+}
+
+// Remapowanie NMS
+tasks.reobfJar {
+    inputJar = shadowJar.archiveFile
+}
+
+tasks.build {
+    dependsOn shadowJar
+}
+
+// Automatyczne usuwanie niepotrzebnego pliku -dev po zakończeniu budowania
+tasks.build.doLast {
+    fileTree("build/libs").matching {
+        include "*-dev.jar", "*-dev-paper.jar", "*-all.jar"
+    }.each { file ->
+        delete file
+    }
 }

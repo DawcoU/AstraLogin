@@ -2,10 +2,11 @@ package pl.dawcou.astralogin.auth.security.premium.api;
 
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.comphenix.protocol.wrappers.WrappedSignedProperty;
+import com.mojang.authlib.GameProfile;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
-import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.AstraLogin;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -25,13 +26,25 @@ public class MojangApiService {
     }
 
     public WrappedGameProfile fetchMojangProfile(String username, String serverHash) {
+        if (plugin.isDevMockMode()) {
+            plugin.getLogger().warning("[DEV-MOCK] Bypassing HTTP request to Mojang for testing!");
+
+            UUID mockUuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(StandardCharsets.UTF_8));
+
+            // Tworzymy prawdziwy obiekt NMS-owy z Mojang AuthLib
+            GameProfile nmsProfile = new GameProfile(mockUuid, username);
+
+            // Opakowujemy go w WrappedGameProfile bezpieczną metodą fromHandle
+            return WrappedGameProfile.fromHandle(nmsProfile);
+        }
+
         long startTime = System.currentTimeMillis();
 
         try {
             String urlString = "https://sessionserver.mojang.com/session/minecraft/hasJoined?username="
                     + URLEncoder.encode(username, StandardCharsets.UTF_8)
                     + "&serverId="
-                    + serverHash;
+                    + URLEncoder.encode(serverHash, StandardCharsets.UTF_8);
 
             debug("[Mojang API] 🌐 Requesting hasJoined: username=" + username + ", serverHash=" + serverHash);
             debug("[Mojang API] 🔗 Full URL: " + urlString);
@@ -88,7 +101,7 @@ public class MojangApiService {
 
             return null;
         } catch (Exception e) {
-            if (plugin.isDebugMode()) {
+            if (plugin.isDebugEnabled()) {
                 plugin.getLogger().severe("[Mojang API] ❌ Exception during hasJoined: " + e.getMessage());
             }
             e.printStackTrace();
@@ -97,7 +110,7 @@ public class MojangApiService {
     }
 
     private void debug(String msg) {
-        if (plugin.isDebugMode()) {
+        if (plugin.isDebugEnabled()) {
             plugin.getLogger().info(msg);
         }
     }

@@ -3,108 +3,128 @@ package pl.dawcou.astralogin.system;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
-import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.AstraLogin;
 
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class LanguageManager {
 
     private final JavaPlugin plugin;
-
     private String currentLang;
 
-    private final Map<String, String> messages = new HashMap<>();
-    private final Map<String, List<String>> lists = new HashMap<>();
+    // Przechowujemy SUROWE wiadomości z YML (nie sparsowane!)
+    private final Map<String, String> rawMessages = new HashMap<>();
+    private final Map<String, List<String>> rawLists = new HashMap<>();
     private final Set<String> missingKeys = new HashSet<>();
     private final MiniMessage miniMessage = MiniMessage.builder().strict(false).build();
+    private final LegacyComponentSerializer legacySerializer = LegacyComponentSerializer.builder()
+            .hexColors()
+            .useUnusualXRepeatedCharacterHexFormat() // Kodowanie hexów dla klasycznego Bukkita (§x§f...)
+            .build();
 
     public LanguageManager(JavaPlugin plugin) {
         this.plugin = plugin;
-        setupFiles(); // Najpierw upewniamy się, że pliki są na dysku
-        reload();
+        setupFiles();
     }
 
-    // Pomocnicza metoda do pobierania języka
     public String getLang() {
         return currentLang;
     }
 
     public void reload() {
-        // Czyścimy mapę
-        messages.clear();
-        lists.clear();
+        rawMessages.clear();
+        rawLists.clear();
+        missingKeys.clear();
 
         String lang = plugin.getConfig().getString("settings.language", "en");
         File langFile = new File(plugin.getDataFolder(), "languages/" + lang + ".yml");
 
         if (!langFile.exists()) {
+            lang = "en";
             langFile = new File(plugin.getDataFolder(), "languages/en.yml");
         }
 
-        currentLang = plugin.getConfig().getString("settings.language", "en");
+        currentLang = lang;
 
-        FileConfiguration langConfig = YamlConfiguration.loadConfiguration(langFile);
+        if (langFile.exists()) {
+            FileConfiguration langConfig = YamlConfiguration.loadConfiguration(langFile);
+            loadMessages(langConfig, "");
+        } else {
+            // Zabezpieczenie: jeśli na dysku nie ma nawet en.yml, wczytaj bootstrapowo z JARa
+            bootstrap();
+        }
+    }
 
-        // Pobieramy sekcję "messages" z pliku YAML
-        ConfigurationSection msgSection = langConfig.getConfigurationSection("messages");
+    public void bootstrap() {
+        rawMessages.clear();
+        rawLists.clear();
 
-        if (msgSection != null) {
-            loadMessages(msgSection, "");
+        String lang = plugin.getConfig().getString("settings.language", "en");
+        File langFile = new File(plugin.getDataFolder(), "languages/" + lang + ".yml");
+
+        // 1. Jeśli plik istnieje na dysku -> ładujemy go
+        if (langFile.exists()) {
+            currentLang = lang;
+            FileConfiguration langConfig = YamlConfiguration.loadConfiguration(langFile);
+            loadMessages(langConfig, "");
+            return;
+        }
+
+        // 2. Jeśli plik NIE istnieje na dysku (pierwsze odpalenie) -> czytamy z wnętrza pliku JAR
+        InputStream internalStream = plugin.getResource("languages/" + lang + ".yml");
+        if (internalStream == null) {
+            // Fallback do angielskiego z JARa
+            internalStream = plugin.getResource("languages/en.yml");
+            currentLang = "en";
+        } else {
+            currentLang = lang;
+        }
+
+        if (internalStream != null) {
+            try (InputStreamReader reader = new InputStreamReader(internalStream, StandardCharsets.UTF_8)) {
+                FileConfiguration langConfig = YamlConfiguration.loadConfiguration(reader);
+                loadMessages(langConfig, "");
+            } catch (Exception e) {
+                plugin.getLogger().severe("Could not load bootstrap language resource: " + e.getMessage());
+            }
         }
     }
 
     public void printMissingKeys() {
-        if (((AstraLogin) plugin).debugMode) {
-            return;
-        }
-        if (missingKeys.isEmpty()) {
-            return;
-        }
+        if (((AstraLogin) plugin).isDebugEnabled()) return;
+        if (missingKeys.isEmpty()) return;
 
         plugin.getLogger().warning("==============================");
         plugin.getLogger().warning("Missing language keys:");
-
         for (String key : missingKeys) {
             plugin.getLogger().warning("- " + key);
         }
-
         plugin.getLogger().warning("==============================");
     }
 
     private void loadMessages(ConfigurationSection section, String path) {
         for (String key : section.getKeys(false)) {
-            String fullPath = path.isEmpty()
-                    ? key
-                    : path + "." + key;
+            String fullPath = path.isEmpty() ? key : path + "." + key;
 
             if (section.isConfigurationSection(key)) {
-                loadMessages(
-                        section.getConfigurationSection(key),
-                        fullPath
-                );
+                loadMessages(section.getConfigurationSection(key), fullPath);
             } else if (section.isList(key)) {
-                // Obsługa list w plikach językowych
-                List<String> rawList = section.getStringList(key);
-                List<String> parsedList = new ArrayList<>();
-
-                for (String line : rawList) {
-                    parsedList.add(parseToLegacy(line));
-                }
-
-                lists.put(fullPath, parsedList);
+                // Zapisujemy surową listę bez ponownego parsowania na tym etapie
+                rawLists.put(fullPath, section.getStringList(key));
             } else {
                 String message = section.getString(key);
-
                 if (message != null) {
-                    messages.put(
-                            fullPath,
-                            parseToLegacy(message)
-                    );
+                    rawMessages.put(fullPath, message);
                 }
             }
         }
@@ -123,49 +143,41 @@ public class LanguageManager {
         }
     }
 
-    /**
-     * Główny parser: Zamienia tagi MiniMessage (gradienty, hexy) oraz stare kody '&'
-     * na tradycyjny format kolorów (§), zwracany jako zwykły String.
-     */
     public String parseToLegacy(String text) {
         if (text == null) return "";
 
+        String result = text;
+
         // 1. Jeśli linijka ma tagi MiniMessage (gradienty, hexy itp.)
-        if (text.contains("<") && text.contains(">")) {
+        if (result.contains("<") && result.contains(">")) {
             try {
-                // Podmieniamy ewentualne '&' na '§', żeby ujednolicić format przed parsowaniem
-                String prepared = text.replace("&", "§");
-
-                // MiniMessage bezpiecznie przetwarza tu gradienty i kolory HEX na Komponent
-                Component parsed = miniMessage.deserialize(prepared);
-
-                // Serializujemy komponent z powrotem do Stringa z gęsto rozsianymi znakami '§'
-                // Dzięki temu silnik Minecrafta przeczyta gradient ze zwykłego Stringa!
-                return LegacyComponentSerializer.legacySection().serialize(parsed);
-            } catch (Exception e) {
-                // Awaryjny ratunek w razie złej składni w pliku konfiguracyjnym
-                return text.replace("&", "§");
-            }
+                Component parsed = miniMessage.deserialize(result);
+                // Używamy naszego parsera z obsługą HEX!
+                result = legacySerializer.serialize(parsed);
+            } catch (Exception ignored) {}
         }
 
-        // 2. Jeśli linijka NIE MA tagów MiniMessage, traktujemy ją w 100% klasycznie
-        return text.replace("&", "§");
+        // 2. Na końcu zamieniamy stare kody & na §
+        return result.replace("&", "§");
     }
 
-    // Pobiera czystą wiadomość z mapy i od razu ją konwertuje
-    public String getMessage(String path) {
-        String rawMessage = messages.get(path);
+    public String getRawMessage(String path) {
+        return findValue(rawMessages, path);
+    }
 
-        if (rawMessage == null) {
+    public String getMessage(String path) {
+        String raw = getRawMessage(path);
+
+        if (raw == null) {
             missingKeys.add(path);
             return "§cMissing message: " + path;
         }
 
-        return parseToLegacy(rawMessage);
+        return parseToLegacy(raw);
     }
 
     public List<String> getMessageList(String path) {
-        List<String> rawList = lists.get(path);
+        List<String> rawList = findValue(rawLists, path);
 
         if (rawList == null) {
             missingKeys.add(path);
@@ -174,11 +186,62 @@ public class LanguageManager {
             return errorList;
         }
 
-        return rawList;
+        List<String> parsedList = new ArrayList<>();
+        for (String line : rawList) {
+            parsedList.add(parseToLegacy(line));
+        }
+        return parsedList;
     }
 
-    // Pobiera wiadomość z prefixem
+    private <T> T findValue(Map<String, T> map, String path) {
+        if (map.containsKey(path)) {
+            return map.get(path);
+        }
+
+        if (path.startsWith("messages.")) {
+            String subPath = path.substring(9);
+            if (map.containsKey(subPath)) {
+                return map.get(subPath);
+            }
+        } else {
+            String prefixedPath = "messages." + path;
+            if (map.containsKey(prefixedPath)) {
+                return map.get(prefixedPath);
+            }
+        }
+
+        return null;
+    }
+
+    // -------------------------------------------------------------
+    // Pobiera wiadomość z prefixem dostosowanym do typu odbiorcy
+    // -------------------------------------------------------------
+    public String getWithPrefix(CommandSender receiver, String path) {
+        String rawMessage = getRawMessage(path);
+
+        if (rawMessage == null) {
+            missingKeys.add(path);
+            String prefix = (receiver instanceof ConsoleCommandSender) ? AstraLogin.PREFIX2 : AstraLogin.PREFIX;
+            return parseToLegacy(prefix) + " §cMissing message: " + path;
+        }
+
+        // Konsola dostaje prosty PREFIX2 bez HEX-ów, gracz dostaje gradient PREFIX
+        if (receiver instanceof ConsoleCommandSender) {
+            return parseToLegacy(AstraLogin.PREFIX2 + " " + rawMessage);
+        } else {
+            return parseToLegacy(AstraLogin.PREFIX + " " + rawMessage);
+        }
+    }
+
+    // Wersja domyślna (dla graczy)
     public String getWithPrefix(String path) {
-        return parseToLegacy(AstraLogin.PREFIX) + " " + getMessage(path);
+        String rawMessage = getRawMessage(path);
+
+        if (rawMessage == null) {
+            missingKeys.add(path);
+            return parseToLegacy(AstraLogin.PREFIX) + " §cMissing message: " + path;
+        }
+
+        return parseToLegacy(AstraLogin.PREFIX + " " + rawMessage);
     }
 }

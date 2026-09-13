@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.accounts;
+package pl.dawcou.astralogin.commands;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -10,8 +10,8 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
-import pl.dawcou.astralogin.auth.AstraLogin;
-import pl.dawcou.astralogin.auth.security.IPManager;
+import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.auth.security.ip.IPManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -47,7 +47,7 @@ public class AccountCommand implements CommandExecutor {
 
             String targetName = args[0];
             String targetUUIDString = null;
-            FileConfiguration config = plugin.getAccountDataManager().getConfig();
+            FileConfiguration config = plugin.getAccountManager().getConfig();
 
             // Szukamy gracza w pliku accounts.yml po nicku
             if (config.getConfigurationSection("accounts") != null) {
@@ -72,7 +72,7 @@ public class AccountCommand implements CommandExecutor {
             String regDate = config.getString(path + "register-date", plugin.getLanguageManager().getMessage("account.not-found"));
             String loginDate = config.getString(path + "last-login-date", plugin.getLanguageManager().getMessage("account.not-found"));
             boolean isRegistered = config.getBoolean(path + "is-registered", false);
-            boolean Has2FA = config.getBoolean(path + "2fa-enabled", false);
+            boolean Has2FA = plugin.getTwoFactorManager().has2FA(targetUUIDString);
 
             if (!isRegistered) {
                 regDate = plugin.getLanguageManager().getMessage("account.status.not-registered");
@@ -109,7 +109,7 @@ public class AccountCommand implements CommandExecutor {
 
             String targetName = args[0];
             UUID targetUUID = null;
-            FileConfiguration accountsConfig = plugin.getAccountDataManager().getConfig();
+            FileConfiguration accountsConfig = plugin.getAccountManager().getConfig();
 
             if (accountsConfig.getConfigurationSection("accounts") != null) {
                 for (String uuidKey : accountsConfig.getConfigurationSection("accounts").getKeys(false)) {
@@ -165,7 +165,7 @@ public class AccountCommand implements CommandExecutor {
             plugin.getSessionManager().deleteSession(targetUUID);
             plugin.getSessionManager().deleteSession2FA(targetUUID);
 
-            plugin.getAccountDataManager().purgeAccountData(targetUUID);
+            plugin.getAccountManager().purgeAccountData(targetUUID);
 
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("purge-account.admin-success").replace("%player%", targetName));
 
@@ -234,7 +234,7 @@ public class AccountCommand implements CommandExecutor {
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("accounts-list.generating"));
 
             plugin.getSchedulerManager().runAsync(() -> {
-                FileConfiguration config = plugin.getAccountDataManager().getConfig();
+                FileConfiguration config = plugin.getAccountManager().getConfig();
 
                 if (config.getConfigurationSection("accounts") == null) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("accounts-list.empty"));
@@ -287,36 +287,36 @@ public class AccountCommand implements CommandExecutor {
                 return true;
             }
 
-            String oldNick = args[0];
-            String newNick = args[1];
+            String oldNickname = args[0];
+            String newNickname = args[1];
 
-            OfflinePlayer oldPlayer = Bukkit.getOfflinePlayer(oldNick);
-            OfflinePlayer newPlayer = Bukkit.getOfflinePlayer(newNick);
+            OfflinePlayer oldPlayer = Bukkit.getOfflinePlayer(oldNickname);
+            OfflinePlayer newPlayer = Bukkit.getOfflinePlayer(newNickname);
 
             String oldUUID = oldPlayer.getUniqueId().toString();
             String newUUID = newPlayer.getUniqueId().toString();
 
-            if (oldNick.equals(newNick)) {
+            if (oldNickname.equals(newNickname)) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.player-same"));
                 return true;
             }
 
             if (!oldPlayer.hasPlayedBefore()) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.player-not-exists")
-                        .replace("%target%", oldNick));
+                        .replace("%target%", oldNickname));
                 return true;
             }
 
             if (oldPlayer.isOnline() || newPlayer.isOnline()) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.players-online")
-                        .replace("%old%", oldNick)
-                        .replace("%new%", newNick));
+                        .replace("%old%", oldNickname)
+                        .replace("%new%", newNickname));
                 return true;
             }
 
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.start")
-                    .replace("%old%", oldNick)
-                    .replace("%new%", newNick));
+                    .replace("%old%", oldNickname)
+                    .replace("%new%", newNickname));
 
             plugin.getSchedulerManager().runAsync(() -> {
                 Path pluginFolder = plugin.getDataFolder().toPath();
@@ -333,7 +333,7 @@ public class AccountCommand implements CommandExecutor {
                         String content = Files.readString(path);
                         // Szukamy po UUID lub po nicku w zawartości pliku / nazwie pliku
                         if (path.getFileName().toString().contains(oldUUID) ||
-                                path.getFileName().toString().contains(oldNick) ||
+                                path.getFileName().toString().contains(oldNickname) ||
                                 content.contains(oldUUID)) {
                             oldPlayerHasData = true;
                             break;
@@ -347,7 +347,7 @@ public class AccountCommand implements CommandExecutor {
                 // Jeśli stary nick nie ma żadnych danych blokujemy
                 if (!oldPlayerHasData) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.old-player-no-data")
-                            .replace("%target%", oldNick));
+                            .replace("%target%", oldNickname));
                     return;
                 }
 
@@ -391,7 +391,7 @@ public class AccountCommand implements CommandExecutor {
 
                         Component confirmBtn = LegacyComponentSerializer.legacySection()
                                 .deserialize(btnTextStr)
-                                .clickEvent(ClickEvent.runCommand("/moveaccount " + oldNick + " " + newNick + " confirm"))
+                                .clickEvent(ClickEvent.runCommand("/moveaccount " + oldNickname + " " + newNickname + " confirm"))
                                 .hoverEvent(LegacyComponentSerializer.legacySection().deserialize(hoverTextStr));
 
                         // Wysyłka bezpiecznie przez BukkitAudiences (obsługuje gracza i konsole):
@@ -417,7 +417,7 @@ public class AccountCommand implements CommandExecutor {
                                         modifiedFilesCount[0]++;
                                     }
                                 } catch (IOException e) {
-                                    plugin.getNoticeManager().sendMigrationError(path.getFileName().toString());
+                                    e.printStackTrace();
                                 }
                             });
 
@@ -436,11 +436,11 @@ public class AccountCommand implements CommandExecutor {
 
 
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.success")
-                            .replace("%old%", oldNick)
-                            .replace("%new%", newNick));
+                            .replace("%old%", oldNickname)
+                            .replace("%new%", newNickname));
 
                     String adminName = sender.getName();
-                    plugin.getLogManager().log("Player " + oldNick + " has been successfully migrated to " + newNick + " by " + adminName);
+                    plugin.getLogManager().log("Player " + oldNickname + " has been successfully migrated to " + newNickname + " by " + adminName);
 
                 } catch (IOException e) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.error-migration"));

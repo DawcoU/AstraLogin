@@ -1,8 +1,11 @@
 package pl.dawcou.astralogin.system;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Server;
+import org.bukkit.entity.Entity;
 import org.bukkit.scheduler.BukkitTask;
-import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.AstraLogin;
 
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -10,13 +13,16 @@ import java.util.function.Consumer;
 public class SchedulerManager {
 
     private final AstraLogin plugin;
-    private final boolean hasAsyncScheduler;
+
+    private final boolean hasPaperAsyncApi;
     private final boolean isFolia;
+    private final boolean hasTeleportAsync;
 
     public SchedulerManager(AstraLogin plugin) {
         this.plugin = plugin;
-        this.hasAsyncScheduler = checkAsyncScheduler();
+        this.hasPaperAsyncApi = checkAsyncScheduler();
         this.isFolia = checkFolia();
+        this.hasTeleportAsync = checkTeleportAsync();
     }
 
     @FunctionalInterface
@@ -26,8 +32,7 @@ public class SchedulerManager {
 
     private boolean checkAsyncScheduler() {
         try {
-            // Sprawdzamy czy metoda getAsyncScheduler istnieje w runtime serwera
-            Bukkit.getServer().getClass().getMethod("getAsyncScheduler");
+            Server.class.getMethod("getAsyncScheduler");
             return true;
         } catch (NoSuchMethodException e) {
             return false;
@@ -43,11 +48,55 @@ public class SchedulerManager {
         }
     }
 
+    private boolean checkTeleportAsync() {
+        try {
+            Entity.class.getMethod("teleportAsync", Location.class);
+            return true;
+        } catch (NoSuchMethodException e) {
+            return false;
+        }
+    }
+
     /**
-     * Wykonuje zadanie asynchronicznie natychmiast (działa na Paper/Folia oraz Spigot/Arclight)
+     * Executes a task for a specific entity on its region thread (Folia compatible).
+     */
+    public void runForEntity(Entity entity, Runnable runnable) {
+        if (isFolia) {
+            entity.getScheduler().run(plugin, task -> runnable.run(), null);
+        } else {
+            runSync(runnable);
+        }
+    }
+
+    /**
+     * Executes a delayed task for a specific entity on its region thread (Folia compatible).
+     */
+    public void runForEntityLater(Entity entity, Runnable runnable, long delayTicks) {
+        if (isFolia) {
+            entity.getScheduler().runDelayed(plugin, task -> runnable.run(), null, delayTicks);
+        } else {
+            runSyncLater(runnable, delayTicks);
+        }
+    }
+
+    /**
+     * Safe teleportation logic for Spigot, Paper, and Folia.
+     */
+    public void teleport(Entity entity, Location location) {
+        if (isFolia) {
+            entity.getScheduler().run(plugin, task -> entity.teleportAsync(location), null);
+        } else if (hasTeleportAsync) {
+            entity.teleportAsync(location);
+        } else {
+            entity.teleport(location);
+        }
+    }
+
+    /**
+     * Executes a task asynchronously immediately.
      */
     public void runAsync(Runnable runnable) {
-        if (hasAsyncScheduler) {
+        if (hasPaperAsyncApi) {
             Bukkit.getServer().getAsyncScheduler().runNow(plugin, task -> runnable.run());
         } else {
             Bukkit.getScheduler().runTaskAsynchronously(plugin, runnable);
@@ -55,11 +104,10 @@ public class SchedulerManager {
     }
 
     /**
-     * Wykonuje zadanie asynchronicznie cyklicznie.
+     * Executes a task asynchronously with repeating period.
      */
     public Task runAsyncRepeating(Consumer<Task> taskConsumer, long initialDelay, long period, TimeUnit unit) {
-        if (hasAsyncScheduler) {
-            // Wynik runAtFixedRate przekazujemy od razu do lambdy
+        if (hasPaperAsyncApi) {
             var paperTask = Bukkit.getServer().getAsyncScheduler().runAtFixedRate(
                     plugin,
                     st -> {
@@ -91,18 +139,15 @@ public class SchedulerManager {
         }
     }
 
-    /**
-     * Uruchamia powtarzalne zadanie asynchroniczne (bez potrzeby anulowania wewnątrz).
-     */
     public Task runAsyncRepeating(Runnable runnable, long initialDelay, long period, TimeUnit unit) {
         return runAsyncRepeating(task -> runnable.run(), initialDelay, period, unit);
     }
 
     /**
-     * Wykonuje zadanie asynchronicznie z opóźnieniem w tickach (1 tick = 50ms)
+     * Executes a task asynchronously with delay in ticks.
      */
     public void runAsyncLater(Runnable runnable, long delayTicks) {
-        if (hasAsyncScheduler) {
+        if (hasPaperAsyncApi) {
             Bukkit.getServer().getAsyncScheduler().runDelayed(
                     plugin,
                     task -> runnable.run(),
@@ -115,10 +160,63 @@ public class SchedulerManager {
     }
 
     /**
-     * Wykonuje zadanie synchronicznie na głównym wątku
+     * Executes a repeating task synchronously (GlobalRegionScheduler on Folia).
+     */
+    public Task runSyncRepeating(Consumer<Task> taskConsumer, long initialDelayTicks, long periodTicks) {
+        if (hasPaperAsyncApi && isFolia) {
+            var foliaTask = Bukkit.getServer().getGlobalRegionScheduler().runAtFixedRate(
+                    plugin,
+                    st -> {
+                        Task taskHandle = st::cancel;
+                        taskConsumer.accept(taskHandle);
+                    },
+                    initialDelayTicks,
+                    periodTicks
+            );
+            return foliaTask::cancel;
+        } else {
+            java.util.concurrent.atomic.AtomicReference<BukkitTask> bukkitTaskRef = new java.util.concurrent.atomic.AtomicReference<>();
+
+            BukkitTask task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+                Task taskHandle = () -> {
+                    if (bukkitTaskRef.get() != null) {
+                        bukkitTaskRef.get().cancel();
+                    }
+                };
+                taskConsumer.accept(taskHandle);
+            }, initialDelayTicks, periodTicks);
+
+            bukkitTaskRef.set(task);
+            return task::cancel;
+        }
+    }
+
+    public Task runSyncRepeating(Runnable runnable, long initialDelayTicks, long periodTicks) {
+        return runSyncRepeating(task -> runnable.run(), initialDelayTicks, periodTicks);
+    }
+
+    /**
+     * Executes a delayed synchronous task (GlobalRegionScheduler on Folia).
+     */
+    public Task runSyncLater(Runnable runnable, long delayTicks) {
+        if (hasPaperAsyncApi && isFolia) {
+            var foliaTask = Bukkit.getServer().getGlobalRegionScheduler().runDelayed(
+                    plugin,
+                    task -> runnable.run(),
+                    delayTicks
+            );
+            return foliaTask::cancel;
+        } else {
+            BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, runnable, delayTicks);
+            return task::cancel;
+        }
+    }
+
+    /**
+     * Executes a synchronous task on the global main thread / global region.
      */
     public void runSync(Runnable runnable) {
-        if (hasAsyncScheduler && isFolia) {
+        if (hasPaperAsyncApi && isFolia) {
             Bukkit.getServer().getGlobalRegionScheduler().run(plugin, task -> runnable.run());
         } else {
             Bukkit.getScheduler().runTask(plugin, runnable);

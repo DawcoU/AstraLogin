@@ -19,10 +19,13 @@ messages:
 
   # --- Logowanie ---
   login:
+    server-busy: "&cSerwer jest obecnie przeciążony próbami logowania. Spróbuj ponownie"
+    rate-limit: "&cZbyt wiele prób logowania! Odczekaj &6%time% &cprzed kolejną próbą"
+
     already-logged: "&cJesteś już zalogowany/zarejestrowany!"
     already-online: "&cGracz o tym nicku jest na serwerze!"
     wrong-casing: "&cWejdź na serwer używając poprawnej wielkości liter!\n&7Prawidłowy nick: &6%registered%"
-    no-account: "&cNie masz konta! Wpisz &e/zarejestruj <hasło> <powtórz>"
+    no-account: "&cNie masz konta! Wpisz &e/zarejestruj <hasło, powtórz>"
     success: "&aZalogowano"
     reminder: "&eZaloguj się: &f/zaloguj <hasło>"
     usage: "&cPoprawne użycie: &e/zaloguj <hasło>"
@@ -32,8 +35,8 @@ messages:
   # --- Rejestracja ---
   register:
     success: "&aZarejestrowano"
-    reminder: "&eZarejestruj się: &f/zarejestruj <hasło> <powtórz>"
-    usage: "&cPoprawne użycie: &e/zarejestruj <hasło> <powtórz>"
+    reminder: "&eZarejestruj się: &f/zarejestruj <hasło, powtórz>"
+    usage: "&cPoprawne użycie: &e/zarejestruj <hasło, powtórz>"
 
 
   # --- Logowanie Premium ---
@@ -41,7 +44,7 @@ messages:
     success: "&aWykryto konto &ePremium &azalogowano automatycznie!"
 
 
-  # ---  /niepamietamhasla ---
+  # --- /niepamietamhasla ---
   forgot-password:
     usage: "&cPoprawne użycie: &e/niepamietamhasla <PIN>"
     wrong-pin: "&cBłędny PIN!"
@@ -56,17 +59,18 @@ messages:
     not-match: "&cHasła nie są identyczne!"
     too-short: "&cHasło jest za krótkie! Minimum &6%min% &cznaków"
     too-long: "&cHasło jest za długie! Maksimum &6%max% &cznaków"
-    change-usage: "&cPoprawne użycie: &e/zmienhaslo <stare> <nowe> <powtórz>"
+    change-usage: "&cPoprawne użycie: &e/zmienhaslo <stare, nowe, powtórz>"
     wrong-old: "&cStare hasło jest niepoprawne!"
     changed-kick: "&aTwoje hasło zostało zmienione! &eZaloguj się ponownie"
     changed: "&aTwoje hasło zostało pomyślnie zmienione!"
     identical: "&cWpisane nowe hasło jest identyczne ze starym!"
+    error: "&cWystąpił błąd krytyczny podczas weryfikacji hasła. Zgłoś to administracji"
 
 
   # --- PIN'y ---
   pin:
-    usage: "&cPoprawne użycie: &e/pin <set>"
-    set-usage: "&cPoprawne użycie: &e/pin <set> <PIN>"
+    usage: "&cPoprawne użycie: &e/pin <setup>"
+    set-usage: "&cPoprawne użycie: &e/pin <setup, PIN>"
     invalid-length: "&cPIN musi mieć dokładnie &6%length% &ccyfr!"
     contains-letters: "&cPIN może zawierać tylko cyfry!"
     already-set: "&cMasz już ustawiony PIN!"
@@ -80,20 +84,40 @@ messages:
     max-attempts: "&cZbyt wiele nieudanych prób logowania! Pozostałe próby: &6%remaining%"
     max-attempts-ban: "&cZbyt wiele nieudanych prób! Zostałeś zbanowany na &6%time%"
     multiaccount: "&cOsiągnięto limit kont dla tego adresu IP!"
-    ip-spam: "&cWykryto zbyt dużo prób połączenia z Twojego IP! Zostałeś zablokowany na &6%time%"
-    ip-mismatch: "&cTwoje IP nie zgadza się z tym kontem!"
+    ip-spam: "&cWykryto zbyt dużo prób połączenia z Twojego adresu IP! Jesteś zablokowany na &6%time%"
+    ip-mismatch: "&cTwój adres IP nie zgadza się z tym kontem!"
+
+
+  security-reminder:
+    no-2fa-no-pin:
+      - "&c----------------------------------------"
+      - "&eTwoje konto nie jest w pełni zabezpieczone!"
+      - "&f1. Włącz 2FA przez &a/2fa <setup>&f, aby nikt nie ukradł Twojego konta"
+      - "&f2. Ustaw PIN przez &a/pin <setup>&f, aby móc odzyskać konto po zapomnieniu hasła"
+      - "&c----------------------------------------"
+    no-2fa-has-pin:
+      - "&c----------------------------------------"
+      - "&eTwoje konto nie ma jeszcze włączonego 2FA!"
+      - "&fZwiększ bezpieczeństwo konta za pomocą &a/2fa <setup>"
+      - "&c----------------------------------------"
+    has-2fa-no-pin:
+      - "&e----------------------------------------"
+      - "&aPrawie gotowe!"
+      - "&fMasz włączone 2FA, ale nie masz ustawionego PIN-u odzyskiwania"
+      - "&fUstaw go przez &a/pin <setup>&f, aby móc odzyskać dostęp do konta"
+      - "&e----------------------------------------"
 
 
   # --- Zaufanie IP ---
   ip-trust:
-    usage: "&cPoprawne użycie: &6/zaufanieip reset, info, set | <IP> | <score>"
+    usage: "&cPoprawne użycie: &6/zaufanieip <reset, info, set, adres IP, score>"
     ip-not-found: "&cNie znaleziono adresu IP: &6(%ip%)"
     invalid-number: "&cIlość punktów może zawierać tylko cyfry!"
     reset-success: "&aPomyślnie zresetowano reputację dla IP: &e(%ip%)"
-    set-success: "&aPomyślnie ustawiono reputację: &6(%score%) &adla IP: &e(%ip%)"
+    set-success: "&aPomyślnie ustawiono reputację: &6(%score%) &adla adresu IP: &e(%ip%)"
     ip-info:
       - "&7&m-------------------------"
-      - "&6&lReputacja IP (%ip%):"
+      - "&6&lReputacja adresu IP (%ip%):"
       - "&eWynik Zaufania: &f%score%"
       - "&6Ocena: %rate%"
       - "&7&m-------------------------"
@@ -102,6 +126,20 @@ messages:
     rate-neutral: "&7Neutralny"
     rate-good: "&aDobry"
     rate-ideal: "&bIdealny"
+
+
+  # --- Zarządzanie IP i Banami /ipmanager ---
+  ip-manager:
+    usage: "&cUżycie: /ipmanager <info, unban, bypass, unbypass, gracz>"
+    no-ip: "&cBrak zarejestrowanego adresu IP dla gracza &6%player%&c!"
+    info-not-banned: "&aGracz &6%player% &7(Adres IP: %ip%) &anie ma aktywnej blokady adresu IP"
+    info-banned: "&cGracz &6%player% &7(Adres IP: %ip%) &cjest zbanowany! Powód: &6%reason%&c, Pozostało: &6%time% s"
+    not-banned: "&cAdres IP gracza &6%player% &cnie jest zbanowany!"
+    unban-success: "&aPomyślnie odbanowano adres IP gracza &6%player% &7(%ip%)&a!"
+    bypass-enabled: "&aWłączono bypass sprawdzania adresu IP dla gracza &6%player%"
+    bypass-active: "&cBypass adresu IP dla gracza &6%player% &cjest już włączony!"
+    bypass-disabled: "&cWyłączono bypass sprawdzania adresu IP dla gracza &6%player%"
+    bypass-not-active: "&cBypass adresu IP dla gracza &6%player% &cjest już wyłączony!"
 
 
   # --- Sesje ---
@@ -122,7 +160,7 @@ messages:
 
   # --- Weryfikacja dwuetapowa 2FA ---
   twofactor:
-    usage: "&cPoprawne użycie: &6/2fa setup, next, unsetup, confirm | <kod>"
+    usage: "&cPoprawne użycie: &6/2fa <setup, next, unsetup, confirm, kod>"
     already-enabled: "&cMasz już włączone zabezpieczenie 2FA!"
     not-enabled: "&cNie masz włączonego zabezpieczenia 2FA!"
 
@@ -164,7 +202,7 @@ messages:
     stats:
       header: "&8--- &6Statystyki konta: &e%target% &8---"
       uuid: "&7UUID: &f%uuid%"
-      ip: "&7Ostatnie IP: &f%ip%"
+      ip: "&7Ostatni adres IP: &f%ip%"
       register-date: "&7Data rejestracji: &f%register_date%"
       login-date: "&7Ostatnie logowanie: &f%login_date%"
       status-2fa: "&7Status 2FA: %status%"
@@ -187,16 +225,16 @@ messages:
 
   # --- Komenda /listaip ---
   ip-list:
-    generating: "&7Ładowanie Listy IP..."
+    generating: "&7Ładowanie Listy adresów IP..."
     empty: "&cBaza danych adresów IP jest pusta"
-    header: "&7===== &6Zarejestrowane IP &7====="
+    header: "&7===== &6Zarejestrowane adresy IP &7====="
     format: "&e%ip% &b(&6Kont: %count%&b) &7-> &a%players%"
     footer: "&7==========================================="
 
 
   # --- Komenda /przenieskonto ---
   account-move:
-    usage: "&cPoprawne użycie: &e/przenieskonto <stary nick> <nowy nick>"
+    usage: "&cPoprawne użycie: &e/przenieskonto <stary nick, nowy nick>"
     start: "&aRozpoczynam proces weryfikacji i migracji dla &e%old% &a--> &e%new%"
 
     success: "&aPomyślnie przeniesiono dane z konta &e%old% &ana konto &e%new%&a!"
@@ -240,7 +278,7 @@ messages:
     usage: "&cPoprawne użycie: &e/zresetujip <gracz>"
     no-ip: "&cTen gracz nie ma zapisanego adresu IP!"
 
-    admin-success: "&aIP gracza &6%player% &azostało zresetowane"
+    admin-success: "&aAdres IP gracza &6%player% &azostał zresetowany"
 
     player-kick: "&cTwój adres IP został zresetowany przez administratora!"
 
@@ -273,9 +311,8 @@ messages:
   spawn:
     set-success: "&aPomyślnie ustawiono lokalizację dla: &e%type%"
     deleted-success: "&aUsunięto lokalizację spawna: &e%type%"
-    login-usage: "&cPoprawne użycie: &e/spawnlogowania <setspawn|delspawn> <before_login|after_login>"
 
-    usage: "&cPoprawne użycie: &e/spawnlogowania %cmd% <before_login|after_login>"
+    usage: "&cPoprawne użycie: &e/spawnlogowania <setspawn, delspawn> <before_login, after_login>"
     invalid-type: "&cNieprawidłowy typ! &eUżyj: before_login lub after_login"
     exists: "&cSpawn &6%type% &cjuż istnieje!"
     does-not-exist: "&cSpawn &6%type% &cnie istnieje!"

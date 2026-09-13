@@ -1,7 +1,7 @@
 package pl.dawcou.astralogin.file;
 
 import org.bukkit.configuration.file.FileConfiguration;
-import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.system.LoginUtils;
 
 import java.io.File;
@@ -22,7 +22,7 @@ public class BackupManager {
         this.plugin = plugin;
     }
 
-    public void createBackup() {
+    public void createBackup(boolean ignoreInterval) {
         FileConfiguration config = plugin.getConfig();
         String timeString = config.getString("settings.backups.interval", "24 hours");
         int limit = config.getInt("settings.backups.limit", 10);
@@ -35,30 +35,32 @@ public class BackupManager {
             File dataFolder = plugin.getDataFolder();
             File backupDirectory = new File(dataFolder, "backups");
 
-            long defaultIntervalMs = 24L * 60 * 60 * 1000;
-            long intervalMs = LoginUtils.parseTime(timeString, defaultIntervalMs);
+            if (!ignoreInterval) {
+                long defaultIntervalMs = 24L * 60 * 60 * 1000;
+                long intervalMs = LoginUtils.parseTime(timeString, defaultIntervalMs);
 
-            long minimumMs = 12L * 60 * 60 * 1000;
-            if (intervalMs < minimumMs) {
-                intervalMs = minimumMs;
-            }
+                long minimumMs = 12L * 60 * 60 * 1000;
+                if (intervalMs < minimumMs) {
+                    intervalMs = minimumMs;
+                }
 
-            long now = System.currentTimeMillis();
-            long lastBackupTime = 0L;
+                long now = System.currentTimeMillis();
+                long lastBackupTime = 0L;
 
-            if (backupDirectory.exists() && backupDirectory.isDirectory()) {
-                File[] files = backupDirectory.listFiles((dir, name) -> name.endsWith(".zip"));
-                if (files != null && files.length > 0) {
-                    for (File file : files) {
-                        if (file.lastModified() > lastBackupTime) {
-                            lastBackupTime = file.lastModified();
+                if (backupDirectory.exists() && backupDirectory.isDirectory()) {
+                    File[] files = backupDirectory.listFiles((dir, name) -> name.endsWith(".zip"));
+                    if (files != null) {
+                        for (File file : files) {
+                            if (file.lastModified() > lastBackupTime) {
+                                lastBackupTime = file.lastModified();
+                            }
                         }
                     }
                 }
-            }
 
-            if (lastBackupTime > 0 && (now - lastBackupTime < intervalMs)) {
-                return;
+                if (lastBackupTime > 0 && (now - lastBackupTime < intervalMs)) {
+                    return;
+                }
             }
 
             // Sprawdzamy czy w ogóle jest co pakować
@@ -84,10 +86,10 @@ public class BackupManager {
                 Path backupsPath = backupDirectory.toPath();
                 Path logsPath = new File(dataFolder, "logs").toPath();
 
-                Files.walkFileTree(sourcePath, new SimpleFileVisitor<Path>() {
+                Files.walkFileTree(sourcePath, new SimpleFileVisitor<>() {
                     @Override
-                    public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                        // Teraz tylko porównujemy gotowe obiekty
+                    public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                        // Porównujemy gotowe obiekty
                         if (dir.equals(backupsPath) || dir.equals(logsPath)) {
                             return FileVisitResult.SKIP_SUBTREE;
                         }

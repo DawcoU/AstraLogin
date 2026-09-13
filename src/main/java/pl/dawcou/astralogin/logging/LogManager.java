@@ -1,7 +1,7 @@
 package pl.dawcou.astralogin.logging;
 
 import org.bukkit.configuration.file.FileConfiguration;
-import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.AstraLogin;
 
 import java.io.File;
 import java.io.FileWriter;

@@ -1,9 +1,9 @@
-package pl.dawcou.astralogin.accounts;
+package pl.dawcou.astralogin.auth.accounts;
 
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.AstraLogin;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,15 +55,13 @@ public class AccountManager {
      * Zapisuje konfigurację na dysk asynchronicznie, aby nie blokować głównego wątku serwera.
      */
     public void saveConfig() {
-        plugin.getSchedulerManager().runAsync(() -> {
-            synchronized (configFile) { // Synchronizacja, żeby uniknąć uszkodzenia pliku przy wielu zapisach naraz
-                try {
-                    accountsConfig.save(configFile);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+        synchronized (configFile) { // Synchronizacja, żeby uniknąć uszkodzenia pliku przy wielu zapisach naraz
+            try {
+                accountsConfig.save(configFile);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        });
+        }
     }
 
     /**
@@ -87,6 +85,23 @@ public class AccountManager {
         accountsConfig.set(path + "last-known-name", name); // Przy okazji aktualizujemy nick, gdyby gracz zmienił go
         accountsConfig.set(path + "last-ip", ip);
         accountsConfig.set(path + "last-login-date", getCurrentDateTime());
+        saveConfig();
+    }
+
+    /**
+     * Pobiera timestamp (ms) ostatnio wysłanego przypomnienia o bezpieczeństwie.
+     */
+    public long getLastSecurityReminderTime(UUID uuid) {
+        String path = "accounts." + uuid.toString() + ".last-security-reminder-timestamp";
+        return accountsConfig.getLong(path, 0L);
+    }
+
+    /**
+     * Zapisuje timestamp (ms) wysłanego przypomnienia o bezpieczeństwie.
+     */
+    public void setLastSecurityReminderTime(UUID uuid, long timestamp) {
+        String path = "accounts." + uuid.toString() + ".last-security-reminder-timestamp";
+        accountsConfig.set(path, timestamp);
         saveConfig();
     }
 
@@ -121,14 +136,6 @@ public class AccountManager {
         }
     }
 
-    /**
-     * Pobiera nick gracza z danych konta
-     */
-    public String getPlayerName(String uuid) {
-        String path = "accounts." + uuid + ".last-known-name";
-        return accountsConfig.getString(path);
-    }
-
     public String getRegisteredNameIgnoreCase(String inputName) {
         if (accountsConfig == null) {
             return null;
@@ -144,7 +151,7 @@ public class AccountManager {
             String savedName = accountsSection.getString(uuidKey + ".last-known-name");
 
             if (savedName != null && savedName.equalsIgnoreCase(inputName)) {
-                return savedName; // Zwróci dokładny zarejestrowany nick, np. "DawcoU"
+                return savedName; // Zwróci dokładny zarejestrowany nick
             }
         }
 

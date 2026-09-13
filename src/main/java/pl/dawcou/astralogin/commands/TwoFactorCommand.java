@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.auth.twofactor;
+package pl.dawcou.astralogin.commands;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -8,8 +8,9 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
-import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.LoginSystem;
+import pl.dawcou.astralogin.auth.security.twofactor.TwoFactorManager;
 
 import java.util.List;
 import java.util.UUID;
@@ -48,7 +49,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             OfflinePlayer offlineP = Bukkit.getOfflinePlayer(targetName);
             UUID targetUUID = offlineP.getUniqueId();
 
-            FileConfiguration accountsConfig = plugin.getAccountDataManager().getConfig();
+            FileConfiguration accountsConfig = plugin.getAccountManager().getConfig();
 
             if (twoFactorManager.isSetupActive(targetUUID)) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.player-setting-up")
@@ -97,7 +98,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
         // SETUP
         if (args[0].equalsIgnoreCase("setup")) {
-            if (plugin.getAccountDataManager().getConfig().getBoolean("accounts." + uuid + ".2fa-enabled", false)) {
+            if (plugin.getAccountManager().getConfig().getBoolean("accounts." + uuid + ".2fa-enabled", false)) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("2fa-already-enabled"));
                 return true;
             }
@@ -163,7 +164,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
         // UNSETUP
         if (args[0].equalsIgnoreCase("unsetup")) {
-            if (!plugin.getAccountDataManager().getConfig().getBoolean("accounts." + uuid + ".2fa-enabled", false)) {
+            if (!plugin.getAccountManager().getConfig().getBoolean("accounts." + uuid + ".2fa-enabled", false)) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.not-enabled"));
                 return true;
             }
@@ -211,9 +212,8 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                     plugin.getLogManager().log("Player " + p.getName() + " removed 2FA protection from his account");
                     p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.removed-success"));
                 } else {
-                    if (plugin.getConfig().getInt("features.attempts.max", 3) > 0) {
-                        plugin.getAttemptManager().dodajProbe(p, "2FA");
-                    }
+                    plugin.getAttemptManager().checkCrime(p, "2FA");
+
                     plugin.getIpTrustManager().addTrustScore(
                             ip,
                             plugin.getIpTrustManager().getTwofaFailedPoints()
@@ -234,7 +234,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             if (twoFactorManager.useBackupCode(uuid, rawInput)) {
                 loginSystem.removeWaitingFor2FA(uuid);
                 loginSystem.finishLogin(p);
-                if (plugin.getConfig().getBoolean("features.2fa.session.enabled")) {
+                if (plugin.getConfig().getBoolean("security.2fa.session.enabled")) {
                     plugin.getSessionManager().saveSession2FA(uuid, ip);
                 }
                 plugin.getLogManager().log("Player " + p.getName() + " entered a valid backup code and was logged in");
@@ -249,9 +249,8 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                         10, 40, 10
                 );
             } else {
-                if (plugin.getConfig().getInt("features.attempts.max", 3) > 0) {
-                    plugin.getAttemptManager().dodajProbe(p, "2FA");
-                }
+                plugin.getAttemptManager().checkCrime(p, "2FA");
+
                 plugin.getIpTrustManager().addTrustScore(
                         ip,
                         plugin.getIpTrustManager().getTwofaFailedPoints()
@@ -301,7 +300,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             if (secret != null && twoFactorManager.verifyCode(secret, code)) {
                 loginSystem.removeWaitingFor2FA(uuid);
                 loginSystem.finishLogin(p);
-                if (plugin.getConfig().getBoolean("features.2fa.session.enabled")) {
+                if (plugin.getConfig().getBoolean("security.2fa.session.enabled")) {
                     plugin.getSessionManager().saveSession2FA(uuid, ip);
                 }
                 plugin.getLogManager().log("Player " + p.getName() + " entered the correct 2FA code and was logged in");
@@ -316,9 +315,8 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                         10, 40, 10
                 );
             } else {
-                if (plugin.getConfig().getInt("features.attempts.max", 3) > 0) {
-                    plugin.getAttemptManager().dodajProbe(p, "2FA");
-                }
+                plugin.getAttemptManager().checkCrime(p, "2FA");
+
                 plugin.getIpTrustManager().addTrustScore(
                         ip,
                         plugin.getIpTrustManager().getTwofaFailedPoints()

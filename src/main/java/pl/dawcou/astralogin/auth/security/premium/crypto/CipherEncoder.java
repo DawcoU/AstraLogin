@@ -13,7 +13,7 @@ public class CipherEncoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) throws Exception {
+    protected void encode(ChannelHandlerContext ctx, ByteBuf msg, ByteBuf out) {
         int readable = msg.readableBytes();
         byte[] heap = new byte[readable];
         msg.readBytes(heap);

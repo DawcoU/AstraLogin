@@ -3,6 +3,7 @@ package pl.dawcou.astralogin.auth;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.system.LoginUtils;
 
 import java.io.File;
@@ -18,12 +19,12 @@ public class SessionManager {
     private FileConfiguration sessionConfig;
 
     // --- MAPY RAM DLA SESJI HASŁA ---
-    private final Map<UUID, Long> sesje = new HashMap<>();
-    private final Map<UUID, String> sesjeIP = new HashMap<>();
+    private final Map<UUID, Long> sessions = new HashMap<>();
+    private final Map<UUID, String> sessionsIP = new HashMap<>();
 
     // --- MAPY RAM DLA MODUŁU 2FA ---
-    private final Map<UUID, Long> dfaSesje = new HashMap<>();
-    private final Map<UUID, String> dfaIP = new HashMap<>();
+    private final Map<UUID, Long> TwoFactorSessions = new HashMap<>();
+    private final Map<UUID, String> TwoFactorSessionsIP = new HashMap<>();
 
     public SessionManager(AstraLogin plugin) {
         this.plugin = plugin;
@@ -35,6 +36,12 @@ public class SessionManager {
         sessionConfig = YamlConfiguration.loadConfiguration(sessionFile);
     }
 
+    // At 3:00 AM I opened the AstraLogin JAR with Windows XP Notepad,
+    // removed several random Chinese symbols from the binary, and saved it.
+    // The JVM immediately exploded and released binary radiation,
+    // scattering broken zeros and ones across the filesystem.
+    // I have learned nothing from this experience.
+
     // ==========================================
     //          LOGIKA OBSŁUGI SESJI
     // ==========================================
@@ -43,11 +50,11 @@ public class SessionManager {
         long now = System.currentTimeMillis();
         long limit = getSessionLimitMillis();
 
-        sesje.forEach((uuid, timestamp) -> {
+        sessions.forEach((uuid, timestamp) -> {
             if (now - timestamp < limit) {
                 String path = "sessions." + uuid;
                 sessionConfig.set(path + ".timestamp", timestamp);
-                sessionConfig.set(path + ".ip", sesjeIP.get(uuid));
+                sessionConfig.set(path + ".ip", sessionsIP.get(uuid));
             } else {
                 String path = "sessions." + uuid;
                 sessionConfig.set(path + ".timestamp", null);
@@ -62,11 +69,11 @@ public class SessionManager {
         long now = System.currentTimeMillis();
         long limit = get2FALimitMillis();
 
-        dfaSesje.forEach((uuid, timestamp) -> {
+        TwoFactorSessions.forEach((uuid, timestamp) -> {
             if (now - timestamp < limit) {
                 String path = "sessions." + uuid;
                 sessionConfig.set(path + ".2fa-timestamp", timestamp);
-                sessionConfig.set(path + ".2fa-ip", dfaIP.get(uuid));
+                sessionConfig.set(path + ".2fa-ip", TwoFactorSessionsIP.get(uuid));
             } else {
                 String path = "sessions." + uuid;
                 sessionConfig.set(path + ".2fa-timestamp", null);
@@ -88,8 +95,8 @@ public class SessionManager {
         long now = System.currentTimeMillis();
         int count = 0;
 
-        sesje.clear();
-        sesjeIP.clear();
+        sessions.clear();
+        sessionsIP.clear();
 
         for (String uuidStr : section.getKeys(false)) {
             try {
@@ -98,8 +105,8 @@ public class SessionManager {
                 String ip = sessionConfig.getString("sessions." + uuidStr + ".ip");
 
                 if (timestamp > 0 && (now - timestamp < sessionLimit)) {
-                    sesje.put(uuid, timestamp);
-                    sesjeIP.put(uuid, ip);
+                    sessions.put(uuid, timestamp);
+                    sessionsIP.put(uuid, ip);
                     count++;
                 }
             } catch (IllegalArgumentException ignored) {
@@ -119,8 +126,8 @@ public class SessionManager {
     public void deleteSession(UUID uuid) {
         if (uuid == null) return;
 
-        sesje.remove(uuid);
-        sesjeIP.remove(uuid);
+        sessions.remove(uuid);
+        sessionsIP.remove(uuid);
 
         String path = "sessions." + uuid;
         if (sessionConfig.contains(path)) {
@@ -139,15 +146,15 @@ public class SessionManager {
 
     public boolean hasActiveSession(UUID uuid, String currentIP) {
         if (uuid == null || currentIP == null) return false;
-        if (!sesje.containsKey(uuid) || !sesjeIP.containsKey(uuid)) return false;
+        if (!sessions.containsKey(uuid) || !sessionsIP.containsKey(uuid)) return false;
 
-        String savedIP = sesjeIP.get(uuid);
+        String savedIP = sessionsIP.get(uuid);
         if (!currentIP.equals(savedIP)) {
             deleteSession(uuid);
             return false;
         }
 
-        long lastLogout = sesje.get(uuid);
+        long lastLogout = sessions.get(uuid);
         long now = System.currentTimeMillis();
 
         if (now - lastLogout <= getSessionLimitMillis()) {
@@ -164,8 +171,8 @@ public class SessionManager {
         long now = System.currentTimeMillis();
         String path = "sessions." + uuid;
 
-        sesje.put(uuid, now);
-        sesjeIP.put(uuid, ip);
+        sessions.put(uuid, now);
+        sessionsIP.put(uuid, ip);
 
         sessionConfig.set(path + ".timestamp", now);
         sessionConfig.set(path + ".ip", ip);
@@ -179,8 +186,8 @@ public class SessionManager {
         long now = System.currentTimeMillis();
         String path = "sessions." + uuid;
 
-        dfaSesje.put(uuid, now);
-        dfaIP.put(uuid, ip);
+        TwoFactorSessions.put(uuid, now);
+        TwoFactorSessionsIP.put(uuid, ip);
 
         sessionConfig.set(path + ".2fa-timestamp", now);
         sessionConfig.set(path + ".2fa-ip", ip);
@@ -191,8 +198,8 @@ public class SessionManager {
     public void deleteSession2FA(UUID uuid) {
         if (uuid == null) return;
 
-        dfaSesje.remove(uuid);
-        dfaIP.remove(uuid);
+        TwoFactorSessions.remove(uuid);
+        TwoFactorSessionsIP.remove(uuid);
 
         String path = "sessions." + uuid;
         if (sessionConfig.contains(path)) {
@@ -219,8 +226,8 @@ public class SessionManager {
         long dfaLimit = get2FALimitMillis();
         long now = System.currentTimeMillis();
 
-        dfaSesje.clear();
-        dfaIP.clear();
+        TwoFactorSessions.clear();
+        TwoFactorSessionsIP.clear();
 
         for (String uuidStr : section.getKeys(false)) {
             try {
@@ -229,24 +236,22 @@ public class SessionManager {
                 String ip = sessionConfig.getString("sessions." + uuidStr + ".2fa-ip");
 
                 if (timestamp > 0 && (now - timestamp < dfaLimit)) {
-                    dfaSesje.put(uuid, timestamp);
-                    dfaIP.put(uuid, ip);
+                    TwoFactorSessions.put(uuid, timestamp);
+                    TwoFactorSessionsIP.put(uuid, ip);
                 }
-            } catch (IllegalArgumentException e) {
-                // Ignorowanie blednych struktur UUID
-            }
+            } catch (IllegalArgumentException ignored) {}
         }
     }
 
     public long get2FALimitMillis() {
-        String timeStr = plugin.getConfig().getString("features.2fa.session.session-time", "2 days");
+        String timeStr = plugin.getConfig().getString("security.2fa.session.session-time", "2 days");
         return LoginUtils.parseTime(timeStr, 172800000L);
     }
 
     public boolean hasActive2FASession(UUID uuid) {
-        if (uuid == null || !dfaSesje.containsKey(uuid)) return false;
+        if (uuid == null || !TwoFactorSessions.containsKey(uuid)) return false;
 
-        long timestamp = dfaSesje.get(uuid);
+        long timestamp = TwoFactorSessions.get(uuid);
         long now = System.currentTimeMillis();
 
         if (now - timestamp >= get2FALimitMillis()) {

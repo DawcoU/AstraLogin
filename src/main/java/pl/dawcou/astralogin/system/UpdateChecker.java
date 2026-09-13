@@ -2,7 +2,7 @@ package pl.dawcou.astralogin.system;
 
 import com.google.gson.Gson;
 import org.bukkit.command.CommandSender;
-import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.AstraLogin;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -64,22 +64,21 @@ public class UpdateChecker {
         });
     }
 
+    // ------------------------------------------------------------------
+    // Compares software versions sequentially with proper DEV handling
+    // ------------------------------------------------------------------
     private void checkVersion(CommandSender sender, String current, ModrinthVersion latest) {
-        // 1. Idealne dopasowanie - masz DOKŁADNIE to, co jest najnowsze na Modrintha
         if (current.equalsIgnoreCase(latest.getVersion())) {
             plugin.getSchedulerManager().runSync(() -> {
                 if (current.contains("-")) {
-                    // Masz najnowszy pre-release -> przypadek 1C: tylko info o wersji eksperymentalnej
                     plugin.getNoticeManager().sendExperimentalNotice(sender);
                 } else {
-                    // Masz najnowszą wersję stabilną -> pełen spokój
                     plugin.getNoticeManager().sendVersionOk();
                 }
             });
             return;
         }
 
-        // 2. Bezpieczne czyszczenie i parsowanie cyfr wersji
         String cleanCurrent = current.split("-")[0];
         String cleanLatest = latest.getVersion().split("-")[0];
 
@@ -94,7 +93,6 @@ public class UpdateChecker {
         int latestMinor = latestParts.length > 1 ? Integer.parseInt(latestParts[1]) : 0;
         int latestPatch = latestParts.length > 2 ? Integer.parseInt(latestParts[2]) : 0;
 
-        // Flagi pomocnicze do czystych warunków
         boolean isCurrentExperimental = current.contains("-");
         boolean isLatestPreRelease = latest.isPrerelease();
 
@@ -104,43 +102,33 @@ public class UpdateChecker {
             // KROK 1: Obsługa wydań Pre-Release z sieci
             // ==========================================
             if (isLatestPreRelease) {
-                // Masz starszy pre-release, a wyszedł nowszy (np. 1.2.0-pre1 vs 1.2.0-pre2)
                 if (isCurrentExperimental && cleanCurrent.equals(cleanLatest)) {
-                    // Wyświetla info o nowej testowej ORAZ informuje, że Twoja też jest eksperymentalna
                     plugin.getNoticeManager().sendExperimentalNotice(sender);
                     plugin.getNoticeManager().sendPreReleaseNotice(sender, latest.getVersion());
                     return;
                 }
 
-                // Masz stabilną 1.3.0, a wyszła nowa wyższa cyfra w testach 1.4.0-pre1
-                // Wyświetlamy TYLKO info o dostępnym pre-release
                 plugin.getNoticeManager().sendPreReleaseNotice(sender, latest.getVersion());
                 return;
             }
 
             // ==========================================
-            // KROK 2: Standardowe porównywanie stabilnych wersji
+            // KROK 2: Sekwencyjne porównywanie wersji (Major -> Minor -> Patch)
             // ==========================================
             if (latestMajor > currentMajor) {
                 plugin.getNoticeManager().sendMajorUpdateNotice(sender, latest.getVersion());
+            } else if (currentMajor > latestMajor) {
+                plugin.getNoticeManager().sendVersionDevNotice(sender, latest.getVersion());
             } else if (latestMinor > currentMinor) {
                 plugin.getNoticeManager().sendMinorUpdateNotice(sender, latest.getVersion());
+            } else if (currentMinor > latestMinor) {
+                plugin.getNoticeManager().sendVersionDevNotice(sender, latest.getVersion());
             } else if (latestPatch > currentPatch) {
                 plugin.getNoticeManager().sendPatchUpdateNotice(sender, latest.getVersion());
-            }
-
-            // ==========================================
-            // KROK 3: Cyfry równe, ale w sieci jest stabilna, a Ty masz testową (np. 1.2.0-pre2 vs 1.2.0)
-            // ==========================================
-            else if (isCurrentExperimental) {
-                plugin.getNoticeManager().sendExperimentalNotice(sender);
-            }
-
-            // ==========================================
-            // KROK 4: Twoje cyfry są po prostu większe (wersja DEV)
-            // ==========================================
-            else if (currentMajor > latestMajor || currentMinor > latestMinor || currentPatch > latestPatch) {
+            } else if (currentPatch > latestPatch) {
                 plugin.getNoticeManager().sendVersionDevNotice(sender, latest.getVersion());
+            } else if (isCurrentExperimental) {
+                plugin.getNoticeManager().sendExperimentalNotice(sender);
             } else {
                 plugin.getNoticeManager().sendVersionOk();
             }

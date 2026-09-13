@@ -2,7 +2,7 @@ package pl.dawcou.astralogin.file;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.AstraLogin;
 
 import java.io.File;
 import java.io.InputStream;
@@ -19,10 +19,8 @@ public class FilesUpdater {
     }
 
     public void check() {
-        // Najpierw aktualizujemy config.yml
         updateFile("config.yml");
 
-        // Teraz aktualizujemy WSZYSTKIE wspierane języki
         List<String> supportedLangs = List.of("pl", "en");
 
         for (String lang : supportedLangs) {
@@ -42,17 +40,21 @@ public class FilesUpdater {
 
         boolean changed = false;
 
-        // 1. DODAWANIE: Jeśli w pliku gracza brakuje klucza z pliku domyślnego -> dodaj go
+        // 1. DODAWANIE: Tylko liście (wartości końcowe)
         for (String key : defaultConfig.getKeys(true)) {
+            if (defaultConfig.isConfigurationSection(key)) continue; // Pomijamy same nagłówki/sekcje!
+
             if (!config.contains(key)) {
                 config.set(key, defaultConfig.get(key));
                 changed = true;
             }
         }
 
-        // 2. USUWANIE: Jeśli gracz ma klucz, którego NIE MA już w jarze -> usuń go
+        // 2. USUWANIE: Tylko liście, których nie ma już w jarze
         List<String> keysToRemove = new ArrayList<>();
         for (String key : config.getKeys(true)) {
+            if (config.isConfigurationSection(key)) continue;
+
             if (!defaultConfig.contains(key)) {
                 keysToRemove.add(key);
             }
@@ -91,17 +93,21 @@ public class FilesUpdater {
 
         boolean changed = false;
 
-        // 1. DODAWANIE: Sprawdzanie nowych kluczy językowych
+        // 1. DODAWANIE nowych wiadomości (tylko pojedyncze klucze/listy, nie całe sekcje)
         for (String key : defaultLangConfig.getKeys(true)) {
+            if (defaultLangConfig.isConfigurationSection(key)) continue;
+
             if (!langConfig.contains(key)) {
                 langConfig.set(key, defaultLangConfig.get(key));
                 changed = true;
             }
         }
 
-        // 2. USUWANIE: Szukamy starych kluczy językowych
+        // 2. USUWANIE nieużywanych wiadomości
         List<String> langKeysToRemove = new ArrayList<>();
         for (String key : langConfig.getKeys(true)) {
+            if (langConfig.isConfigurationSection(key)) continue;
+
             if (!defaultLangConfig.contains(key)) {
                 langKeysToRemove.add(key);
             }

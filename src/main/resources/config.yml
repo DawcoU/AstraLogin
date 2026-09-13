@@ -13,8 +13,13 @@ settings:
   # Should the plugin check for newer versions of the plugin?
   check-updates: true
 
-  # Should debug mode be enabled?
-  debug-mode: false
+  debug:
+    # Should debug mode be enabled?
+    enabled: false
+
+    # Developer mode (e.g., bypassing HTTP requests to Mojang for Premium testing)
+    # WARNING: Only enable when testing on a local server!
+    dev-mock-mode: false
 
   # Should the plugin save events (logins, registrations, etc.) to .log files?
   logs:
@@ -39,6 +44,56 @@ settings:
 #           Security Settings
 # =====================================
 security:
+  attempts:
+    # Should anti-brute force protection be enabled?
+    enabled: true
+
+    # Maximum number of login attempts before action is taken
+    max: 3
+
+    # 0 = Ban immediately after exceeding max attempts
+    # 1 = One extra "margin" chance (kick) before final ban, and other values do the same, etc.
+    margin: 2
+
+    # Temporary ban duration (format: "number unit", e.g., "5 minutes", "1 hour")
+    tempban-time: "15 minutes"
+
+  2fa:
+    # Determine how much time a player has to configure 2FA
+    setup-timeout: "2 minutes"
+
+    session:
+      # Should 2FA session be enabled?
+      enabled: true
+      # How long should a 2FA session last?
+      session-time: "2 days"
+
+  # Premium Login
+  auto-login:
+    # Should premium login be enabled?
+    enabled: false
+
+    # Available modes:
+    # FULL - Uses new experimental full player authentication (requires ProtocolLib installed, 100% secure)
+    # MINI - Native AstraLogin system (Checks Mojang API for premium nick + verifies IP. NOTE: Prototype feature! Less secure because variable IPs allow cracked players to bypass password if they hit a matching IP).
+    mode: FULL
+
+  pin:
+    # Available modes:
+    # RANDOM – Generates a random PIN code
+    # TYPING - Manually entered code during creation
+    method: RANDOM
+
+    # Specifies the length of the automatically generated PIN or the manually entered PIN. 4 Minimum, 9 Maximum
+    length: 6
+
+  security-reminder:
+    # Enable or disable security reminder alerts for logged-in players
+    enabled: true
+
+    # Interval between reminder broadcasts (e.g., "5 minutes", "24 hours", "300s")
+    interval: "24 hours"
+
   ip-trust:
     # Should IP trust be enabled?
     enabled: true
@@ -96,32 +151,39 @@ security:
 
   logger:
     # Available options:
-    # "mask" - masks the password with asterisks
-    # "deny" - completely removes the line from the logs
-    action: "mask"
+    # MASK - masks the password with asterisks
+    # DENY - completely removes the line from the logs
+    action: "MASK"
 
-  bcrypt:
-    # The cost factor for the BCrypt algorithm.
-    # Determines the number of iterations for password and PIN hashing.
-    # Recommended range: 10-12 (Optimal balance between security and performance).
-    # WARNING: Values above 14 may cause severe lag or server crashes on shared hosting.
-    # Default value: 10
-    cost: 12
+  hashing:
+    # Selected hashing algorithm: ARGON2ID or BCRYPT
+    # Switching to ARGON2ID will automatically re-hash player passwords upon their next successful login!
+    algorithm: "ARGON2ID"
+
+    # Settings for BCrypt algorithm
+    bcrypt:
+      # Work factor / cost (Range: 8 - 16). Higher values increase security but take more CPU time.
+      cost: 12
+
+    # Settings for Argon2id algorithm
+    argon2:
+      # Number of iterations / time cost (Range: 1 - 10, Recommended: 2-3)
+      iterations: 3
+      # Memory cost in KB per hash calculation (Range: 4096 - 131072, 32768 KB = 32 MB)
+      memory-kb: 32768
+      # Degree of parallelism / number of threads per hash calculation (Range: 1 - 4)
+      parallelism: 1
+
+    rate-limit:
+      # Maximum number of concurrent hashing operations allowed on the server
+      max-concurrent-hashings: 2
+      # Cooldown period per player between login attempts (in milliseconds)
+      player-cooldown-ms: 2000
 
 # =================================
 #          LOGIN FEATURES
 # =================================
 features:
-  attempts:
-    # Maximum number of login attempts before action is taken
-    max: 3
-    # 0 = Ban immediately after exceeding max attempts
-    # 1 = One additional "margin" chance (kick) before the final ban
-    margin: 2
-    # Temporary ban duration (format: "number unit", e.g., "5 minutes", "1 hour")
-    # This ban is stored in RAM and will reset after a server restart.
-    tempban-time: "15 minutes"
-
   timer:
     # Enable or disable the login timer
     enabled: true
@@ -158,41 +220,12 @@ features:
     # Should the player's gamemode be saved?
     save-gamemode: true
 
-  2fa:
-    # Determine how much time a player has to configure 2FA
-    setup-timeout: "2 minutes"
-
-    session:
-      # Should 2FA session be enabled?
-      enabled: true
-      # How long should a 2FA session last?
-      session-time: "2 days"
-
-  # Premium Login
-  auto-login:
-    # Should premium login be enabled?
-    enabled: false
-
-    # Available modes:
-    # FULL - Uses new experimental full player authentication (requires ProtocolLib installed, 100% secure)
-    # NATIVE - Native AstraLogin system (Uses Mojang API + IP verification. NOTE: Less secure with variable IPs!)
-    mode: FULL
-
   password:
     # Minimum number of characters in a password
     min-password-length: 6
 
     # Maximum number of characters in a password
     max-password-length: 24
-
-  pin:
-    # How should the PIN be generated?
-    # RANDOM – Generates a random PIN code
-    # TYPING - Manually entered code during creation
-    method: RANDOM
-
-    # Specifies the length of the automatically generated PIN or the manually entered PIN. 4 Minimum 9 Maximum
-    length: 6
 
 # =========================
 #          VISUALS

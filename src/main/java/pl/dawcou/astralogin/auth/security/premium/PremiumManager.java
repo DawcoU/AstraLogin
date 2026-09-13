@@ -2,12 +2,13 @@ package pl.dawcou.astralogin.auth.security.premium;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.AstraLogin;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
@@ -22,39 +23,37 @@ public class PremiumManager {
     private final Map<UUID, Long> premiumCacheTime = new ConcurrentHashMap<>();
     private final Map<UUID, Boolean> activeSessions = new ConcurrentHashMap<>();
 
-    public PremiumManager(AstraLogin plugin) {
-        this.plugin = plugin;
-    }
-
     public Map<UUID, Boolean> getPremiumCache() {
         return Collections.unmodifiableMap(premiumCache);
+    }
+
+    public PremiumManager(AstraLogin plugin) {
+        this.plugin = plugin;
     }
 
     public boolean isPremium(Player p) {
         UUID uuid = p.getUniqueId();
 
-        boolean premiumAllowed = premiumLoginRequirements();
+        // 1. Pobieramy wariant z configu
+        String mode = plugin.getConfig().getString("security.auto-login.mode", "MINI");
 
-        if (!premiumAllowed || !plugin.getPasswordManager().isRegistered(uuid.toString())) {
+        // 2. Jeśli zwrócą false, natychmiast przerywamy
+        if (!premiumLoginRequirements(mode)) {
             return false;
         }
 
-        // 2. Pobieramy wariant z configu (domyślnie NATIVE)
-        String mode = plugin.getConfig().getString("features.auto-login.mode", "NATIVE");
+        // 3. Dopiero teraz sprawdzamy resztę warunków (baza danych)
+        if (!plugin.getPasswordManager().isRegistered(uuid.toString())) {
+            return false;
+        }
 
-        // 3. Jeśli wybrano nowy system logowania Premium
-        if ("FULL".equalsIgnoreCase(mode) && (plugin.getServer().getPluginManager().getPlugin("ProtocolLib") != null)) {
+        // 4. Obsługa trybu FULL
+        if ("FULL".equalsIgnoreCase(mode)) {
             return isAuthenticated(uuid);
         }
 
-        // Wymagamy ochronę IP do trybu NATIVE
-        if (!plugin.getConfig().getBoolean("security.ip-security.enabled")) {
-            return false;
-        }
-
-        // 4. TRYB NATIVE (Stare, dobre HTTP Cache + Mojang API)
+        // 5. Obsługa trybu MINI (Cache + HTTP Mojang API)
         Boolean cached = checkCache(uuid);
-
         if (cached != null) {
             return cached;
         }
@@ -62,6 +61,9 @@ public class PremiumManager {
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.mojang.com/users/profiles/minecraft/" + p.getName()))
+                    .timeout(Duration.ofSeconds(5))
+                    .header("Accept", "application/json")
+                    .header("User-Agent", "AstraLogin/" + plugin.getDescription().getVersion())
                     .GET()
                     .build();
 
@@ -84,6 +86,9 @@ public class PremiumManager {
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.mojang.com/users/profiles/minecraft/" + username))
+                    .timeout(Duration.ofSeconds(5))
+                    .header("Accept", "application/json")
+                    .header("User-Agent", "AstraLogin/" + plugin.getDescription().getVersion())
                     .GET()
                     .build();
 
@@ -91,7 +96,7 @@ public class PremiumManager {
 
             int statusCode = response.statusCode();
 
-            if (plugin.debugMode) {
+            if (plugin.isDebugEnabled()) {
                 plugin.getLogger().info("HTTP status for " + username + " = " + statusCode);
             }
 
@@ -132,9 +137,23 @@ public class PremiumManager {
         });
     }
 
-    public boolean premiumLoginRequirements() {
-        // Podstawowe warunki blokujące
-        return !Bukkit.getOnlineMode() && plugin.getConfig().getBoolean("features.auto-login.enabled");
+    // Weryfikacja wymagań dla logowania Premium (FULL / MINI)
+    public boolean premiumLoginRequirements(String mode) {
+        // Podstawowe warunki odrzucane na starcie
+        if (Bukkit.getOnlineMode() || !plugin.getConfig().getBoolean("security.auto-login.enabled")) {
+            return false;
+        }
+
+        // Sprawdzanie konkretnego trybu
+        if (mode.equalsIgnoreCase("FULL")) {
+            return plugin.getServer().getPluginManager().getPlugin("ProtocolLib") != null;
+        }
+
+        if (mode.equalsIgnoreCase("MINI")) {
+            return plugin.getConfig().getBoolean("security.ip-security.enabled");
+        }
+
+        return false;
     }
 
     public void setAuthenticated(UUID uuid, boolean authenticated) {

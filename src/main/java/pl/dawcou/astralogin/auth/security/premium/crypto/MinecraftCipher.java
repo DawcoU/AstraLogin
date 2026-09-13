@@ -14,7 +14,7 @@ public class MinecraftCipher {
         cipher.init(mode, key, new IvParameterSpec(key.getEncoded()));
     }
 
-    public byte[] transform(byte[] input) throws GeneralSecurityException {
+    public byte[] transform(byte[] input) {
         return cipher.update(input);
     }
 }

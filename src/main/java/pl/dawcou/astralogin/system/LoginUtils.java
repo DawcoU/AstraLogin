@@ -26,8 +26,25 @@ public class LoginUtils {
     }
 
     public static String formatTime(long totalSeconds) {
-        long minutes = totalSeconds / 60;
+        if (totalSeconds <= 0) {
+            return "0s";
+        }
+
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
         long seconds = totalSeconds % 60;
-        return minutes + "m " + seconds + "s";
+
+        // Gdy są godziny: 1h 5m 20s / 1h 0m 5s
+        if (hours > 0) {
+            return hours + "h " + minutes + "m " + seconds + "s";
+        }
+
+        // Gdy są minuty: 5m 20s / 5m 0s
+        if (minutes > 0) {
+            return minutes + "m " + seconds + "s";
+        }
+
+        // Same sekundy: 5s
+        return seconds + "s";
     }
 }

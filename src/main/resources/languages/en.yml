@@ -19,10 +19,13 @@ messages:
 
   # --- Login ---
   login:
+    server-busy: "&cThe server is currently experiencing heavy login traffic. Try again"
+    rate-limit: "&cToo many login attempts! Please wait &6%time% &cbefore trying again"
+
     already-logged: "&cYou are already logged in/registered!"
     already-online: "&cA player with this nickname is on the server!"
     wrong-casing: "&cJoin the server using the correct case!\n&7Correct nickname: &6%registered%"
-    no-account: "&cYou do not have an account! Type &e/register <password> <repeat>"
+    no-account: "&cYou do not have an account! Type &e/register <password, repeat>"
     success: "&aSuccessfully logged in!"
     reminder: "&ePlease log in: &f/login <password>"
     usage: "&cCorrect usage: &e/login <password>"
@@ -32,13 +35,13 @@ messages:
   # --- Register ---
   register:
     success: "&aSuccessfully registered!"
-    reminder: "&ePlease register: &f/register <password> <repeat>"
-    usage: "&cCorrect usage: &e/register <password> <repeat>"
+    reminder: "&ePlease register: &f/register <password, repeat>"
+    usage: "&cCorrect usage: &e/register <password, repeat>"
 
 
   # --- Premium Login ---
   premium:
-    success: "&aPremium account detected, logged in automatically!"
+    success: "&ePremium &aaccount detected, logged in automatically!"
 
 
   # --- /forgotpassword ---
@@ -56,17 +59,18 @@ messages:
     not-match: "&cPasswords do not match!"
     too-short: "&cPassword is too short! Minimum &6%min% &ccharacters"
     too-long: "&cPassword is too long! Maximum &6%max% &ccharacters"
-    change-usage: "&cCorrect usage: &e/changepassword <old> <new> <repeat>"
+    change-usage: "&cCorrect usage: &e/changepassword <old, new, repeat>"
     wrong-old: "&cOld password is incorrect!"
     changed-kick: "&aYour password has been changed! &ePlease log in again"
     changed: "&aYour password has been successfully changed!"
     identical: "&cThe new password cannot be the same as the old one!"
+    error: "&cA critical error occurred while verifying your password. Contact administration"
 
 
   # --- PINs ---
   pin:
-    usage: "&cCorrect usage: &e/pin <set>"
-    set-usage: "&cCorrect usage: &e/pin <set> <PIN>"
+    usage: "&cCorrect usage: &e/pin <setup>"
+    set-usage: "&cCorrect usage: &e/pin <setup, PIN>"
     invalid-length: "&cPIN must be exactly &6%length% &cdigits long!"
     contains-letters: "&cPIN can only contain numbers!"
     already-set: "&cYou already have a PIN set!"
@@ -80,20 +84,40 @@ messages:
     max-attempts: "&cToo many failed login attempts! Remaining attempts: &6%remaining%"
     max-attempts-ban: "&cToo many failed attempts! You have been banned for &6%time%"
     multiaccount: "&cAccount limit for this IP address has been reached!"
-    ip-spam: "&cToo many connection attempts from your IP! You have been blocked for &6%time%"
+    ip-spam: "&cToo many connection attempts from your IP address! You are blocked on &6%time%"
     ip-mismatch: "&cYour IP address does not match this account!"
+
+
+  security-reminder:
+    no-2fa-no-pin:
+      - "&c----------------------------------------"
+      - "&eYour account is not fully secured!"
+      - "&f1. Enable 2FA using &a/2fa <setup>&f to prevent account theft"
+      - "&f2. Set a PIN using &a/pin <setup>&f to recover your account if you forget your password"
+      - "&c----------------------------------------"
+    no-2fa-has-pin:
+      - "&c----------------------------------------"
+      - "&eYour account does not have 2FA enabled yet!"
+      - "&fIncrease your account security using &a/2fa <setup>"
+      - "&c----------------------------------------"
+    has-2fa-no-pin:
+      - "&e----------------------------------------"
+      - "&aAlmost there!"
+      - "&fYou have 2FA enabled, but you haven't set a recovery PIN"
+      - "&fSet it using &a/pin <setup>&f so you can recover access to your account"
+      - "&e----------------------------------------"
 
 
   # --- IP Trust ---
   ip-trust:
-    usage: "&cCorrect usage: &6/iptrust reset, info, set | <IP> | <score>"
+    usage: "&cCorrect usage: &6/iptrust <reset, info, set, IP address, score>"
     ip-not-found: "&cIP address not found: &6(%ip%)"
     invalid-number: "&cThe amount of points can only contain numbers!"
     reset-success: "&aSuccessfully reset reputation for IP: &e(%ip%)"
     set-success: "&aSuccessfully set reputation: &6(%score%) &afor IP: &e(%ip%)"
     ip-info:
       - "&7&m-------------------------"
-      - "&6&lIP Reputation (%ip%):"
+      - "&6&lIP Address Reputation (%ip%):"
       - "&eTrust Score: &f%score%"
       - "&6Rating: %rate%"
       - "&7&m-------------------------"
@@ -102,6 +126,20 @@ messages:
     rate-neutral: "&7Neutral"
     rate-good: "&aGood"
     rate-ideal: "&bIdeal"
+
+
+  # --- IP Management and Bans /ipmanager ---
+  ip-manager:
+    usage: "&cUsage: /ipmanager <info, unban, bypass, unbypass, player>"
+    no-ip: "&cNo registered IP address found for player &6%player%&c!"
+    info-not-banned: "&aPlayer &6%player% &7(IP address: %ip%) &adoes not have an active IP address ban"
+    info-banned: "&cPlayer &6%player% &7(IP address: %ip%) &cis banned! Reason: &6%reason%&c, Time left: &6%time% s"
+    not-banned: "&cIP address for player &6%player% &cis not banned!"
+    unban-success: "&aSuccessfully unbanned IP address for player &6%player% &7(%ip%)&a!"
+    bypass-enabled: "&aEnabled IP address check bypass for player &6%player%"
+    bypass-active: "&cIP address Bypass for player &6%player% &cis already enabled!"
+    bypass-disabled: "&cDisabled IP address check bypass for player &6%player%"
+    bypass-not-active: "&cIP address Bypass for player &6%player% &cis already disabled!"
 
 
   # --- Sessions ---
@@ -122,7 +160,7 @@ messages:
 
   # --- Two-Factor Authentication (2FA) ---
   twofactor:
-    usage: "&cCorrect usage: &6/2fa setup, next, unsetup, confirm | <code>"
+    usage: "&cCorrect usage: &6/2fa <setup, next, unsetup, confirm, code>"
     already-enabled: "&cYou already have 2FA enabled!"
     not-enabled: "&cYou do not have 2FA enabled!"
 
@@ -164,7 +202,7 @@ messages:
     stats:
       header: "&8--- &6Account Statistics: &e%target% &8---"
       uuid: "&7UUID: &f%uuid%"
-      ip: "&7Last IP: &f%ip%"
+      ip: "&7Last IP address: &f%ip%"
       register-date: "&7Registration Date: &f%register_date%"
       login-date: "&7Last Login: &f%login_date%"
       status-2fa: "&72FA Status: %status%"
@@ -178,9 +216,9 @@ messages:
 
   # --- Accounts List Command (/kontalista) ---
   accounts-list:
-    generating: "&7Loading registered accounts list..."
-    empty: "&cThe account database is empty"
-    header: "&7===== &6Registered Accounts &7====="
+    generating: "&7Loading IP address List..."
+    empty: "&cThe IP address database is empty"
+    header: "&7===== &6Registered IP addresses &7====="
     format: "&7- &e%name% &7(&aUUID: &b%uuid%&7)"
     footer: "&7======================================="
 
@@ -196,7 +234,7 @@ messages:
 
   # --- Move Account Command (/przenieskonto) ---
   account-move:
-    usage: "&cCorrect usage: &e/moveaccount <old nick> <new nick>"
+    usage: "&cCorrect usage: &e/moveaccount <old nick, new nick>"
     start: "&aStarting verification and migration process for &e%old% &a--> &e%new%"
 
     success: "&aSuccessfully transferred data from &e%old% &ato &e%new%&a!"
@@ -273,9 +311,8 @@ messages:
   spawn:
     set-success: "&aSuccessfully set spawn location for: &e%type%"
     deleted-success: "&aSuccessfully removed spawn location for: &e%type%"
-    login-usage: "&cCorrect usage: &e/loginspawn <setspawn|delspawn> <before_login|after_login>"
 
-    usage: "&cCorrect usage: &e/loginspawn %cmd% <before_login|after_login>"
+    usage: "&cCorrect usage: &e/loginspawn <setspawn, delspawn> <before_login, after_login>"
     invalid-type: "&cInvalid type! &eUse: before_login or after_login"
     exists: "&cSpawn for &6%type% &calready exists!"
     does-not-exist: "&cSpawn for &6%type% &cdoes not exist!"

@@ -20,7 +20,7 @@ Paper or its forks are strongly recommended for the best experience.
 
 ### 🚀 Key Features
 
-* **Advanced Security:** Password hashing using the **BCrypt** algorithm, ensuring no plain text is ever stored and protecting against dictionary attacks. 🛡️🔑
+* **Advanced Security:** Password hashing using the **BCrypt** or **Argon2id** algorithm, ensuring no plain text is ever stored and protecting against dictionary attacks. 🛡️🔑
 * **Smart Brute-Force Protection:** 🚫🤖
     * Automatically kicks players after exceeding failed login attempts.
     * **Margin of Error:** Configure extra "mercy" chances (margin) before a final action is taken.
@@ -36,33 +36,35 @@ Paper or its forks are strongly recommended for the best experience.
     * **HEX Colors:** Full support for modern HEX color codes in the prefix and all messages via MiniMessage/Legacy! 🌈
 * **Admin Utilities:** 🛠️⚙️
     * **Auto-Updater:** Configuration files automatically update when you install a newer plugin version.
-    * **Update Notifications:** Notifies admins when a new version is available on Modrinth.
-* **AutoLogin Premium:** Automatic login if a PREMIUM (Full Authentication) or MINI account is detected AutoLogin only checks the mojang database ✅👤
+    * **Update Notifications:** Notifies administrators when a new version is available, with warnings about pre-release versions, newer versions, and available patches. 🛜
+* **AutoLogin Premium:** Automatic login for premium accounts. Supports **FULL** authentication (secure Mojang handshake) and a legacy **MINI** prototype (only checks if the nickname exists in Mojang database without full authentication; allows cracked logins with that nickname without a password). ✅👤
 * **Password recovery:** Using the PIN as a separate source of authentication confirmation, you can reset your password yourself. 🔑🔄
+* **Security Reminders:** Periodically reminds players to boost their account security by enabling 2FA or setting up a recovery PIN. 🔔🛡️
 
 ---
 
 ### 🛠️ Commands & Permissions
 
-| Command                                                      | Description                                                                     | Permission                                                                      |
-|:-------------------------------------------------------------|:--------------------------------------------------------------------------------|:--------------------------------------------------------------------------------|
-| `/register <pass> <repeat>`                                  | Register a new account 🔐                                                       | *None*                                                                          |
-| `/login <pass>`                                              | Log into the server 🔑                                                          | *None*                                                                          |
-| `/logout`                                                    | Log out of the server ➡️                                                        | *None*                                                                          |
-| `/pin <set> <PIN/Automatically>`                             | Generates a random PIN or requires manual entry (Depending on configuration) ➡️ | *None*                                                                          |
-| `/changepassword <old> <new> <repeat>`                       | Change your current password 🔄                                                 | *None*                                                                          |
-| `/2fa <setup/unsetup/code>`                                  | Manage and verify your 2FA security 📱                                          | *None*                                                                          |
-| `/forgotpass <PIN>`                                          | Resets password using pin 🔑🔄                                                  | *None*                                                                          |
-| `/account <player>`                                          | View advanced account stats (UUID, IP, 2FA, dates) 📊                           | `astralogin.account`                                                            |
-| `/accountslist`                                              | View all AstraLogin accounts 👥                                                 | `astralogin.accountslist`                                                       |
-| `/resetpassword <player>`                                    | Deletes a player's password ❌                                                   | `astralogin.resetpassword`                                                      |
-| `/resetip <player>`                                          | Resets the player's IP address 🌐                                               | `astralogin.resetip`                                                            |
-| `/resetpin <player>`                                         | Resets the player's PIN 🔑❌                                                     | `astralogin.resetpin`                                                           |
-| `/resetaccount <player>`                                     | **Wipes all player data** (password, IP, location, 2FA) ⚠️                      | `astralogin.resetaccount`                                                       |
-| `/moveaccount <old player> <new player>`                     | Transfers all AstraLogin player data to another account ▶️                      | `astralogin.moveaccount`                                                        |
-| `/loginspawn <setspawn/delspawn> <before_login/after_login>` | Sets and removes the selected login spawn 🗺️                                   | `astralogin.setspawn`, `astralogin.delspawn`                                    |
-| `/astralogin reload`                                         | Reloads the plugin configuration ⚙️                                             | `astralogin.reload`                                                             |
-| `/iptrust <info/set/reset> <IP> <score>`                     | Shows IP reputation, resets, and sets 📈📉                                      | `astralogin.iptrust.info`, `astralogin.iptrust.set`, `astralogin.iptrust.reset` |
+| Command                                                      | Description                                                                     | Permission                                                                                                                |
+|:-------------------------------------------------------------|:--------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------|
+| `/register <pass> <repeat>`                                  | Register a new account 🔐                                                       | *None*                                                                                                                    |
+| `/login <pass>`                                              | Log into the server 🔑                                                          | *None*                                                                                                                    |
+| `/logout`                                                    | Log out of the server ➡️                                                        | *None*                                                                                                                    |
+| `/pin <set> <PIN/Automatically>`                             | Generates a random PIN or requires manual entry (Depending on configuration) ➡️ | *None*                                                                                                                    |
+| `/changepassword <old> <new> <repeat>`                       | Change your current password 🔄                                                 | *None*                                                                                                                    |
+| `/2fa <setup/unsetup/code>`                                  | Manage and verify your 2FA security 📱                                          | *None*                                                                                                                    |
+| `/forgotpass <PIN>`                                          | Resets password using pin 🔑🔄                                                  | *None*                                                                                                                    |
+| `/account <player>`                                          | View advanced account stats (UUID, IP, 2FA, dates) 📊                           | `astralogin.account`                                                                                                      |
+| `/accountslist`                                              | View all AstraLogin accounts 👥                                                 | `astralogin.accountslist`                                                                                                 |
+| `/resetpassword <player>`                                    | Deletes a player's password ❌                                                   | `astralogin.resetpassword`                                                                                                |
+| `/resetip <player>`                                          | Resets the player's IP address 🌐                                               | `astralogin.resetip`                                                                                                      |
+| `/resetpin <player>`                                         | Resets the player's PIN 🔑❌                                                     | `astralogin.resetpin`                                                                                                     |
+| `/resetaccount <player>`                                     | **Wipes all player data** (password, IP, location, 2FA) ⚠️                      | `astralogin.resetaccount`                                                                                                 |
+| `/moveaccount <old player> <new player>`                     | Transfers all AstraLogin player data to another account ▶️                      | `astralogin.moveaccount`                                                                                                  |
+| `/loginspawn <setspawn/delspawn> <before_login/after_login>` | Sets and removes the selected login spawn 🗺️                                   | `astralogin.setspawn`, `astralogin.delspawn`                                                                              |
+| `/astralogin reload`                                         | Reloads the plugin configuration ⚙️                                             | `astralogin.reload`                                                                                                       |
+| `/iptrust <info/set/reset> <IP> <score>`                     | Shows IP reputation, resets, and sets 📈📉                                      | `astralogin.iptrust.info`, `astralogin.iptrust.set`, `astralogin.iptrust.reset`                                           |
+| `/ipmanager <info/unban/bypass/unbypass> <player>`           | Manage IP bans and bypass status for players 🌐🛡️                              | `astralogin.ipmanager.info`, `astralogin.ipmanager.unban`, `astralogin.ipmanager.bypass`, `astralogin.ipmanager.unbypass` |
 
 **Other Permissions:**
 * `astralogin.update` – Receive a notification when a new version is available. 📡🔔
@@ -74,7 +76,7 @@ Paper or its forks are strongly recommended for the best experience.
 1. Download the `.jar` file from [Modrinth](https://modrinth.com/plugin/astralogin). 📥
 2. Drop it into your `plugins` folder. 📂
 3. Restart your server. 🔄
-4. Customize your messages and settings in `config.yml`. 📝⚙️
+4. Customize your messages in the languages folder and settings in `config.yml`. 📝⚙️
 
 ---
 

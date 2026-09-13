@@ -10,7 +10,7 @@ import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.*;
-import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.LoginSystem;
 
 import java.util.UUID;
@@ -24,6 +24,8 @@ public class LoginBlocks implements Listener {
         this.plugin = plugin;
         loginSystem = plugin.getLoginSystem();
     }
+
+    // Please remain calm. The code is secure, the binaries are innocent, and the potato is under control.
 
     // Helper ułatwiający czytelność i optymalizację
     private boolean isNotAuthenticated(UUID uuid) {

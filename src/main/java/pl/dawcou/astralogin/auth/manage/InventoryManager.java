@@ -5,10 +5,14 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import pl.dawcou.astralogin.auth.AstraLogin;
+import pl.dawcou.astralogin.AstraLogin;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 public class InventoryManager {
 
@@ -31,10 +35,7 @@ public class InventoryManager {
     public void save(Player p) {
         String uuid = p.getUniqueId().toString();
 
-        // KROK 1: Absolutne bezpieczeństwo danych.
-        // Jeśli plik zawiera już UUID gracza (bo np. wyszedł niezalogowany), to NIEZALEŻNIE
-        // od tego, czy admin właśnie wyłączył opcję w configu, musimy wyczyścić mu tymczasowe EQ
-        // i ustawić survival, ponieważ jego prawdziwe przedmioty już bezpiecznie leżą w pliku!
+        // Czyszczenie tymczasowego EQ, gdy zapis dla gracza juz istnieje
         if (config.contains("inventory." + uuid)) {
             p.getInventory().clear();
             p.getInventory().setArmorContents(null);
@@ -42,13 +43,12 @@ public class InventoryManager {
             return;
         }
 
-        // KROK 2: Sprawdzenie głównego configu
         boolean inventoryEnabled = plugin.getConfig().getBoolean("features.inventory.enabled", true);
         if (!inventoryEnabled) {
-            return; // Opcja jest wyłączona, a gracz nie miał zapisu? Wychodzimy! Nie dotykamy jego EQ ani GM.
+            return;
         }
 
-        // KROK 1: Zapisujemy KAŻDY slot z osobna z prefiksem 'inventory', żeby Bukkit się nie pogubił
+        // Zapis glównego ekwipunku
         ItemStack[] inv = p.getInventory().getContents();
         for (int i = 0; i < inv.length; i++) {
             if (inv[i] != null) {
@@ -56,7 +56,7 @@ public class InventoryManager {
             }
         }
 
-        // KROK 2: Zapisujemy zbroję do nowej sekcji inventory
+        // Zapis zbroi
         ItemStack[] armor = p.getInventory().getArmorContents();
         for (int i = 0; i < armor.length; i++) {
             if (armor[i] != null) {
@@ -64,15 +64,14 @@ public class InventoryManager {
             }
         }
 
-        // KROK 3: Opcjonalne zapisywanie GameMode w tym samym formacie
+        // Zapis trybu gry
         boolean saveGamemode = plugin.getConfig().getBoolean("features.inventory.save-gamemode", true);
         if (saveGamemode) {
             config.set("inventory." + uuid + ".gamemode", p.getGameMode().name());
         }
 
-        save(); // Zapisujemy plik
+        save();
 
-        // Czyszczenie po pomyślnym zapisie
         p.getInventory().clear();
         p.getInventory().setArmorContents(null);
 
@@ -84,16 +83,22 @@ public class InventoryManager {
     public void restore(Player p) {
         String uuid = p.getUniqueId().toString();
 
-        // KLUCZOWE: Sprawdzamy nowy format z prefiksem 'inventory.'
         if (!config.contains("inventory." + uuid)) return;
 
-        // Przywracamy EQ (Wspólniona ścieżka z inventory.)
+        // Zbieramy przedmioty zdobyte przed zalogowaniem
+        List<ItemStack> newItems = new ArrayList<>();
+        for (ItemStack item : p.getInventory().getContents()) {
+            if (item != null) {
+                newItems.add(item.clone());
+            }
+        }
+
+        // Przywracanie glównego ekwipunku
         ItemStack[] inv = new ItemStack[p.getInventory().getSize()];
         if (config.getConfigurationSection("inventory." + uuid + ".inv") != null) {
             for (String key : config.getConfigurationSection("inventory." + uuid + ".inv").getKeys(false)) {
                 int slot = Integer.parseInt(key);
                 ItemStack item = config.getItemStack("inventory." + uuid + ".inv." + key);
-
                 if (item != null) {
                     inv[slot] = item;
                 }
@@ -101,13 +106,12 @@ public class InventoryManager {
         }
         p.getInventory().setContents(inv);
 
-        // Przywracamy Armor (Wspólniona ścieżka z inventory.)
+        // Przywracanie zbroi
         ItemStack[] armor = new ItemStack[4];
         if (config.getConfigurationSection("inventory." + uuid + ".arm") != null) {
             for (String key : config.getConfigurationSection("inventory." + uuid + ".arm").getKeys(false)) {
                 int slot = Integer.parseInt(key);
                 ItemStack item = config.getItemStack("inventory." + uuid + ".arm." + key);
-
                 if (item != null) {
                     armor[slot] = item;
                 }
@@ -115,7 +119,19 @@ public class InventoryManager {
         }
         p.getInventory().setArmorContents(armor);
 
-        // KROK 4: Przywracamy GameMode Inteligentnie (Wspólniona ścieżka z inventory.)
+        // Losowe przydzielanie nowych przedmiotów do wolnych slotów
+        if (!newItems.isEmpty()) {
+            Collections.shuffle(newItems);
+            for (ItemStack newItem : newItems) {
+                Map<Integer, ItemStack> leftover = p.getInventory().addItem(newItem);
+                if (!leftover.isEmpty()) {
+                    // Miejsce w ekwipunku się skończyło
+                    break;
+                }
+            }
+        }
+
+        // Przywracanie trybu gry
         if (config.contains("inventory." + uuid + ".gamemode")) {
             String gmName = config.getString("inventory." + uuid + ".gamemode", "SURVIVAL");
             try {
@@ -126,7 +142,6 @@ public class InventoryManager {
             }
         }
 
-        // Czyszczenie danych po przywróceniu z poprawnego klucza
         config.set("inventory." + uuid, null);
         save();
     }

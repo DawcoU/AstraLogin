@@ -1,6 +1,6 @@
 name: AstraLogin
 version: '${version}'
-main: pl.dawcou.astralogin.auth.AstraLogin
+main: pl.dawcou.astralogin.AstraLogin
 api-version: '1.18'
 load: STARTUP
 author: DawcoU
@@ -44,7 +44,9 @@ commands:
   niepamietamhasla:
     aliases: [forgotpassword, forgotpass]
   pin:
-
+    description: PIN
+  ipmanager:
+    description: IPMANAGER
 
 permissions:
   astralogin.reload:
@@ -81,6 +83,15 @@ permissions:
   astralogin.iptrust.reset:
     default: op
   astralogin.iptrust.set:
+    default: op
+
+  astralogin.ipmanager.info:
+    default: op
+  astralogin.ipmanager.unban:
+    default: op
+  astralogin.ipmanager.bypass:
+    default: op
+  astralogin.ipmanager.unbypass:
     default: op
 
   astralogin.spawn.*:
