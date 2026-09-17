@@ -16,14 +16,14 @@ import org.bukkit.potion.PotionEffectType;
 
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.LoginSystem;
-import pl.dawcou.astralogin.auth.SessionManager;
+import pl.dawcou.astralogin.auth.sessions.SessionManager;
 import pl.dawcou.astralogin.auth.manage.InventoryManager;
 import pl.dawcou.astralogin.auth.manage.spawn.SpawnManager;
 import pl.dawcou.astralogin.auth.manage.spawn.SpawnType;
-import pl.dawcou.astralogin.auth.security.premium.listener.PremiumProtocolListener;
+import pl.dawcou.astralogin.auth.security.premium.protocol.PacketListener;
 import pl.dawcou.astralogin.auth.security.ip.IPManager;
 import pl.dawcou.astralogin.auth.security.ip.IPTrustManager;
-import pl.dawcou.astralogin.system.LoginUtils;
+import pl.dawcou.astralogin.system.TimeUtils;
 import pl.dawcou.astralogin.auth.security.twofactor.TwoFactorManager;
 
 import java.time.Duration;
@@ -34,11 +34,11 @@ public class LoginListeners implements Listener {
 
     private final AstraLogin plugin;
 
-    private final PremiumProtocolListener premiumProtocolListener;
+    private final PacketListener packetListener;
 
-    public LoginListeners(AstraLogin plugin, PremiumProtocolListener premiumProtocolListener) {
+    public LoginListeners(AstraLogin plugin, PacketListener packetListener) {
         this.plugin = plugin;
-        this.premiumProtocolListener = premiumProtocolListener;
+        this.packetListener = packetListener;
     }
 
     // Everything is secure here. Please do not inspect further, especially not the next 47 lines.
@@ -105,7 +105,7 @@ public class LoginListeners implements Listener {
                             if (is2FAEnabled) {
                                 // Gracz MA włączone 2FA na koncie -> sprawdzamy sesję drugiego stopnia
                                 boolean is2FASessionEnabled = plugin.getConfig().getBoolean("security.2fa.session.enabled", true);
-                                boolean hasActive2FA = plugin.getSessionManager().hasActive2FASession(uuid);
+                                boolean hasActive2FA = plugin.getSessionManager().getTwoFactorSessionManager().hasActive2FASession(uuid);
 
                                 if (!is2FASessionEnabled || !hasActive2FA) {
                                     // [Kombinacja: Hasło przywrócone, ale brakuje kodu 2FA / sesja 2FA wyłączona]
@@ -197,7 +197,7 @@ public class LoginListeners implements Listener {
                 // Timer logowania / wpisania kodu 2FA
                 if (plugin.getConfig().getBoolean("features.timer.enabled")) {
                     String rawTime = plugin.getConfig().getString("features.timer.time-limit", "2 minutes");
-                    long parsedMillis = LoginUtils.parseTime(rawTime, 60000L);
+                    long parsedMillis = TimeUtils.parseTime(rawTime, 60000L);
 
                     long clampedMillis = Math.max(40000L, Math.min(240000L, parsedMillis));
 
@@ -248,7 +248,7 @@ public class LoginListeners implements Listener {
 
                         String rawMsg = plugin.getLanguageManager()
                                 .getMessage("session.timer")
-                                .replace("%time%", LoginUtils.formatTime(time[0]));
+                                .replace("%time%", TimeUtils.formatTime(time[0]));
 
                         Component message = LegacyComponentSerializer.legacySection().deserialize(rawMsg);
 
@@ -326,7 +326,7 @@ public class LoginListeners implements Listener {
             long totalSeconds = ipManager.getIPBanTimeLeft(currentIP);
 
             // Teraz używamy klasy narzędziowej:
-            String timeFormatted = LoginUtils.formatTime(totalSeconds);
+            String timeFormatted = TimeUtils.formatTime(totalSeconds);
             String reason = ipManager.getBanReason(currentIP);
             if (reason == null) reason = "UNKNOWN";
 
@@ -427,7 +427,7 @@ public class LoginListeners implements Listener {
         // 5. ZAPIS (sesji)
         if (sessionManager != null) {
             sessionManager.saveSessionsToConfig();
-            sessionManager.save2FAToConfig();
+            sessionManager.getTwoFactorSessionManager().save2FAToConfig();
         }
 
         // 6. CZYSZCZENIE (zamrożonych setup'ów)

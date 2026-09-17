@@ -5,23 +5,27 @@ import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
 import org.bukkit.configuration.file.FileConfiguration;
 import pl.dawcou.astralogin.auth.accounts.AccountManager;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.system.LoginUtils;
+import pl.dawcou.astralogin.auth.passwords.PasswordHasher;
+import pl.dawcou.astralogin.system.TimeUtils;
 
+import java.security.SecureRandom;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TwoFactorManager {
 
     private final AstraLogin plugin;
     private final GoogleAuthenticator gAuth;
 
+    private final SecureRandom secureRandom = new SecureRandom();
+
     // Mapa przechowująca tymczasowe klucze graczy podczas konfiguracji (UUID -> Secret Key)
-    private final Map<UUID, String> pendingSetups = new HashMap<>();
+    private final Map<UUID, String> pendingSetups = new ConcurrentHashMap<>();
     // Mapa przechowująca czas wygaśnięcia sesji konfiguracji (UUID -> Timestamp w milisekundach)
-    private final Map<UUID, Long> setupExpirations = new HashMap<>();
+    private final Map<UUID, Long> setupExpirations = new ConcurrentHashMap<>();
 
     // Mapa przechowująca kody zapasowe tymczasowo
-    private final Map<UUID, List<String>> pendingBackupCodes = new HashMap<>();
+    private final Map<UUID, List<String>> pendingBackupCodes = new ConcurrentHashMap<>();
 
     public TwoFactorManager(AstraLogin plugin) {
         this.plugin = plugin;
@@ -36,7 +40,7 @@ public class TwoFactorManager {
         String secret = key.getKey();
 
         String timeConfig = plugin.getConfig().getString("security.2fa.setup-timeout", "2 minutes");
-        long timeoutMillis = LoginUtils.parseTime(timeConfig, 60000L);
+        long timeoutMillis = TimeUtils.parseTime(timeConfig, 60000L);
 
         pendingSetups.put(uuid, secret);
         setupExpirations.put(uuid, System.currentTimeMillis() + timeoutMillis);
@@ -91,8 +95,7 @@ public class TwoFactorManager {
         try {
             UUID uuid = UUID.fromString(uuidStr);
             invalidateSetup(uuid);
-        } catch (IllegalArgumentException ignored) {
-        }
+        } catch (IllegalArgumentException ignored) {}
     }
 
     /**
@@ -102,24 +105,69 @@ public class TwoFactorManager {
         return gAuth.authorize(secret, code);
     }
 
-    public boolean useBackupCode(UUID uuid, String inputCode) {
+    public void useBackupCode(UUID uuid, String inputCode, java.util.function.Consumer<PasswordHasher.VerificationResult> callback) {
         AccountManager accountManager = plugin.getAccountManager();
         FileConfiguration config = accountManager.getConfig();
         String path = "accounts." + uuid.toString() + ".backup-codes";
 
         List<String> savedCodes = config.getStringList(path);
-        if (savedCodes.isEmpty()) return false;
-
-        // Szukamy kodu (ignorując wielkość liter i ewentualne spakowane spacje)
-        String cleanInput = inputCode.trim().toUpperCase();
-        if (savedCodes.contains(cleanInput)) {
-            savedCodes.remove(cleanInput); // Usuwamy kod - staje się jednorazowy!
-            config.set(path, savedCodes);
-            accountManager.saveConfig();
-            return true;
+        if (savedCodes.isEmpty()) {
+            callback.accept(new PasswordHasher.VerificationResult(
+                    PasswordHasher.HashStatus.INVALID_PASSWORD, false, null
+            ));
+            return;
         }
 
-        return false;
+        String cleanInput = inputCode.trim().toUpperCase();
+
+        plugin.getSchedulerManager().runAsync(() -> {
+            String matchedCodeToRemove = null;
+            PasswordHasher.VerificationResult lastResult = null;
+
+            for (String savedCode : savedCodes) {
+                var result = plugin.getPasswordManager().getPasswordHasher().verifyPassword(uuid, cleanInput, savedCode);
+                lastResult = result;
+
+                switch (result.status()) {
+                    case SUCCESS -> matchedCodeToRemove = savedCode;
+                    case INVALID_PASSWORD -> {
+                        // Wariancja dla starych kodów bez hashowania (czysty tekst)
+                        if (savedCode.equalsIgnoreCase(cleanInput)) {
+                            matchedCodeToRemove = savedCode;
+                        }
+                    }
+                    default -> { }
+                }
+
+                if (matchedCodeToRemove != null) {
+                    break;
+                }
+            }
+
+            final String finalCodeToRemove = matchedCodeToRemove;
+            final var finalResult = lastResult;
+
+            if (finalCodeToRemove != null) {
+                plugin.getSchedulerManager().runSync(() -> {
+                    savedCodes.remove(finalCodeToRemove);
+
+                    if (savedCodes.isEmpty()) {
+                        config.set(path, null);
+                    } else {
+                        config.set(path, savedCodes);
+                    }
+
+                    accountManager.saveConfig();
+                    callback.accept(new PasswordHasher.VerificationResult(
+                            PasswordHasher.HashStatus.SUCCESS, false, null
+                    ));
+                });
+            } else {
+                plugin.getSchedulerManager().runSync(() -> callback.accept(
+                        finalResult != null ? finalResult : new PasswordHasher.VerificationResult(PasswordHasher.HashStatus.INVALID_PASSWORD, false, null)
+                ));
+            }
+        });
     }
 
     public String getSavedSecret(UUID uuid) {
@@ -129,22 +177,45 @@ public class TwoFactorManager {
     /**
      * Zapisuje aktywowane 2FA do pliku kont gracza accounts.yml.
      */
-    public void save2FA(UUID uuid, String secret) {
-        AccountManager accountManager = plugin.getAccountManager();
-        FileConfiguration config = accountManager.getConfig();
-        String path = "accounts." + uuid.toString() + ".";
-
-        config.set(path + "2fa-enabled", true);
-        config.set(path + "2fa-secret", secret);
-
-        // Pobieramy tymczasowe kody i zapisujemy je na stałe do configu
+    public void save2FA(UUID uuid, String secret, Runnable onComplete) {
         List<String> codes = pendingBackupCodes.get(uuid);
-        if (codes != null) {
-            config.set(path + "backup-codes", codes);
-        }
 
-        accountManager.saveConfig();
-        invalidateSetup(uuid);
+        plugin.getSchedulerManager().runAsync(() -> {
+            List<String> hashedCodes = new ArrayList<>();
+
+            if (codes != null) {
+                for (String code : codes) {
+                    String cleanCode = code.trim().toUpperCase();
+                    String hashed = plugin.getPasswordManager().getPasswordHasher().hashPassword(cleanCode);
+
+                    if (hashed != null) {
+                        hashedCodes.add(hashed);
+                    } else {
+                        hashedCodes.add(cleanCode);
+                    }
+                }
+            }
+
+            plugin.getSchedulerManager().runSync(() -> {
+                AccountManager accountManager = plugin.getAccountManager();
+                FileConfiguration config = accountManager.getConfig();
+                String path = "accounts." + uuid.toString() + ".";
+
+                config.set(path + "2fa-enabled", true);
+                config.set(path + "2fa-secret", secret);
+
+                if (!hashedCodes.isEmpty()) {
+                    config.set(path + "backup-codes", hashedCodes);
+                }
+
+                accountManager.saveConfig();
+                invalidateSetup(uuid);
+
+                if (onComplete != null) {
+                    onComplete.run();
+                }
+            });
+        });
     }
 
     public void delete2FA(UUID uuid) {
@@ -174,12 +245,12 @@ public class TwoFactorManager {
 
         if (remainingSeconds < 0) return "0m 0s";
 
-        return LoginUtils.formatTime(remainingSeconds);
+        return TimeUtils.formatTime(remainingSeconds);
     }
 
     private String generateRandomBackupCode() {
-        int part1 = ThreadLocalRandom.current().nextInt(1000, 10000);
-        int part2 = ThreadLocalRandom.current().nextInt(1000, 10000);
+        int part1 = 1000 + secureRandom.nextInt(9000);
+        int part2 = 1000 + secureRandom.nextInt(9000);
         return part1 + "-" + part2;
     }
 }

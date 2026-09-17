@@ -9,7 +9,7 @@ Developed in Java 17 and leveraging the Paper API for maximum efficiency, it is 
 ⭐ AstraLogin supports:
 - Paper
 - Purpur
-- Arclight
+- Arclight (supported, but not recommended)
 - Spigot (supported, but not recommended)
 
 🚰⚠️ Spigot is supported, but it is not the recommended platform.

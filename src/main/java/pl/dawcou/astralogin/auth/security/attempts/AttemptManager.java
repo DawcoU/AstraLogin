@@ -2,7 +2,7 @@ package pl.dawcou.astralogin.auth.security.attempts;
 
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.system.LoginUtils;
+import pl.dawcou.astralogin.system.TimeUtils;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -33,7 +33,7 @@ public class AttemptManager {
 
         if (current >= threshold) {
             clearAttempts(p.getUniqueId());
-            long banMillis = LoginUtils.parseTime(timeStr, 300000L);
+            long banMillis = TimeUtils.parseTime(timeStr, 300000L);
             plugin.getIPManager().banIPWithMillis(ip, banMillis, type); // Używamy typu (PASSWORD lub 2FA)
 
             plugin.getLogManager().log("Player " + p.getName() + " (" + ip + ") was IP banned. Reason: Too many failed " + type + " attempts");

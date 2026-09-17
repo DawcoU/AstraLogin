@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.auth.security.premium.crypto;
+package pl.dawcou.astralogin.auth.security.premium.protocol.cipher;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;

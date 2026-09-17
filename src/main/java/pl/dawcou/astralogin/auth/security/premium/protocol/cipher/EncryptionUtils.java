@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.auth.security.premium.crypto;
+package pl.dawcou.astralogin.auth.security.premium.protocol.cipher;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -10,9 +10,9 @@ import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
-public final class EncryptionUtil {
+public final class EncryptionUtils {
 
-    private EncryptionUtil() {}
+    private EncryptionUtils() {}
 
     // Generuje unikalny Server Hash wariantu Minecraft SHA-1 (Notchian Hex)
     public static String generateServerHash(String serverId, PublicKey publicKey, SecretKey secretKey) {

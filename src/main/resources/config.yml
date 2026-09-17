@@ -71,7 +71,7 @@ security:
   # Premium Login
   auto-login:
     # Should premium login be enabled?
-    enabled: false
+    enabled: true
 
     # Available modes:
     # FULL - Uses new experimental full player authentication (requires ProtocolLib installed, 100% secure)

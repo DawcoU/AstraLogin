@@ -38,16 +38,14 @@ public class MojangApiService {
             return WrappedGameProfile.fromHandle(nmsProfile);
         }
 
-        long startTime = System.currentTimeMillis();
-
         try {
             String urlString = "https://sessionserver.mojang.com/session/minecraft/hasJoined?username="
                     + URLEncoder.encode(username, StandardCharsets.UTF_8)
                     + "&serverId="
                     + URLEncoder.encode(serverHash, StandardCharsets.UTF_8);
 
-            debug("[Mojang API] 🌐 Requesting hasJoined: username=" + username + ", serverHash=" + serverHash);
-            debug("[Mojang API] 🔗 Full URL: " + urlString);
+            plugin.getPacketListener().debug("DEBUG [Mojang API] 🌐 Requesting hasJoined: username=" + username + ", serverHash=" + serverHash);
+            plugin.getPacketListener().debug("DEBUG [Mojang API] 🔗 Full URL: " + urlString);
 
             URL url = URI.create(urlString).toURL();
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -93,25 +91,21 @@ public class MojangApiService {
                     }
                 }
 
-                debug("[Mojang API] ✅ hasJoined returned valid profile username=" + name + ", totalTime=" + (System.currentTimeMillis() - startTime) + "ms");
+                plugin.getPacketListener().debug("DEBUG [MOJANG-API] 🔓 Player " + name + " successfully verified by Mojang!");
+
                 return profile;
             } else {
-                debug("[Mojang API] ❌ Unexpected HTTP response=" + responseCode + " for " + username);
+                plugin.getPacketListener().debugSevere("DEBUG [Mojang API] ❌ Unexpected HTTP response=" + responseCode + " for " + username);
             }
 
             return null;
         } catch (Exception e) {
-            if (plugin.isDebugEnabled()) {
-                plugin.getLogger().severe("[Mojang API] ❌ Exception during hasJoined: " + e.getMessage());
-            }
+            plugin.getLogger().severe(
+                    "[MOJANG-API-ERR] ❌ Exception during hasJoined: "
+                            + e.getClass().getName() + ": " + e.getMessage()
+            );
             e.printStackTrace();
             return null;
-        }
-    }
-
-    private void debug(String msg) {
-        if (plugin.isDebugEnabled()) {
-            plugin.getLogger().info(msg);
         }
     }
 }

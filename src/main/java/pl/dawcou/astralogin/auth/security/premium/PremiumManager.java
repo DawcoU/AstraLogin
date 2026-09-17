@@ -35,7 +35,7 @@ public class PremiumManager {
         UUID uuid = p.getUniqueId();
 
         // 1. Pobieramy wariant z configu
-        String mode = plugin.getConfig().getString("security.auto-login.mode", "MINI");
+        String mode = plugin.getConfig().getString("security.auto-login.mode", "FULL");
 
         // 2. Jeśli zwrócą false, natychmiast przerywamy
         if (!premiumLoginRequirements(mode)) {
@@ -157,7 +157,11 @@ public class PremiumManager {
     }
 
     public void setAuthenticated(UUID uuid, boolean authenticated) {
-        activeSessions.put(uuid, authenticated);
+        if (authenticated) {
+            activeSessions.put(uuid, true);
+        } else {
+            activeSessions.remove(uuid);
+        }
     }
 
     public boolean isAuthenticated(UUID uuid) {

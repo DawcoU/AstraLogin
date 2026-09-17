@@ -57,9 +57,7 @@ public class UpdateChecker {
                 checkVersion(target, currentVersion, latest);
 
             } catch (Exception e) {
-                plugin.getSchedulerManager().runSync(() -> {
-                    plugin.getNoticeManager().sendUpdateCheckError();
-                });
+                plugin.getSchedulerManager().runSync(() -> plugin.getNoticeManager().sendUpdateCheckError());
             }
         });
     }
@@ -94,22 +92,36 @@ public class UpdateChecker {
         int latestPatch = latestParts.length > 2 ? Integer.parseInt(latestParts[2]) : 0;
 
         boolean isCurrentExperimental = current.contains("-");
-        boolean isLatestPreRelease = latest.isPrerelease();
+        boolean isLatestExperimental = latest.getVersion().contains("-");
+        boolean isLatestPreRelease = latest.isPrerelease() || isLatestExperimental;
 
         plugin.getSchedulerManager().runSync(() -> {
 
             // ==========================================
-            // KROK 1: Obsługa wydań Pre-Release z sieci
+            // KROK 1: Obsługa wersji z sieci typu Pre-Release / Experimental
             // ==========================================
             if (isLatestPreRelease) {
-                if (isCurrentExperimental && cleanCurrent.equals(cleanLatest)) {
-                    plugin.getNoticeManager().sendExperimentalNotice(sender);
+                if (cleanCurrent.equals(cleanLatest)) {
+                    if (!isCurrentExperimental) {
+                        // Masz 4.4.0 na serwerze, a na sieci jest 4.4.0-rc1 -> masz wersję dev/niepubliczną
+                        plugin.getNoticeManager().sendVersionDevNotice(sender, latest.getVersion());
+                        return;
+                    } else {
+                        // Obydwie to wersje testowe tej samej gałęzi
+                        plugin.getNoticeManager().sendExperimentalNotice(sender);
+                        plugin.getNoticeManager().sendPreReleaseNotice(sender, latest.getVersion());
+                        return;
+                    }
+                }
+
+                boolean isLatestHigher = (latestMajor > currentMajor) ||
+                        (latestMajor == currentMajor && latestMinor > currentMinor) ||
+                        (latestMajor == currentMajor && latestMinor == currentMinor && latestPatch > currentPatch);
+
+                if (isLatestHigher) {
                     plugin.getNoticeManager().sendPreReleaseNotice(sender, latest.getVersion());
                     return;
                 }
-
-                plugin.getNoticeManager().sendPreReleaseNotice(sender, latest.getVersion());
-                return;
             }
 
             // ==========================================

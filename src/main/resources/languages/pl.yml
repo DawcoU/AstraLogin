@@ -133,7 +133,7 @@ messages:
     usage: "&cUżycie: /ipmanager <info, unban, bypass, unbypass, gracz>"
     no-ip: "&cBrak zarejestrowanego adresu IP dla gracza &6%player%&c!"
     info-not-banned: "&aGracz &6%player% &7(Adres IP: %ip%) &anie ma aktywnej blokady adresu IP"
-    info-banned: "&cGracz &6%player% &7(Adres IP: %ip%) &cjest zbanowany! Powód: &6%reason%&c, Pozostało: &6%time% s"
+    info-banned: "&cGracz &6%player% &7(Adres IP: %ip%) &cjest zbanowany! Powód: &6%reason%&c, Pozostało: &6%time%"
     not-banned: "&cAdres IP gracza &6%player% &cnie jest zbanowany!"
     unban-success: "&aPomyślnie odbanowano adres IP gracza &6%player% &7(%ip%)&a!"
     bypass-enabled: "&aWłączono bypass sprawdzania adresu IP dla gracza &6%player%"
@@ -160,7 +160,7 @@ messages:
 
   # --- Weryfikacja dwuetapowa 2FA ---
   twofactor:
-    usage: "&cPoprawne użycie: &6/2fa <setup, next, unsetup, confirm, kod>"
+    usage: "&cPoprawne użycie: &6/2fa <setup, unsetup, kod>"
     already-enabled: "&cMasz już włączone zabezpieczenie 2FA!"
     not-enabled: "&cNie masz włączonego zabezpieczenia 2FA!"
 
@@ -238,9 +238,9 @@ messages:
     start: "&aRozpoczynam proces weryfikacji i migracji dla &e%old% &a--> &e%new%"
 
     success: "&aPomyślnie przeniesiono dane z konta &e%old% &ana konto &e%new%&a!"
-    error-migration: "§cWystąpił błąd podczas zapisywania zmigrowanych plików!"
+    error-migration: "&cWystąpił błąd podczas zapisywania zmigrowanych plików!"
 
-    new-player-exists: "§cNowe UUID &6(%uuid%) &cistnieje już w bazie danych pluginu!"
+    new-player-exists: "&cNowe UUID &6(%uuid%) &cistnieje już w bazie danych pluginu!"
     old-player-no-data: "&cGracz &6%target% &cnie posiada żadnych zapisanych danych w tym pluginie. Nie ma czego przenosić!"
 
     player-not-exists: "&cGracz &6%target% &cnigdy nie grał na tym serwerze!"

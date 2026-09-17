@@ -61,6 +61,7 @@ public class NoticeManager {
             sender.sendMessage(p + " §f/iptrust <info/set/reset> <IP> <score> §7- " + (isPl ? "Reputacja IP gracza" : "Shows and manages IP reputation"));
             sender.sendMessage(p + " §f/astralogin reload §7- " + (isPl ? "Przeładowanie konfiguracji pluginu" : "Reloads plugin configuration"));
         }
+
         sender.sendMessage(p + "§b§l=================================");
     }
 
@@ -75,42 +76,44 @@ public class NoticeManager {
     }
 
     public void sendPlayerLocationReadError(String playerName) {
-        String msg = getLang().equalsIgnoreCase("pl") ? "§cBłąd podczas odczytu pozycji dla " + playerName : "§cError while reading location for " + playerName;
+        String msg = getLang().equalsIgnoreCase("pl")
+                ? "Błąd podczas odczytu pozycji dla " + playerName
+                : "Error while reading location for " + playerName;
         plugin.getLogger().severe(msg);
     }
 
     public void sendLoggerError(Exception e) {
-        String msg = getLang().equalsIgnoreCase("pl") ?
-                "§4KRYTYCZNY BŁĄD: §cNie udało się aktywować filtra logów! Hasła mogą być widoczne w konsoli Błąd: " + e.getMessage() :
-                "§4CRITICAL ERROR: §cFailed to activate log filter! Passwords may be visible in console Error: " + e.getMessage();
+        String msg = getLang().equalsIgnoreCase("pl")
+                ? "KRYTYCZNY BŁĄD: Nie udało się aktywować filtra logów! Hasła mogą być widoczne w konsoli Błąd: " + e.getMessage()
+                : "CRITICAL ERROR: Failed to activate log filter! Passwords may be visible in console Error: " + e.getMessage();
         plugin.getLogger().severe(msg);
     }
 
     public void sendPremiumCheckError(String player, Exception e) {
-        String msg = getLang().equalsIgnoreCase("pl") ?
-                "§cNie udało się zweryfikować gracza: §6(" + player + ") §cBłąd: " + e.getMessage() :
-                "§cFailed to verify player: §6(" + player + ") §cError: " + e.getMessage();
+        String msg = getLang().equalsIgnoreCase("pl")
+                ? "Nie udało się zweryfikować gracza: (" + player + ") Błąd: " + e.getMessage()
+                : "Failed to verify player: (" + player + ") Error: " + e.getMessage();
         plugin.getLogger().warning(msg);
     }
 
     public void sendPremiumFastCheckError(String player, Exception e) {
-        String msg = getLang().equalsIgnoreCase("pl") ?
-                "§cNie udało się zweryfikować gracza w bazie Mojang: §6(" + player + ") §cBłąd: " + e.getMessage() :
-                "§cCould not verify player in Mojang database: §6(" + player + ") §cError: " + e.getMessage();
+        String msg = getLang().equalsIgnoreCase("pl")
+                ? "Nie udało się zweryfikować gracza w bazie Mojang: (" + player + ") Błąd: " + e.getMessage()
+                : "Could not verify player in Mojang database: (" + player + ") Error: " + e.getMessage();
         plugin.getLogger().warning(msg);
     }
 
     public void sendLogSaveError(String fileName) {
-        String msg = getLang().equalsIgnoreCase("pl") ?
-                "§cNie udało się zapisać logu bezpieczeństwa do pliku: §e" + fileName :
-                "§cFailed to save security log to file: §e" + fileName;
+        String msg = getLang().equalsIgnoreCase("pl")
+                ? "Nie udało się zapisać logu bezpieczeństwa do pliku: " + fileName
+                : "Failed to save security log to file: " + fileName;
         plugin.getLogger().severe(msg);
     }
 
     public void sendBackupSaveError(String error) {
-        String msg = getLang().equalsIgnoreCase("pl") ?
-                "§cNie udało się wykonać automatycznej kopii zapasowej, Błąd:" :
-                "§cAutomatic backup failed, Error:";
+        String msg = getLang().equalsIgnoreCase("pl")
+                ? "Nie udało się wykonać automatycznej kopii zapasowej, Błąd:"
+                : "Automatic backup failed, Error:";
         plugin.getLogger().severe(msg + " " + error);
     }
 
@@ -159,9 +162,9 @@ public class NoticeManager {
     }
 
     public void sendLangUpdateError(String fileName, String error) {
-        String msg = getLang().equalsIgnoreCase("pl") ?
-                "§cNie udało się zaktualizować pliku językowego (" + fileName + "):" :
-                "§cFailed to update language file (" + fileName + "): ";
+        String msg = getLang().equalsIgnoreCase("pl")
+                ? "Nie udało się zaktualizować pliku językowego (" + fileName + "):"
+                : "Failed to update language file (" + fileName + "): ";
         plugin.getLogger().severe(msg + " " + error);
     }
 
@@ -205,13 +208,19 @@ public class NoticeManager {
     // --- METODY POWIADOMIEŃ WERSJI I AKTUALIZACJI ---
 
     public void sendVersionOk() {
-        String msg = getLang().equalsIgnoreCase("pl") ? "§aAstraLogin jest aktualny §f(§ev" + plugin.getDescription().getVersion() + "§f)" : "§aAstraLogin is up to date §f(§ev" + plugin.getDescription().getVersion() + "§f)";
+        String msg = getLang().equalsIgnoreCase("pl")
+                ? "§aAstraLogin jest aktualny §f(§ev" + plugin.getDescription().getVersion() + "§f)"
+                : "§aAstraLogin is up to date §f(§ev" + plugin.getDescription().getVersion() + "§f)";
         Bukkit.getConsoleSender().sendMessage(getConsolePrefix() + " " + msg);
     }
 
     public void sendExperimentalNotice(CommandSender target) {
-        String devTitle = getLang().equalsIgnoreCase("pl") ? "§bUżywasz eksperymentalną wersję: §fv" : "§bYou are using an experimental version: §fv";
-        String warning = getLang().equalsIgnoreCase("pl") ? "§cUżywaj tylko dla testów! kod jest w fazie rozwoju!" : "§cUse only for testing! the code is in development!";
+        String devTitle = getLang().equalsIgnoreCase("pl")
+                ? "§bUżywasz eksperymentalną wersję: §fv"
+                : "§bYou are using an experimental version: §fv";
+        String warning = getLang().equalsIgnoreCase("pl")
+                ? "§cUżywaj tylko dla testów! kod jest w fazie rozwoju!"
+                : "§cUse only for testing! the code is in development!";
 
         String prefix = getPrefix(target);
 
@@ -224,8 +233,12 @@ public class NoticeManager {
     }
 
     public void sendPreReleaseNotice(CommandSender target, String version) {
-        String title = getLang().equalsIgnoreCase("pl") ? "§6[Pre-Release] §eDostępna jest wersja testowa: §b" + plugin.getDescription().getVersion() : "§6[Pre-Release] §eTest version available: §b" + plugin.getDescription().getVersion();
-        String info = getLang().equalsIgnoreCase("pl") ? "§cUwaga: Wersja wyłącznie do celów testowych! Może zawierać błędy." : "§cNotice: For testing purposes only! May contain bugs.";
+        String title = getLang().equalsIgnoreCase("pl")
+                ? "§6[Pre-Release] §eDostępna jest wersja testowa: §b" + plugin.getDescription().getVersion()
+                : "§6[Pre-Release] §eTest version available: §b" + plugin.getDescription().getVersion();
+        String info = getLang().equalsIgnoreCase("pl")
+                ? "§cUwaga: Wersja wyłącznie do celów testowych! Może zawierać błędy."
+                : "§cNotice: For testing purposes only! May contain bugs.";
 
         String download = getLang().equalsIgnoreCase("pl")
                 ? "§aPobierz: "
@@ -243,9 +256,15 @@ public class NoticeManager {
     }
 
     public void sendVersionDevNotice(CommandSender target, String latestStable) {
-        String devTitle = getLang().equalsIgnoreCase("pl") ? "§bUżywasz nowszej wersji nie publicznej: §fv" : "§bYou are using a newer, non-public version: §fv";
-        String stableInfo = getLang().equalsIgnoreCase("pl") ? "§eNajnowsza publiczna wersja AstraLogin to: §fv" : "§eThe latest public version of AstraLogin is: §fv";
-        String warning = getLang().equalsIgnoreCase("pl") ? "§cUważaj na błędy, kod jest w fazie rozwoju!" : "§cWatch out for bugs, the code is in development!";
+        String devTitle = getLang().equalsIgnoreCase("pl")
+                ? "§bUżywasz nowszej wersji nie publicznej: §fv"
+                : "§bYou are using a newer, non-public version: §fv";
+        String stableInfo = getLang().equalsIgnoreCase("pl")
+                ? "§eNajnowsza publiczna wersja AstraLogin to: §fv"
+                : "§eThe latest public version of AstraLogin is: §fv";
+        String warning = getLang().equalsIgnoreCase("pl")
+                ? "§cUważaj na błędy, kod jest w fazie rozwoju!"
+                : "§cWatch out for bugs, the code is in development!";
 
         String prefix = getPrefix(target);
 
@@ -317,8 +336,8 @@ public class NoticeManager {
 
     public void sendUpdateCheckError() {
         String msg = getLang().equalsIgnoreCase("pl")
-                ? "§cNie udało się sprawdzić aktualizacji"
-                : "§cFailed to check for updates";
+                ? "Nie udało się sprawdzić aktualizacji"
+                : "Failed to check for updates";
         plugin.getLogger().warning(msg);
     }
 }

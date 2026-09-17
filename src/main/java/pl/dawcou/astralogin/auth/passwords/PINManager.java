@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.auth.security.passwords;
+package pl.dawcou.astralogin.auth.passwords;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -6,15 +6,17 @@ import pl.dawcou.astralogin.AstraLogin;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class PINManager {
 
     private final AstraLogin plugin;
     private final File file;
     private FileConfiguration config;
+
+    private static final SecureRandom secureRandom = new SecureRandom();
 
     private final Map<String, String> PINCache = new HashMap<>();
 
@@ -40,7 +42,7 @@ public class PINManager {
 
     public String generatePIN(int length) {
         int bound = (int) Math.pow(10, length);
-        int pinNumber = ThreadLocalRandom.current().nextInt(bound);
+        int pinNumber = secureRandom.nextInt(bound);
         return String.format("%0" + length + "d", pinNumber);
     }
 

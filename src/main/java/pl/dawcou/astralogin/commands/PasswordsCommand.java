@@ -9,8 +9,8 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.auth.security.passwords.PasswordHasher;
-import pl.dawcou.astralogin.system.LoginUtils;
+import pl.dawcou.astralogin.auth.passwords.PasswordHasher;
+import pl.dawcou.astralogin.system.TimeUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -111,10 +111,10 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
             plugin.getSchedulerManager().runAsync(() -> {
                 PasswordHasher.VerificationResult result = plugin.getPasswordManager().getPasswordHasher().verifyPassword(p.getUniqueId(), PIN, hashedPIN);
 
-                switch (result.getStatus()) {
+                switch (result.status()) {
                     case SUCCESS:
-                        if (result.isRehashNeeded() && result.getNewHash() != null) {
-                            plugin.getPasswordManager().savePassword(uuidString, result.getNewHash());
+                        if (result.rehashNeeded() && result.newHash() != null) {
+                            plugin.getPasswordManager().savePassword(uuidString, result.newHash());
                         }
 
                         plugin.getSchedulerManager().runSync(() -> {
@@ -142,10 +142,10 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                         break;
 
                     case RATE_LIMITED_PLAYER:
-                        long seconds = result.getRemainingSeconds();
+                        long seconds = result.remainingSeconds();
                         plugin.getSchedulerManager().runSync(() -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.rate-limit")
-                                    .replace("%time%", LoginUtils.formatTime(seconds)));
+                                    .replace("%time%", TimeUtils.formatTime(seconds)));
                         });
                         break;
 
@@ -221,7 +221,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                 PasswordHasher hasher = plugin.getPasswordManager().getPasswordHasher();
                 PasswordHasher.VerificationResult result = hasher.verifyPassword(playerUUID, oldPassword, currentPassword);
 
-                switch (result.getStatus()) {
+                switch (result.status()) {
                     case SUCCESS:
                         String newHashPassword = hasher.hashPassword(newPassword);
 
@@ -259,10 +259,10 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                         break;
 
                     case RATE_LIMITED_PLAYER:
-                        long seconds = result.getRemainingSeconds();
+                        long seconds = result.remainingSeconds();
                         plugin.getSchedulerManager().runSync(() -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.rate-limit")
-                                    .replace("%time%", LoginUtils.formatTime(seconds)));
+                                    .replace("%time%", TimeUtils.formatTime(seconds)));
                         });
                         break;
 

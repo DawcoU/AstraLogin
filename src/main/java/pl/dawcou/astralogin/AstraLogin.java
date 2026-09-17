@@ -11,15 +11,15 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import pl.dawcou.astralogin.auth.LoginSystem;
-import pl.dawcou.astralogin.auth.SessionManager;
+import pl.dawcou.astralogin.auth.sessions.SessionManager;
 import pl.dawcou.astralogin.auth.manage.*;
 import pl.dawcou.astralogin.auth.accounts.AccountManager;
 import pl.dawcou.astralogin.auth.manage.spawn.SpawnManager;
 import pl.dawcou.astralogin.commands.*;
-import pl.dawcou.astralogin.auth.security.passwords.PINManager;
-import pl.dawcou.astralogin.auth.security.passwords.PasswordManager;
+import pl.dawcou.astralogin.auth.passwords.PINManager;
+import pl.dawcou.astralogin.auth.passwords.PasswordManager;
 import pl.dawcou.astralogin.auth.security.premium.PremiumManager;
-import pl.dawcou.astralogin.auth.security.premium.listener.PremiumProtocolListener;
+import pl.dawcou.astralogin.auth.security.premium.protocol.PacketListener;
 import pl.dawcou.astralogin.auth.security.ip.IPTrustManager;
 import pl.dawcou.astralogin.file.BackupManager;
 import pl.dawcou.astralogin.file.FilesUpdater;
@@ -101,7 +101,7 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
     // ----------------------------------------------------------------------------------------------------
 
     private ProtocolManager protocolManager;
-    private PremiumProtocolListener premiumProtocolListener;
+    private PacketListener packetListener;
 
     private LoginListeners loginListeners;
     private TechnicalListeners technicalListeners;
@@ -157,7 +157,7 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
     // ----------------------------------------------------------------------------------------------------
 
     public ProtocolManager getProtocolManager() { return protocolManager; }
-    public PremiumProtocolListener getPremiumProtocolListener() { return premiumProtocolListener; }
+    public PacketListener getPacketListener() { return packetListener; }
 
     // TODO: implement ultra advanced quantum potato engine with 9000% more binary and RTX ray tracing
     // Security is more important than backdoors or worms, so you, the reader, move on and don't worry about it.
@@ -258,12 +258,12 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
         if (getServer().getPluginManager().getPlugin("ProtocolLib") != null) {
             protocolManager = ProtocolLibrary.getProtocolManager();
             // TWORZYMY LISTENER PROTOKOŁU TYLKO RAZ!
-            premiumProtocolListener = new PremiumProtocolListener(this, protocolManager);
+            packetListener = new PacketListener(this, protocolManager);
         } else {
             getLogger().warning("ProtocolLib is missing from the server! Premium autologin will be disabled.");
         }
 
-        loginListeners = new LoginListeners(this, premiumProtocolListener);
+        loginListeners = new LoginListeners(this, packetListener);
         technicalListeners = new TechnicalListeners(this);
         AccountCommand accountCommand = new AccountCommand(this);
         TwoFactorCommand twoFactorCommand = new TwoFactorCommand(this, twoFactorManager, loginSystem);
@@ -285,7 +285,7 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
         }
 
         try {
-            Class.forName("pl.dawcou.astralogin.system.LoginUtils");
+            Class.forName("pl.dawcou.astralogin.system.TimeUtils");
         } catch (ClassNotFoundException ignored) {}
 
         // --- 4. REJESTRACJA EVENTÓW I KOMEND ---
@@ -321,7 +321,7 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
         registerCommand("zresetuj2fa", twoFactorCommand);
 
         sessionManager.loadSessionsFromConfig();
-        sessionManager.load2FAFromConfig();
+        sessionManager.getTwoFactorSessionManager().load2FAFromConfig();
 
         // 1. Zapisuje sesje i sprawdza czy można wyczyścić mapy z premium graczami
         schedulerManager.runAsync(() -> {

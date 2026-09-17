@@ -2,9 +2,8 @@ package pl.dawcou.astralogin.auth.security.ip;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.system.LoginUtils;
+import pl.dawcou.astralogin.system.TimeUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -84,7 +83,7 @@ public class IPBanManager {
         ipAttempts.put(ip, current);
 
         if (current >= max) {
-            long banMillis = LoginUtils.parseTime(timeStr, 600000L);
+            long banMillis = TimeUtils.parseTime(timeStr, 600000L);
             banIPWithMillis(ip, banMillis, "SPAM", uuid);
             ipAttempts.remove(ip);
             plugin.getIpTrustManager().addTrustScore(

@@ -2,7 +2,7 @@ package pl.dawcou.astralogin.file;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.system.LoginUtils;
+import pl.dawcou.astralogin.system.TimeUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -37,7 +37,7 @@ public class BackupManager {
 
             if (!ignoreInterval) {
                 long defaultIntervalMs = 24L * 60 * 60 * 1000;
-                long intervalMs = LoginUtils.parseTime(timeString, defaultIntervalMs);
+                long intervalMs = TimeUtils.parseTime(timeString, defaultIntervalMs);
 
                 long minimumMs = 12L * 60 * 60 * 1000;
                 if (intervalMs < minimumMs) {

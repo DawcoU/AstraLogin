@@ -133,7 +133,7 @@ messages:
     usage: "&cUsage: /ipmanager <info, unban, bypass, unbypass, player>"
     no-ip: "&cNo registered IP address found for player &6%player%&c!"
     info-not-banned: "&aPlayer &6%player% &7(IP address: %ip%) &adoes not have an active IP address ban"
-    info-banned: "&cPlayer &6%player% &7(IP address: %ip%) &cis banned! Reason: &6%reason%&c, Time left: &6%time% s"
+    info-banned: "&cPlayer &6%player% &7(IP address: %ip%) &cis banned! Reason: &6%reason%&c, Time left: &6%time%"
     not-banned: "&cIP address for player &6%player% &cis not banned!"
     unban-success: "&aSuccessfully unbanned IP address for player &6%player% &7(%ip%)&a!"
     bypass-enabled: "&aEnabled IP address check bypass for player &6%player%"
@@ -160,7 +160,7 @@ messages:
 
   # --- Two-Factor Authentication (2FA) ---
   twofactor:
-    usage: "&cCorrect usage: &6/2fa <setup, next, unsetup, confirm, code>"
+    usage: "&cCorrect usage: &6/2fa <setup, unsetup, code>"
     already-enabled: "&cYou already have 2FA enabled!"
     not-enabled: "&cYou do not have 2FA enabled!"
 
@@ -177,7 +177,7 @@ messages:
       - "&6Use one of these if you lose access to your authenticator app!"
       - "&7&m-------------------------"
 
-    setup-timer: "&aTime remaining for setup: &e%seconds%s"
+    setup-timer: "&aTime remaining for setup: &e%seconds%"
     expired: "&cVerification time has expired!"
     setup-already-active: "&cYou are already setting up 2FA!"
     not-in-setup: "&cYou are not currently setting up or removing 2FA"
@@ -189,7 +189,7 @@ messages:
     required: "&eEnter the code from your app: &6/2fa <code>"
     not-needed: "&cYou do not need to enter a 2FA code right now"
 
-    unsetup-instructions: "&cAby disable 2FA, enter the code: /2fa unsetup <code>"
+    unsetup-instructions: "&cTo disable 2FA, enter the code: /2fa unsetup <code>"
 
 
   # --- Account Info Command (/konto) ---
@@ -238,9 +238,9 @@ messages:
     start: "&aStarting verification and migration process for &e%old% &a--> &e%new%"
 
     success: "&aSuccessfully transferred data from &e%old% &ato &e%new%&a!"
-    error-migration: "§cAn error occurred while saving the migrated files!"
+    error-migration: "&cAn error occurred while saving the migrated files!"
 
-    new-player-exists: "§cThe new UUID &6(%uuid%) &calready exists in the plugin database!"
+    new-player-exists: "&cThe new UUID &6(%uuid%) &calready exists in the plugin database!"
     old-player-no-data: "&cPlayer &6%target% &chas no data saved in this plugin. Nothing to transfer!"
 
     player-not-exists: "&cPlayer &6%target% &chas never played on this server!"

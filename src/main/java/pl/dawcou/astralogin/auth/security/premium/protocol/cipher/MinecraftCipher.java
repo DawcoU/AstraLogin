@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.auth.security.premium.crypto;
+package pl.dawcou.astralogin.auth.security.premium.protocol.cipher;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;

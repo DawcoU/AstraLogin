@@ -9,7 +9,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.auth.security.passwords.PINManager;
+import pl.dawcou.astralogin.auth.passwords.PINManager;
 
 import java.util.ArrayList;
 import java.util.List;

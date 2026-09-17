@@ -11,7 +11,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffectType;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.manage.spawn.SpawnType;
-import pl.dawcou.astralogin.system.LoginUtils;
+import pl.dawcou.astralogin.system.TimeUtils;
 
 import java.time.Duration;
 import java.util.*;
@@ -175,10 +175,10 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                     // Sprawdzamy poprawność nowym systemem z obsługą UUID dla limitera
                     var result = plugin.getPasswordManager().getPasswordHasher().verifyPassword(playerUUID, inputPassword, password);
 
-                    switch (result.getStatus()) {
+                    switch (result.status()) {
                         case SUCCESS:
-                            if (result.isRehashNeeded() && result.getNewHash() != null) {
-                                plugin.getPasswordManager().savePassword(uuidString, result.getNewHash());
+                            if (result.rehashNeeded() && result.newHash() != null) {
+                                plugin.getPasswordManager().savePassword(uuidString, result.newHash());
                             }
 
                             plugin.getIPManager().saveIP(uuidString, currentIP);
@@ -188,7 +188,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                             boolean is2FAEnabled = plugin.getAccountManager().getConfig().getBoolean("accounts." + uuidString + ".2fa-enabled", false);
 
                             // Jeśli opcja sesji 2FA jest wyłączona w configu, 'hasActive2FA' ZAWSZE traktujemy jako false
-                            boolean hasActive2FA = is2FASessionEnabled && plugin.getSessionManager().hasActive2FASession(playerUUID);
+                            boolean hasActive2FA = is2FASessionEnabled && plugin.getSessionManager().getTwoFactorSessionManager().hasActive2FASession(playerUUID);
 
                             // KOMBINACJA: Hasło poprawne, 2FA włączone, ale BRAK aktywnej sesji 2FA (lub sesje wyłączone w configu)
                             if (is2FAEnabled && !hasActive2FA) {
@@ -231,7 +231,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
 
                                     // Zapisujemy sesję 2FA na dysk TYLKO jeśli funkcja sesji 2FA jest włączona w config.yml!
                                     if (is2FAEnabled && is2FASessionEnabled) {
-                                        plugin.getSessionManager().saveSession2FA(playerUUID, currentIP);
+                                        plugin.getSessionManager().getTwoFactorSessionManager().saveSession2FA(playerUUID, currentIP);
                                     }
                                 });
                             }
@@ -257,10 +257,10 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                             break;
 
                         case RATE_LIMITED_PLAYER:
-                            long seconds = result.getRemainingSeconds();
+                            long seconds = result.remainingSeconds();
                             plugin.getSchedulerManager().runSync(() -> {
                                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.rate-limit")
-                                        .replace("%time%", LoginUtils.formatTime(seconds)));
+                                        .replace("%time%", TimeUtils.formatTime(seconds)));
                             });
                             break;
 
@@ -314,6 +314,8 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
 
         loggedIn.add(uuid);
         plugin.getSessionManager().deleteSession(uuid);
+
+        p.removePotionEffect(PotionEffectType.BLINDNESS);
     }
 
     @Override

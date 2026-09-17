@@ -163,7 +163,7 @@ public class AccountCommand implements CommandExecutor {
             plugin.getInventoryManager().deleteInventoryCache(uuidString);
             plugin.getSpawnManager().deletePlayerSpawn(uuidString);
             plugin.getSessionManager().deleteSession(targetUUID);
-            plugin.getSessionManager().deleteSession2FA(targetUUID);
+            plugin.getSessionManager().getTwoFactorSessionManager().deleteSession2FA(targetUUID);
 
             plugin.getAccountManager().purgeAccountData(targetUUID);
 

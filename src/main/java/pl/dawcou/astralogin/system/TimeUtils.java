@@ -1,6 +1,6 @@
 package pl.dawcou.astralogin.system;
 
-public class LoginUtils {
+public class TimeUtils {
 
     public static long parseTime(String input, long defaultValue) {
         if (input == null || input.isBlank()) return defaultValue;

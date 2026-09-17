@@ -3,7 +3,7 @@ package pl.dawcou.astralogin.system.tasks;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.system.LoginUtils;
+import pl.dawcou.astralogin.system.TimeUtils;
 import pl.dawcou.astralogin.system.SchedulerManager;
 
 import java.util.List;
@@ -27,7 +27,7 @@ public class SecurityReminderTask {
         }
 
         String rawTime = plugin.getConfig().getString("security.security-reminder.interval", "24 hours");
-        long intervalMillis = LoginUtils.parseTime(rawTime, 86400000L);
+        long intervalMillis = TimeUtils.parseTime(rawTime, 86400000L);
 
         this.currentTask = plugin.getSchedulerManager().runAsyncRepeating(task -> {
             long now = System.currentTimeMillis();

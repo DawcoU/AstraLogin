@@ -1,11 +1,11 @@
 plugins {
     id 'java'
     id 'com.gradleup.shadow' version '8.3.9'
-    id 'io.papermc.paperweight.userdev' version '1.7.2'
+    // id 'io.papermc.paperweight.userdev' version '1.7.2'
 }
 
 group = 'pl.dawcou'
-version = '4.4.0-rc1'
+version = '4.4.0'
 
 repositories {
     mavenCentral()
@@ -13,13 +13,21 @@ repositories {
 }
 
 dependencies {
-    paperweight.paperDevBundle("1.20.4-R0.1-SNAPSHOT")
+    // Paper API
+    compileOnly 'io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT'
+
+    // Mapowania Papera
+    // paperweight.paperDevBundle("1.20.4-R0.1-SNAPSHOT")
 
     // Biblioteka Mojang
     compileOnly 'com.mojang:authlib:6.0.54'
 
     // Pełny Netty z handlerami i pipelinem
     compileOnly 'io.netty:netty-all:4.2.18.Final'
+
+    // Log4j
+    compileOnly 'org.apache.logging.log4j:log4j-api:2.25.1'
+    compileOnly 'org.apache.logging.log4j:log4j-core:2.25.1'
 
     // LOKALNE JAR-Y z folderu /libs
     // compileOnly fileTree(dir: 'libs', include: ['*.jar'])
@@ -80,20 +88,15 @@ shadowJar {
     exclude 'org/bouncycastle/iana/**'
 }
 
-// Remapowanie NMS
-tasks.reobfJar {
-    inputJar = shadowJar.archiveFile
-}
-
 tasks.build {
     dependsOn shadowJar
 }
 
 // Automatyczne usuwanie niepotrzebnego pliku -dev po zakończeniu budowania
-tasks.build.doLast {
-    fileTree("build/libs").matching {
-        include "*-dev.jar", "*-dev-paper.jar", "*-all.jar"
-    }.each { file ->
-        delete file
-    }
-}
+// tasks.build.doLast {
+    // fileTree("build/libs").matching {
+        // include "*-dev.jar"
+    // }.each { file ->
+        // delete file
+    // }
+// }

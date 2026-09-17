@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.auth.security.passwords;
+package pl.dawcou.astralogin.auth.passwords;
 
 import org.bouncycastle.crypto.generators.Argon2BytesGenerator;
 import org.bouncycastle.crypto.params.Argon2Parameters;
@@ -49,45 +49,18 @@ public class PasswordHasher {
         ERROR
     }
 
-    public static class VerificationResult {
-        private final HashStatus status;
-        private final boolean rehashNeeded;
-        private final String newHash;
-        private final long remainingSeconds;
-
-        public VerificationResult(HashStatus status, boolean rehashNeeded, String newHash, long remainingSeconds) {
-            this.status = status;
-            this.rehashNeeded = rehashNeeded;
-            this.newHash = newHash;
-            this.remainingSeconds = remainingSeconds;
-        }
-
+    public record VerificationResult(HashStatus status, boolean rehashNeeded, String newHash, long remainingSeconds) {
         // Konstruktor pomocniczy dla zwykłych statusów (bez czasu)
-        public VerificationResult(HashStatus status, boolean success, String newHash) {
-            this(status, success, newHash, 0L);
-        }
+            public VerificationResult(HashStatus status, boolean success, String newHash) {
+                this(status, success, newHash, 0L);
+            }
 
-        public HashStatus getStatus() {
-            return status;
+            public boolean isSuccess() {
+                return status == HashStatus.SUCCESS;
+            }
         }
-
-        public boolean isSuccess() {
-            return status == HashStatus.SUCCESS;
-        }
-
-        public boolean isRehashNeeded() {
-            return rehashNeeded;
-        }
-
-        public String getNewHash() {
-            return newHash;
-        }
-
-        public long getRemainingSeconds() { return remainingSeconds; }
-    }
 
     // --- GENEROWANIE HASHA ---
-
     public String hashPassword(String password) {
         if (password == null || password.isEmpty()) {
             return null;
@@ -160,7 +133,6 @@ public class PasswordHasher {
     }
 
     // --- WERYFIKACJA ORAZ MIGRACJA ---
-
     public VerificationResult verifyPassword(UUID playerUuid, String rawPassword, String storedHash) {
         if (storedHash == null || rawPassword == null || rawPassword.isEmpty() || storedHash.isEmpty()) {
             return new VerificationResult(HashStatus.INVALID_PASSWORD, false, null);
@@ -237,12 +209,11 @@ public class PasswordHasher {
             plugin.getLogger().severe("Error while verifying password: " + t.getMessage());
             return new VerificationResult(HashStatus.ERROR, false, null);
         } finally {
-            hashingSemaphore.release(); // ZAWSZE zwalnia slot semafora
+            hashingSemaphore.release(); // Zwalnia slot semafora
         }
     }
 
     // --- METODY POMOCNICZE BOUNCYCASTLE ARGON2 ---
-
     private byte[] generateArgon2idBytes(char[] password, byte[] salt, int iterations, int memoryKb, int parallelism, int outputLength) {
         Argon2Parameters params = new Argon2Parameters.Builder(Argon2Parameters.ARGON2_id)
                 .withVersion(Argon2Parameters.ARGON2_VERSION_13)
@@ -275,9 +246,11 @@ public class PasswordHasher {
         for (String param : params) {
             String[] kv = param.split("=");
             if (kv.length == 2) {
-                if (kv[0].equals("m")) memoryKb = Integer.parseInt(kv[1]);
-                else if (kv[0].equals("t")) iterations = Integer.parseInt(kv[1]);
-                else if (kv[0].equals("p")) parallelism = Integer.parseInt(kv[1]);
+                switch (kv[0]) {
+                    case "m" -> memoryKb = Integer.parseInt(kv[1]);
+                    case "t" -> iterations = Integer.parseInt(kv[1]);
+                    case "p" -> parallelism = Integer.parseInt(kv[1]);
+                }
             }
         }
 

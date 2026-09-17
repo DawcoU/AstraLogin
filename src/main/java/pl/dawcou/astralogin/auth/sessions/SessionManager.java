@@ -1,10 +1,10 @@
-package pl.dawcou.astralogin.auth;
+package pl.dawcou.astralogin.auth.sessions;
 
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.system.LoginUtils;
+import pl.dawcou.astralogin.system.TimeUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,6 +15,8 @@ import java.util.UUID;
 public class SessionManager {
 
     private final AstraLogin plugin;
+    private final TwoFactorSessionManager twoFactorSessionManager;
+
     private final File sessionFile;
     private FileConfiguration sessionConfig;
 
@@ -22,12 +24,12 @@ public class SessionManager {
     private final Map<UUID, Long> sessions = new HashMap<>();
     private final Map<UUID, String> sessionsIP = new HashMap<>();
 
-    // --- MAPY RAM DLA MODUŁU 2FA ---
-    private final Map<UUID, Long> TwoFactorSessions = new HashMap<>();
-    private final Map<UUID, String> TwoFactorSessionsIP = new HashMap<>();
+    public TwoFactorSessionManager getTwoFactorSessionManager() { return twoFactorSessionManager; }
 
     public SessionManager(AstraLogin plugin) {
         this.plugin = plugin;
+        this.twoFactorSessionManager = new TwoFactorSessionManager(plugin);
+
         File dataDir = new File(plugin.getDataFolder(), "data/players");
         if (!dataDir.exists()) {
             dataDir.mkdirs();
@@ -59,25 +61,6 @@ public class SessionManager {
                 String path = "sessions." + uuid;
                 sessionConfig.set(path + ".timestamp", null);
                 sessionConfig.set(path + ".ip", null);
-            }
-        });
-
-        save();
-    }
-
-    public void save2FAToConfig() {
-        long now = System.currentTimeMillis();
-        long limit = get2FALimitMillis();
-
-        TwoFactorSessions.forEach((uuid, timestamp) -> {
-            if (now - timestamp < limit) {
-                String path = "sessions." + uuid;
-                sessionConfig.set(path + ".2fa-timestamp", timestamp);
-                sessionConfig.set(path + ".2fa-ip", TwoFactorSessionsIP.get(uuid));
-            } else {
-                String path = "sessions." + uuid;
-                sessionConfig.set(path + ".2fa-timestamp", null);
-                sessionConfig.set(path + ".2fa-ip", null);
             }
         });
 
@@ -120,7 +103,7 @@ public class SessionManager {
 
     public long getSessionLimitMillis() {
         String timeStr = plugin.getConfig().getString("features.session.session-time", "15 minutes");
-        return LoginUtils.parseTime(timeStr, 900000L);
+        return TimeUtils.parseTime(timeStr, 900000L);
     }
 
     public void deleteSession(UUID uuid) {
@@ -180,93 +163,11 @@ public class SessionManager {
         save();
     }
 
-    public void saveSession2FA(UUID uuid, String ip) {
-        if (uuid == null) return;
-
-        long now = System.currentTimeMillis();
-        String path = "sessions." + uuid;
-
-        TwoFactorSessions.put(uuid, now);
-        TwoFactorSessionsIP.put(uuid, ip);
-
-        sessionConfig.set(path + ".2fa-timestamp", now);
-        sessionConfig.set(path + ".2fa-ip", ip);
-
-        save();
-    }
-
-    public void deleteSession2FA(UUID uuid) {
-        if (uuid == null) return;
-
-        TwoFactorSessions.remove(uuid);
-        TwoFactorSessionsIP.remove(uuid);
-
-        String path = "sessions." + uuid;
-        if (sessionConfig.contains(path)) {
-            sessionConfig.set(path + ".2fa-timestamp", null);
-            sessionConfig.set(path + ".2fa-ip", null);
-
-            // Jeśli po usunięciu 2FA cała sekcja UUID jest pusta, usuń ją całkowicie
-            var section = sessionConfig.getConfigurationSection(path);
-            if (section == null || section.getKeys(false).isEmpty()) {
-                sessionConfig.set(path, null);
-            }
-
-            save();
-        }
-    }
-
-    public void load2FAFromConfig() {
-        if (!sessionFile.exists()) return;
-
-        sessionConfig = YamlConfiguration.loadConfiguration(sessionFile);
-        ConfigurationSection section = sessionConfig.getConfigurationSection("sessions");
-        if (section == null) return;
-
-        long dfaLimit = get2FALimitMillis();
-        long now = System.currentTimeMillis();
-
-        TwoFactorSessions.clear();
-        TwoFactorSessionsIP.clear();
-
-        for (String uuidStr : section.getKeys(false)) {
-            try {
-                UUID uuid = UUID.fromString(uuidStr);
-                long timestamp = sessionConfig.getLong("sessions." + uuidStr + ".2fa-timestamp");
-                String ip = sessionConfig.getString("sessions." + uuidStr + ".2fa-ip");
-
-                if (timestamp > 0 && (now - timestamp < dfaLimit)) {
-                    TwoFactorSessions.put(uuid, timestamp);
-                    TwoFactorSessionsIP.put(uuid, ip);
-                }
-            } catch (IllegalArgumentException ignored) {}
-        }
-    }
-
-    public long get2FALimitMillis() {
-        String timeStr = plugin.getConfig().getString("security.2fa.session.session-time", "2 days");
-        return LoginUtils.parseTime(timeStr, 172800000L);
-    }
-
-    public boolean hasActive2FASession(UUID uuid) {
-        if (uuid == null || !TwoFactorSessions.containsKey(uuid)) return false;
-
-        long timestamp = TwoFactorSessions.get(uuid);
-        long now = System.currentTimeMillis();
-
-        if (now - timestamp >= get2FALimitMillis()) {
-            deleteSession2FA(uuid);
-            return false;
-        }
-        return true;
-    }
-
     public void reload() {
         // Wczytujemy plik z dysku na nowo do obiektu konfiguracyjnego
         sessionConfig = YamlConfiguration.loadConfiguration(sessionFile);
 
         loadSessionsFromConfig();
-        load2FAFromConfig();
     }
 
     private void save() {
