@@ -13,14 +13,19 @@ import org.bukkit.plugin.java.JavaPlugin;
 import pl.dawcou.astralogin.auth.LoginSystem;
 import pl.dawcou.astralogin.auth.sessions.SessionManager;
 import pl.dawcou.astralogin.auth.manage.*;
-import pl.dawcou.astralogin.auth.accounts.AccountManager;
+import pl.dawcou.astralogin.auth.AccountManager;
 import pl.dawcou.astralogin.auth.manage.spawn.SpawnManager;
-import pl.dawcou.astralogin.commands.*;
 import pl.dawcou.astralogin.auth.passwords.PINManager;
 import pl.dawcou.astralogin.auth.passwords.PasswordManager;
 import pl.dawcou.astralogin.auth.security.premium.PremiumManager;
 import pl.dawcou.astralogin.auth.security.premium.protocol.PacketListener;
 import pl.dawcou.astralogin.auth.security.ip.IPTrustManager;
+import pl.dawcou.astralogin.commands.admin.*;
+import pl.dawcou.astralogin.commands.player.PINCommand;
+import pl.dawcou.astralogin.commands.player.PasswordsCommand;
+import pl.dawcou.astralogin.commands.player.TwoFactorCommand;
+import pl.dawcou.astralogin.data.GlobalDataManager;
+import pl.dawcou.astralogin.data.PlayerDataManager;
 import pl.dawcou.astralogin.file.BackupManager;
 import pl.dawcou.astralogin.file.FilesUpdater;
 import pl.dawcou.astralogin.file.converters.MigrationManager;
@@ -28,13 +33,13 @@ import pl.dawcou.astralogin.listeners.LoginListeners;
 import pl.dawcou.astralogin.listeners.TechnicalListeners;
 import pl.dawcou.astralogin.logging.LogFilter;
 import pl.dawcou.astralogin.logging.LogManager;
-import pl.dawcou.astralogin.auth.security.attempts.AttemptManager;
+import pl.dawcou.astralogin.auth.security.AttemptManager;
 import pl.dawcou.astralogin.auth.security.ip.IPManager;
 import pl.dawcou.astralogin.system.LanguageManager;
 import pl.dawcou.astralogin.system.NoticeManager;
 import pl.dawcou.astralogin.system.SchedulerManager;
 import pl.dawcou.astralogin.system.UpdateChecker;
-import pl.dawcou.astralogin.auth.security.twofactor.TwoFactorManager;
+import pl.dawcou.astralogin.auth.security.TwoFactorManager;
 import pl.dawcou.astralogin.system.tasks.SecurityReminderTask;
 
 import java.security.KeyPair;
@@ -64,6 +69,9 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
     // ----------------------------------------------------------------------------------------------------
     // MANAGEROWIE SYSTEMOWI I DANYCH
     // ----------------------------------------------------------------------------------------------------
+
+    private PlayerDataManager playerDataManager;
+    private GlobalDataManager globalDataManager;
 
     private SchedulerManager schedulerManager;
     private LanguageManager languageManager;
@@ -122,6 +130,10 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
     public KeyPair getKeyPair() { return keyPair; }
     public boolean isDebugEnabled() { return debugEnabled; }
     public boolean isDevMockMode() { return devMockMode; }
+
+    public PlayerDataManager getPlayerDataManager() { return playerDataManager; }
+
+    public GlobalDataManager getGlobalDataManager() { return globalDataManager; }
 
     public SchedulerManager getSchedulerManager() { return schedulerManager; }
     public BackupManager getBackupManager() { return backupManager; }
@@ -190,6 +202,7 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
 
         schedulerManager = new SchedulerManager(this);
         backupManager = new BackupManager(this);
+
         loginSystem = new LoginSystem(this);
 
         // 2. Inicjalizacja języka i powiadomień
@@ -200,46 +213,49 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
         // 3. Migracje danych
         new MigrationManager(this).migrate();
 
-        // 4. Aktualizator plików i pełne przeładowanie języka
+        // 4. Menedżery plików
+        playerDataManager = new PlayerDataManager(this);
+        globalDataManager = new GlobalDataManager(this);
+
+        // 5. Aktualizator plików i pełne przeładowanie języka
         filesUpdater = new FilesUpdater(this);
         filesUpdater.check();
 
         languageManager.reload();
 
-        // 5. Diagnostyka
+        // 6. Diagnostyka
         logManager = new LogManager(this);
         updateChecker = new UpdateChecker(this);
 
-        // 6. Inicjalizacja logiki i menedżerów
-        twoFactorManager = new TwoFactorManager(this);
-        accountManager = new AccountManager(this);
-        inventoryManager = new InventoryManager(this);
-        spawnManager = new SpawnManager(this);
+        // 7. Inicjalizacja logiki i menedżerów
+        twoFactorManager = new TwoFactorManager(this, playerDataManager);
+        accountManager = new AccountManager(this, playerDataManager);
+        inventoryManager = new InventoryManager(this, playerDataManager);
+        spawnManager = new SpawnManager(this, playerDataManager, globalDataManager);
 
         // --- MANAGERY ---
         // --- KOMENDY HASŁA ---
-        passwordManager = new PasswordManager(this);
+        passwordManager = new PasswordManager(this, playerDataManager);
         passwordsCommand = new PasswordsCommand(this);
 
         // --- KOMENDY PIN ---
-        pinManager = new PINManager(this);
+        pinManager = new PINManager(this, playerDataManager);
         pinCommand = new PINCommand(this, pinManager);
 
         // --- KOMENDY PIN ---
-        ipTrustManager = new IPTrustManager(this);
+        ipTrustManager = new IPTrustManager(this, globalDataManager);
         iPTrustCommand = new IPTrustCommand(this, ipTrustManager);
 
         // --- KOMENDY LOGIN SPAWNA ---
         loginSpawnCommand = new LoginSpawnCommand(this);
 
         // --- KOMENDY IP ---
-        IPManager.ipCheckOctets = getConfig().getInt("security.ip-security.ip-check-octets", 2);
-        ipManager = new IPManager(this);
+        ipManager = new IPManager(this, playerDataManager, globalDataManager);
         ipResetCommand = new IPResetCommand(this, ipManager);
         iPManagerCommand = new IPManagerCommand(this);
 
         // --- POZOSTAŁE I ZADANIA ---
-        sessionManager = new SessionManager(this);
+        sessionManager = new SessionManager(this, playerDataManager);
         attemptManager = new AttemptManager(this);
         premiumManager = new PremiumManager(this);
         securityReminderTask = new SecurityReminderTask(this);
@@ -254,10 +270,9 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
             getLogger().severe("Failed to generate RSA keys: " + e.getMessage());
         }
 
-        // 3. Sprawdzenie i podpięcie ProtocolLiba oraz listenera autologowania
+        // Sprawdzenie i podpięcie ProtocolLiba oraz listenera autologowania
         if (getServer().getPluginManager().getPlugin("ProtocolLib") != null) {
             protocolManager = ProtocolLibrary.getProtocolManager();
-            // TWORZYMY LISTENER PROTOKOŁU TYLKO RAZ!
             packetListener = new PacketListener(this, protocolManager);
         } else {
             getLogger().warning("ProtocolLib is missing from the server! Premium autologin will be disabled.");
@@ -268,13 +283,10 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
         AccountCommand accountCommand = new AccountCommand(this);
         TwoFactorCommand twoFactorCommand = new TwoFactorCommand(this, twoFactorManager, loginSystem);
 
-        // 5. Wczytywanie baz danych i cache
-        passwordManager.reload();
-        pinManager.reload();
-
+        // Wczytywanie baz danych i cache
         ipManager.reload();
 
-        // --- 3. FILTRACJA LOGÓW (UKRYWANIE HASEŁ) ---
+        // --- FILTRACJA LOGÓW (UKRYWANIE HASEŁ) ---
         try {
             org.apache.logging.log4j.core.Logger rootLogger = (org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager.getRootLogger();
             rootLogger.addFilter(new LogFilter(this));
@@ -284,11 +296,7 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
             e.printStackTrace();
         }
 
-        try {
-            Class.forName("pl.dawcou.astralogin.system.TimeUtils");
-        } catch (ClassNotFoundException ignored) {}
-
-        // --- 4. REJESTRACJA EVENTÓW I KOMEND ---
+        // --- REJESTRACJA EVENTÓW I KOMEND ---
         getServer().getPluginManager().registerEvents(loginListeners, this);
         getServer().getPluginManager().registerEvents(technicalListeners, this);
 
@@ -320,26 +328,37 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
         registerCommand("2fa", twoFactorCommand, twoFactorCommand);
         registerCommand("zresetuj2fa", twoFactorCommand);
 
-        sessionManager.loadSessionsFromConfig();
-        sessionManager.getTwoFactorSessionManager().load2FAFromConfig();
+        sessionManager.reload();
+        sessionManager.getTwoFactorSessionManager().reload();
 
-        // 1. Zapisuje sesje i sprawdza czy można wyczyścić mapy z premium graczami
-        schedulerManager.runAsync(() -> {
-            if (sessionManager != null) {
-                sessionManager.saveSessionsToConfig();
-            }
-            premiumManager.cleanCache();
-        });
-
-        // 2. Odpala tworzenie backupów co 15 minut
+        // Odpala tworzenie backupów co 15 minut
         schedulerManager.runAsyncRepeating(
                 () -> backupManager.createBackup(false),
-                1,
+                15,
                 15,
                 TimeUnit.MINUTES
         );
 
-        // 3. LOGO STARTOWE I SPRAWDZANIE WERSJI
+        // Zapis plików co 5 minut
+        schedulerManager.runAsyncRepeating(
+                () -> {
+                    playerDataManager.saveAll();
+                    globalDataManager.save();
+                },
+                5,
+                5,
+                TimeUnit.MINUTES
+        );
+
+        if (playerDataManager != null) {
+            playerDataManager.saveAll();
+        }
+
+        if (globalDataManager != null) {
+            globalDataManager.save();
+        }
+
+        // LOGO STARTOWE I SPRAWDZANIE WERSJI
         schedulerManager.runAsync(() -> {
             // Logo zawsze przy starcie
             noticeManager.sendStartupLogo();
@@ -348,27 +367,35 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
             if (getConfig().getBoolean("settings.check-updates", true)) {
                 updateChecker.checkForUpdates(Bukkit.getConsoleSender());
             } else {
-                noticeManager.sendVersionOk();
+                noticeManager.sendVersionOk(getServer().getConsoleSender());
             }
         });
     }
 
     @Override
     public void onDisable() {
-        if (this.adventure != null) {
-            this.adventure.close();
+        if (adventure != null) {
+            adventure.close();
         }
 
         // Gracze
         if (loginListeners != null) {
             for (Player p : Bukkit.getOnlinePlayers()) {
-                loginListeners.handleQuit(p);
+                loginListeners.handleQuit(p, true);
             }
         }
 
         // Dopiero teraz rozbrajamy bombę ewentualne debugi i wiadomość końcowa
         if (ipManager != null && ipManager.getIpBanManager() != null) {
             ipManager.getIpBanManager().saveBans();
+        }
+
+        if (playerDataManager != null) {
+            playerDataManager.saveAll();
+        }
+
+        if (globalDataManager != null) {
+            globalDataManager.save();
         }
 
         if (languageManager != null) {
@@ -380,25 +407,30 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
         }
     }
 
-    private void reload() {
+    public void reload() {
+        // 1. Przeładowanie pliku config.yml
         reloadConfig();
 
-        IPManager.ipCheckOctets = getConfig().getInt("security.ip-security.ip-check-octets", 2);
+        // 2. Aktualizacja zmiennych podręcznych z configu
         debugEnabled = getConfig().getBoolean("settings.debug.enabled", false);
         devMockMode = getConfig().getBoolean("settings.debug.dev-mock-mode", false);
 
+        // 3. Przeładowanie języka
         languageManager.reload();
 
+        // 4. Przeładowanie menedżerów danych JSON (I/O)
+        globalDataManager.reload();
+        playerDataManager.reloadAll();
+
+        // 5. Przeładowanie logiki i menedżerów systemowych
         ipTrustManager.reload();
         ipManager.reload();
 
         securityReminderTask.start();
 
         spawnManager.reload();
-        inventoryManager.reload();
-        passwordManager.reload();
-        pinManager.reload();
         sessionManager.reload();
+        premiumManager.cleanCache();
     }
 
     @Override
@@ -417,7 +449,9 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
                     sender.sendMessage(languageManager.getWithPrefix("general.no-permission"));
                     return true;
                 }
+
                 reload();
+
                 sender.sendMessage(getLanguageManager().getWithPrefix("general.reload-success"));
                 return true;
             }

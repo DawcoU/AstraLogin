@@ -26,11 +26,11 @@ public class FilesConverter {
      * Executes all file and folder data migrations.
      */
     public void runAllMigrations() {
-        migratePlayerDataFolder();
         migratePasswordSection();
         migrateInventorySection();
         migrateSpawnSection();
         migrateDataFolders();
+        migrateYamlToJson();
     }
 
     /*
@@ -225,29 +225,6 @@ public class FilesConverter {
     }
 
     /*
-     * Migrates playerdata folder -> player_data.
-     */
-    private void migratePlayerDataFolder() {
-        File oldFolder = new File(plugin.getDataFolder(), "playerdata");
-        File newFolder = new File(plugin.getDataFolder(), "player_data");
-
-        if (!oldFolder.exists() || newFolder.exists()) {
-            return;
-        }
-
-        plugin.getNoticeManager().sendMigrationNotice(oldFolder.getName(), newFolder.getName());
-
-        try {
-            Files.move(oldFolder.toPath(), newFolder.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            plugin.getNoticeManager().sendSuccessMigrationNotice(oldFolder.getName());
-        } catch (IOException e) {
-            plugin.getNoticeManager().sendErrorMigrationNotice("move " + oldFolder.getName() + " -> " + newFolder.getName());
-            plugin.getLogger().severe("Failed to migrate playerdata -> player_data!");
-            e.printStackTrace();
-        }
-    }
-
-    /*
      * Migrates global_data/ -> data/global/ and player_data/ -> data/players/.
      */
     private void migrateDataFolders() {
@@ -279,6 +256,315 @@ public class FilesConverter {
 
             plugin.getNoticeManager().sendSuccessMigrationNotice("player_data");
         }
+    }
+
+    /*
+     * Migrates legacy YAML files into player-specific JSON files and single global.json.
+     */
+    private void migrateYamlToJson() {
+        File dataFolder = new File(plugin.getDataFolder(), "data");
+        File playersFolder = new File(dataFolder, "players");
+        File globalFolder = new File(dataFolder, "global");
+
+        File passwordsYml = new File(playersFolder, "passwords.yml");
+        File ipsYml = new File(playersFolder, "ips.yml");
+        File locationsYml = new File(playersFolder, "locations_data.yml");
+        File sessionsYml = new File(playersFolder, "session_data.yml");
+        File inventoryDataYml = new File(playersFolder, "inventory_data.yml");
+
+        File accountsYml = new File(globalFolder, "accounts.yml");
+        File ipBansYml = new File(globalFolder, "ip_bans.yml");
+        File ipTrustYml = new File(globalFolder, "ip-trust.yml");
+        File spawnsYml = new File(globalFolder, "spawns.yml");
+
+        boolean anyYamlExists = passwordsYml.exists() || ipsYml.exists() || locationsYml.exists()
+                || accountsYml.exists() || ipBansYml.exists() || ipTrustYml.exists() || spawnsYml.exists();
+
+        if (!anyYamlExists) {
+            return;
+        }
+
+        plugin.getNoticeManager().sendMigrationNotice("YAML files", "JSON format (data/players/<UUID>.json & data/global.json)");
+
+        com.google.gson.Gson gson = new com.google.gson.GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+        java.util.Map<String, com.google.gson.JsonObject> playerJsonMap = new java.util.HashMap<>();
+
+        // --------------------------------------------------
+        // 1. Migracja passwords.yml -> auth.password
+        // --------------------------------------------------
+        if (passwordsYml.exists()) {
+            FileConfiguration config = YamlConfiguration.loadConfiguration(passwordsYml);
+            ConfigurationSection passwords = config.getConfigurationSection("passwords");
+            if (passwords != null) {
+                for (String uuid : passwords.getKeys(false)) {
+                    String pass = passwords.getString(uuid + ".password");
+                    if (pass == null && passwords.isString(uuid)) {
+                        pass = passwords.getString(uuid);
+                    }
+                    if (pass != null) {
+                        com.google.gson.JsonObject playerJson = getOrCreatePlayerJson(playerJsonMap, playersFolder, uuid, gson);
+                        com.google.gson.JsonObject auth = getOrCreateSubObject(playerJson, "auth");
+                        auth.addProperty("password", pass);
+                    }
+                }
+            }
+        }
+
+        // --------------------------------------------------
+        // 2. Migracja ips.yml -> auth.last-ip
+        // --------------------------------------------------
+        if (ipsYml.exists()) {
+            FileConfiguration config = YamlConfiguration.loadConfiguration(ipsYml);
+            ConfigurationSection ips = config.getConfigurationSection("ips");
+            if (ips != null) {
+                for (String uuid : ips.getKeys(false)) {
+                    String ip = ips.getString(uuid);
+                    if (ip != null) {
+                        com.google.gson.JsonObject playerJson = getOrCreatePlayerJson(playerJsonMap, playersFolder, uuid, gson);
+                        com.google.gson.JsonObject auth = getOrCreateSubObject(playerJson, "auth");
+                        auth.addProperty("last-ip", ip);
+                    }
+                }
+            }
+        }
+
+        // --------------------------------------------------
+        // 3. Migracja locations_data.yml -> location
+        // --------------------------------------------------
+        if (locationsYml.exists()) {
+            FileConfiguration config = YamlConfiguration.loadConfiguration(locationsYml);
+            ConfigurationSection locations = config.getConfigurationSection("last_locations");
+            if (locations != null) {
+                for (String uuid : locations.getKeys(false)) {
+                    ConfigurationSection locSec = locations.getConfigurationSection(uuid);
+                    if (locSec != null) {
+                        com.google.gson.JsonObject playerJson = getOrCreatePlayerJson(playerJsonMap, playersFolder, uuid, gson);
+                        com.google.gson.JsonObject locObj = new com.google.gson.JsonObject();
+                        locObj.addProperty("world", locSec.getString("world"));
+                        locObj.addProperty("x", locSec.getDouble("x"));
+                        locObj.addProperty("y", locSec.getDouble("y"));
+                        locObj.addProperty("z", locSec.getDouble("z"));
+                        locObj.addProperty("yaw", (float) locSec.getDouble("yaw"));
+                        locObj.addProperty("pitch", (float) locSec.getDouble("pitch"));
+
+                        playerJson.add("location", locObj);
+                    }
+                }
+            }
+        }
+
+        // --------------------------------------------------
+        // 4. Migracja accounts.yml -> dane gracza (name, register-date itp.)
+        // --------------------------------------------------
+        if (accountsYml.exists()) {
+            FileConfiguration config = YamlConfiguration.loadConfiguration(accountsYml);
+            ConfigurationSection accounts = config.getConfigurationSection("accounts");
+            if (accounts != null) {
+                for (String uuid : accounts.getKeys(false)) {
+                    ConfigurationSection accSec = accounts.getConfigurationSection(uuid);
+                    if (accSec != null) {
+                        com.google.gson.JsonObject playerJson = getOrCreatePlayerJson(playerJsonMap, playersFolder, uuid, gson);
+
+                        // Tworzymy lub pobieramy sekcję "account" wewnątrz pliku gracza
+                        com.google.gson.JsonObject accountSection;
+                        if (playerJson.has("account") && playerJson.get("account").isJsonObject()) {
+                            accountSection = playerJson.getAsJsonObject("account");
+                        } else {
+                            accountSection = new com.google.gson.JsonObject();
+                            playerJson.add("account", accountSection);
+                        }
+
+                        if (accSec.contains("last-known-name")) {
+                            accountSection.addProperty("name", accSec.getString("last-known-name"));
+                        }
+                        if (accSec.contains("register-date")) {
+                            accountSection.addProperty("register-date", accSec.getString("register-date"));
+                        }
+                        if (accSec.contains("last-login-date")) {
+                            accountSection.addProperty("last-login-date", accSec.getString("last-login-date"));
+                        }
+                        if (accSec.contains("last-security-reminder-timestamp")) {
+                            accountSection.addProperty("last-security-reminder-timestamp", accSec.getLong("last-security-reminder-timestamp"));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Zapis poszczególnych plików graczy <UUID>.json
+        ensureDirectory(playersFolder);
+        for (java.util.Map.Entry<String, com.google.gson.JsonObject> entry : playerJsonMap.entrySet()) {
+            File targetFile = new File(playersFolder, entry.getKey() + ".json");
+            try (java.io.FileWriter writer = new java.io.FileWriter(targetFile)) {
+                gson.toJson(entry.getValue(), writer);
+            } catch (IOException e) {
+                plugin.getLogger().severe("Failed to save player JSON during migration: " + entry.getKey());
+                e.printStackTrace();
+            }
+        }
+
+        // --------------------------------------------------
+        // 5. Migracja danych globalnych do data/global.json
+        // --------------------------------------------------
+        File globalJsonFile = new File(dataFolder, "global.json");
+        com.google.gson.JsonObject globalRoot = new com.google.gson.JsonObject();
+
+        if (globalJsonFile.exists()) {
+            try (java.io.FileReader reader = new java.io.FileReader(globalJsonFile)) {
+                com.google.gson.JsonElement parsed = com.google.gson.JsonParser.parseReader(reader);
+                if (parsed != null && parsed.isJsonObject()) {
+                    globalRoot = parsed.getAsJsonObject();
+                }
+            } catch (IOException ignored) {}
+        }
+
+        // 5a. Spawny (spawns.yml)
+        if (spawnsYml.exists()) {
+            FileConfiguration config = YamlConfiguration.loadConfiguration(spawnsYml);
+            ConfigurationSection spawnsSec = config.getConfigurationSection("spawns");
+            if (spawnsSec != null) {
+                com.google.gson.JsonObject spawnsObj = new com.google.gson.JsonObject();
+                for (String key : spawnsSec.getKeys(false)) {
+                    ConfigurationSection s = spawnsSec.getConfigurationSection(key);
+                    if (s != null) {
+                        com.google.gson.JsonObject singleSpawn = new com.google.gson.JsonObject();
+                        singleSpawn.addProperty("world", s.getString("world"));
+                        singleSpawn.addProperty("x", s.getDouble("x"));
+                        singleSpawn.addProperty("y", s.getDouble("y"));
+                        singleSpawn.addProperty("z", s.getDouble("z"));
+                        singleSpawn.addProperty("yaw", (float) s.getDouble("yaw"));
+                        singleSpawn.addProperty("pitch", (float) s.getDouble("pitch"));
+
+                        spawnsObj.add(key, singleSpawn);
+                    }
+                }
+                globalRoot.add("spawns", spawnsObj);
+            }
+        }
+
+        // 5b. IP Bans (ip_bans.yml)
+        if (ipBansYml.exists()) {
+            FileConfiguration config = YamlConfiguration.loadConfiguration(ipBansYml);
+            com.google.gson.JsonObject bansObj = new com.google.gson.JsonObject();
+
+            if (config.isList("bypasses")) {
+                com.google.gson.JsonArray bypassesArray = new com.google.gson.JsonArray();
+                for (String bypass : config.getStringList("bypasses")) {
+                    bypassesArray.add(bypass);
+                }
+                bansObj.add("bypasses", bypassesArray);
+            }
+
+            if (config.isConfigurationSection("bans")) {
+                ConfigurationSection bansSec = config.getConfigurationSection("bans");
+                if (bansSec != null) {
+                    com.google.gson.JsonObject bansList = new com.google.gson.JsonObject();
+                    for (String key : bansSec.getKeys(false)) {
+                        ConfigurationSection banItem = bansSec.getConfigurationSection(key);
+                        if (banItem != null) {
+                            String rawIp = banItem.getString("ip");
+                            // Jeśli brak pola "ip", przywracamy kropki ze skompresowanego klucza (np. 192_168_1_1)
+                            String cleanIp = (rawIp != null) ? rawIp : key.replace("_", ".");
+
+                            long expire = banItem.getLong("expire");
+                            String reason = banItem.getString("reason", "UNKNOWN");
+                            String uuid = banItem.getString("uuid", "UNKNOWN");
+
+                            // Pomijamy wygasłe bany już na etapie migracji
+                            if (expire > System.currentTimeMillis()) {
+                                com.google.gson.JsonObject b = new com.google.gson.JsonObject();
+                                b.addProperty("ip", cleanIp);
+                                b.addProperty("expire", expire);
+                                b.addProperty("reason", reason);
+                                b.addProperty("uuid", uuid);
+
+                                bansList.add(cleanIp, b);
+                            }
+                        }
+                    }
+                    bansObj.add("bans", bansList);
+                }
+            }
+            globalRoot.add("ip_bans", bansObj);
+        }
+
+        // 5c. IP Trust (ip_trust.yml) -> zamiana podłóg w IP na kropki
+        if (ipTrustYml.exists()) {
+            FileConfiguration config = YamlConfiguration.loadConfiguration(ipTrustYml);
+            ConfigurationSection ipsSec = config.getConfigurationSection("ips");
+            if (ipsSec != null) {
+                com.google.gson.JsonObject trustObj = new com.google.gson.JsonObject();
+                for (String rawIpKey : ipsSec.getKeys(false)) {
+                    String cleanIpKey = rawIpKey.replace("_", ".");
+                    ConfigurationSection ipData = ipsSec.getConfigurationSection(rawIpKey);
+                    if (ipData != null) {
+                        com.google.gson.JsonObject scoreObj = new com.google.gson.JsonObject();
+                        if (ipData.contains("score")) {
+                            scoreObj.addProperty("score", ipData.getInt("score"));
+                        }
+                        trustObj.add(cleanIpKey, scoreObj);
+                    }
+                }
+                globalRoot.add("ip_trust", trustObj);
+            }
+        }
+
+        // Zapis do data/global.json
+        try (java.io.FileWriter writer = new java.io.FileWriter(globalJsonFile)) {
+            gson.toJson(globalRoot, writer);
+        } catch (IOException e) {
+            plugin.getLogger().severe("Failed to save global.json during migration!");
+            e.printStackTrace();
+        }
+
+        // Czyszczenie i usuwanie starych plików YAML
+        passwordsYml.delete();
+        ipsYml.delete();
+        locationsYml.delete();
+        accountsYml.delete();
+        ipBansYml.delete();
+        ipTrustYml.delete();
+        spawnsYml.delete();
+        sessionsYml.delete();
+        inventoryDataYml.delete();
+
+        // Usuwanie starych katalogów jeśli są puste
+        deleteEmptyDirectory(globalFolder);
+
+        plugin.getNoticeManager().sendSuccessMigrationNotice("YAML -> JSON Conversion");
+    }
+
+    private com.google.gson.JsonObject getOrCreatePlayerJson(
+            java.util.Map<String, com.google.gson.JsonObject> map, File playersFolder, String uuid, com.google.gson.Gson gson) {
+
+        if (map.containsKey(uuid)) {
+            return map.get(uuid);
+        }
+
+        File existingFile = new File(playersFolder, uuid + ".json");
+        if (existingFile.exists()) {
+            try (java.io.FileReader reader = new java.io.FileReader(existingFile)) {
+                com.google.gson.JsonElement parsed = com.google.gson.JsonParser.parseReader(reader);
+                if (parsed != null && parsed.isJsonObject()) {
+                    com.google.gson.JsonObject obj = parsed.getAsJsonObject();
+                    map.put(uuid, obj);
+                    return obj;
+                }
+            } catch (IOException ignored) {}
+        }
+
+        com.google.gson.JsonObject newObj = new com.google.gson.JsonObject();
+        map.put(uuid, newObj);
+        return newObj;
+    }
+
+    private com.google.gson.JsonObject getOrCreateSubObject(com.google.gson.JsonObject parent, String key) {
+        if (parent.has(key) && parent.get(key).isJsonObject()) {
+            return parent.getAsJsonObject(key);
+        }
+        com.google.gson.JsonObject child = new com.google.gson.JsonObject();
+        parent.add(key, child);
+        return child;
     }
 
     /*
@@ -416,12 +702,21 @@ public class FilesConverter {
             return true;
         }
 
-        // 4. Check playerdata folder
-        if (new File(dataFolder, "playerdata").exists() && !new File(dataFolder, "player_data").exists()) {
+        // 4. Check global_data or player_data folders
+        if (new File(dataFolder, "global_data").exists() || new File(dataFolder, "player_data").exists()) {
             return true;
         }
 
-        // 5. Check global_data or player_data folders
-        return new File(dataFolder, "global_data").exists() || new File(dataFolder, "player_data").exists();
+        // 5. Check if old YAML files exist that need JSON conversion
+        File playersDir = new File(dataFolder, "data/players");
+        File globalDir = new File(dataFolder, "data/global");
+
+        return new File(playersDir, "passwords.yml").exists() ||
+                new File(playersDir, "ips.yml").exists() ||
+                new File(playersDir, "locations_data.yml").exists() ||
+                new File(globalDir, "accounts.yml").exists() ||
+                new File(globalDir, "ip_bans.yml").exists() ||
+                new File(globalDir, "ip_trust.yml").exists() ||
+                new File(globalDir, "spawns.yml").exists();
     }
 }

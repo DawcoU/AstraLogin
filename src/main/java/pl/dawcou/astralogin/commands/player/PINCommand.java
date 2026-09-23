@@ -1,12 +1,10 @@
-package pl.dawcou.astralogin.commands;
+package pl.dawcou.astralogin.commands.player;
 
 import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.passwords.PINManager;
@@ -40,34 +38,25 @@ public class PINCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            String targetName = args[0];
-            UUID targetUUID = null;
-            FileConfiguration accountsConfig = plugin.getAccountManager().getConfig();
-
-            if (accountsConfig.getConfigurationSection("accounts") != null) {
-                for (String uuidKey : accountsConfig.getConfigurationSection("accounts").getKeys(false)) {
-                    String knownName = accountsConfig.getString("accounts." + uuidKey + ".last-known-name");
-                    if (knownName != null && knownName.equalsIgnoreCase(targetName)) {
-                        targetUUID = UUID.fromString(uuidKey);
-                        targetName = knownName;
-                        break;
-                    }
-                }
-            }
+            String inputName = args[0];
+            UUID targetUUID = plugin.getAccountManager().getUuidByUsername(inputName);
 
             if (targetUUID == null) {
-                OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
-                targetUUID = target.getUniqueId();
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found"));
+                return true;
             }
 
-            String uuidString = targetUUID.toString();
+            String targetName = plugin.getAccountManager().getRegisteredNameIgnoreCase(inputName);
+            if (targetName == null) {
+                targetName = inputName;
+            }
 
-            if (!pinManager.hasPIN(uuidString)) {
+            if (!pinManager.hasPIN(targetUUID)) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-pin.no-has-pin"));
                 return true;
             }
 
-            pinManager.deletePIN(uuidString);
+            pinManager.deletePIN(targetUUID);
 
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-pin.admin-success")
                     .replace("%player%", targetName));
@@ -101,6 +90,7 @@ public class PINCommand implements CommandExecutor, TabCompleter {
 
             if (action.equalsIgnoreCase("setup")) {
                 String method = plugin.getConfig().getString("features.pin.method", "RANDOM");
+                UUID playerUUID = p.getUniqueId();
 
                 if ("RANDOM".equalsIgnoreCase(method)) {
                     if (args.length != 1) {
@@ -108,7 +98,7 @@ public class PINCommand implements CommandExecutor, TabCompleter {
                         return true;
                     }
 
-                    if (pinManager.hasPIN(p.getUniqueId().toString())) {
+                    if (pinManager.hasPIN(playerUUID)) {
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("pin.already-set"));
                         return true;
                     }
@@ -122,7 +112,7 @@ public class PINCommand implements CommandExecutor, TabCompleter {
                     plugin.getSchedulerManager().runAsync(() -> {
                         String hashedPIN = plugin.getPasswordManager().getPasswordHasher().hashPassword(generatedPIN);
 
-                        pinManager.savePIN(p.getUniqueId().toString(), hashedPIN);
+                        pinManager.savePIN(playerUUID, hashedPIN);
 
                         plugin.getSchedulerManager().runSync(() -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("pin.set-success")
@@ -139,7 +129,7 @@ public class PINCommand implements CommandExecutor, TabCompleter {
 
                     String PIN = args[1];
 
-                    if (pinManager.hasPIN(p.getUniqueId().toString())) {
+                    if (pinManager.hasPIN(playerUUID)) {
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("pin.already-set"));
                         return true;
                     }
@@ -162,7 +152,7 @@ public class PINCommand implements CommandExecutor, TabCompleter {
                     plugin.getSchedulerManager().runAsync(() -> {
                         String hashedPIN = plugin.getPasswordManager().getPasswordHasher().hashPassword(PIN);
 
-                        pinManager.savePIN(p.getUniqueId().toString(), hashedPIN);
+                        pinManager.savePIN(playerUUID, hashedPIN);
 
                         plugin.getSchedulerManager().runSync(() -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("pin.typed-success"));

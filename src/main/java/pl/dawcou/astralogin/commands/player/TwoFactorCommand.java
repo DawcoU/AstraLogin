@@ -1,20 +1,22 @@
-package pl.dawcou.astralogin.commands;
+package pl.dawcou.astralogin.commands.player;
 
 import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.LoginSystem;
-import pl.dawcou.astralogin.auth.security.twofactor.TwoFactorManager;
+import pl.dawcou.astralogin.auth.security.TwoFactorManager;
+import pl.dawcou.astralogin.system.utils.TimeUtils;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
@@ -30,9 +32,9 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        // ==========================================
+        //--------------------------------------------------
         // KOMENDA: /zresetuj2fa lub /reset2fa
-        // ==========================================
+        //--------------------------------------------------
         if (command.getName().equalsIgnoreCase("zresetuj2fa") || command.getName().equalsIgnoreCase("reset2fa")) {
             if (!sender.hasPermission("astralogin.reset2fa")) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
@@ -44,12 +46,19 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            String targetName = args[0];
+            String targetInput = args[0];
+            UUID targetUUID = plugin.getAccountManager().getUuidByUsername(targetInput);
 
-            OfflinePlayer offlineP = Bukkit.getOfflinePlayer(targetName);
-            UUID targetUUID = offlineP.getUniqueId();
+            if (targetUUID == null) {
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.not-found")
+                        .replace("%target%", targetInput));
+                return true;
+            }
 
-            FileConfiguration accountsConfig = plugin.getAccountManager().getConfig();
+            String targetName = plugin.getAccountManager().getRegisteredNameIgnoreCase(targetInput);
+            if (targetName == null) {
+                targetName = targetInput;
+            }
 
             if (twoFactorManager.isSetupActive(targetUUID)) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.player-setting-up")
@@ -57,7 +66,8 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            if (!accountsConfig.contains("accounts." + targetUUID + ".2fa-enabled")) {
+            boolean is2faEnabled = plugin.getTwoFactorManager().has2FA(targetUUID);
+            if (!is2faEnabled) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.not-found").replace("%target%", targetName));
                 return true;
             }
@@ -70,10 +80,10 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             twoFactorManager.invalidateSetup(targetUUID);
             twoFactorManager.delete2FA(targetUUID);
 
-            Player targetP = offlineP.getPlayer();
+            Player targetP = Bukkit.getPlayer(targetUUID);
             if (targetP != null && targetP.isOnline()) {
-                String MessageReset2FA = plugin.getLanguageManager().getMessage("reset-twofactor.player-message");
-                targetP.sendMessage((MessageReset2FA));
+                String messageReset2FA = plugin.getLanguageManager().getMessage("reset-twofactor.player-message");
+                targetP.sendMessage(messageReset2FA);
             }
 
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.admin-success").replace("%player%", targetName));
@@ -98,7 +108,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
         // SETUP
         if (args[0].equalsIgnoreCase("setup")) {
-            if (plugin.getAccountManager().getConfig().getBoolean("accounts." + uuid + ".2fa-enabled", false)) {
+            if (plugin.getPlayerDataManager().getBoolean(uuid, "account.2fa-enabled", false)) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.already-enabled"));
                 return true;
             }
@@ -145,8 +155,8 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                     return;
                 }
 
-                // 2. Jeśli gracz pomyślnie ukończył setup (aktywował 2FA w bazie/configu) – anulujemy cicho!
-                if (plugin.getAccountManager().getConfig().getBoolean("accounts." + uuid + ".2fa-enabled", false)) {
+                // 2. Jeśli gracz pomyślnie ukończył setup (aktywował 2FA w danych gracza) – anulujemy cicho!
+                if (plugin.getPlayerDataManager().getBoolean(uuid, "account.2fa-enabled", false)) {
                     task.cancel();
                     return;
                 }
@@ -160,7 +170,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                 }
 
                 String secondsLeft = twoFactorManager.getRemainingTime(uuid);
-                p.sendActionBar((timerFormat.replace("%seconds%", secondsLeft)));
+                p.sendActionBar(timerFormat.replace("%seconds%", secondsLeft));
             }, 0, 1, TimeUnit.SECONDS);
 
             return true;
@@ -168,7 +178,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
         // UNSETUP
         if (args[0].equalsIgnoreCase("unsetup")) {
-            if (!plugin.getAccountManager().getConfig().getBoolean("accounts." + uuid + ".2fa-enabled", false)) {
+            if (!plugin.getPlayerDataManager().getBoolean(uuid, "account.2fa-enabled", false)) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.not-enabled"));
                 return true;
             }
@@ -203,7 +213,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                         }
                         case RATE_LIMITED_SERVER -> p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.server-busy"));
                         case RATE_LIMITED_PLAYER -> p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.rate-limit")
-                                .replace("%time%", pl.dawcou.astralogin.system.TimeUtils.formatTime(result.remainingSeconds())));
+                                .replace("%time%", TimeUtils.formatTime(result.remainingSeconds())));
                         default -> p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.error"));
                     }
                 });
@@ -269,7 +279,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                     }
                     case RATE_LIMITED_SERVER -> p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.server-busy"));
                     case RATE_LIMITED_PLAYER -> p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.rate-limit")
-                            .replace("%time%", pl.dawcou.astralogin.system.TimeUtils.formatTime(result.remainingSeconds())));
+                            .replace("%time%", TimeUtils.formatTime(result.remainingSeconds())));
                     default -> p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.error"));
                 }
             });
@@ -281,7 +291,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // Dopiero tutaj parsujemy czyste cyfry (np. usuwając spakowane spacje dla wygody!)
+        // Parsowanie cyfr
         int code;
         try {
             code = Integer.parseInt(rawInput.replace(" ", ""));
@@ -351,10 +361,10 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
         if (args.length == 1) {
             String input = args[0].toLowerCase();
-            List<String> hints = new java.util.ArrayList<>();
+            List<String> hints = new ArrayList<>();
 
             if (input.matches("\\d+")) {
-                return java.util.Collections.emptyList();
+                return Collections.emptyList();
             }
 
             hints.add("setup");
@@ -362,9 +372,9 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
             return hints.stream()
                     .filter(s -> s.toLowerCase().startsWith(input))
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(Collectors.toList());
         }
 
-        return java.util.Collections.emptyList();
+        return Collections.emptyList();
     }
 }

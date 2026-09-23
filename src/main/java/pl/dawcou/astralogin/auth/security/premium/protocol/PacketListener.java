@@ -103,14 +103,26 @@ public class PacketListener implements Listener {
 
                 debug("DEBUG [1.3] 🔌 Netty channel extracted: " + channel);
 
-                String offlineUuid = UUID.nameUUIDFromBytes(
-                        ("OfflinePlayer:" + username)
-                                .getBytes(java.nio.charset.StandardCharsets.UTF_8)
-                ).toString();
+                UUID playerUuid = PacketListener.this.plugin.getAccountManager().getUuidByUsername(username);
 
-                if (!PacketListener.this.plugin.getPasswordManager().isRegistered(offlineUuid)) {
-                    debugWarning("DEBUG [1.4] ⚠️ Player " + username + " is not registered.");
-                    return;
+                // Jeśli gracz nie istnieje jeszcze w usermap, wyliczamy tymczasowe Offline UUID
+                if (playerUuid == null) {
+                    playerUuid = UUID.nameUUIDFromBytes(
+                            ("OfflinePlayer:" + username)
+                                    .getBytes(java.nio.charset.StandardCharsets.UTF_8)
+                    );
+                }
+
+                boolean isRegistered = PacketListener.this.plugin.getPasswordManager().isRegistered(playerUuid);
+
+                if (isRegistered) {
+                    // ZAREJESTROWANY: Ustawiamy flagę na true (aktywujemy bypass dla znanego gracza)
+                    debugWarning("DEBUG [1.4] 🔒 Player " + username + " is registered. Enabling premium bypass flag.");
+                    PacketListener.this.plugin.getPremiumManager().markPendingBypass(playerUuid, true);
+                } else {
+                    // NIEZAREJESTROWANY: Ustawiamy flagę na false (brak gotowej autoryzacji)
+                    debugWarning("DEBUG [1.4] ℹ️ Player " + username + " is not registered. Setting bypass flag to false.");
+                    PacketListener.this.plugin.getPremiumManager().markPendingBypass(playerUuid, false);
                 }
 
                 debug("DEBUG [1.5] 🛑 Cancelling original START packet for premium verification.");

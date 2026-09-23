@@ -1,8 +1,8 @@
-package pl.dawcou.astralogin.auth.security.attempts;
+package pl.dawcou.astralogin.auth.security;
 
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.system.TimeUtils;
+import pl.dawcou.astralogin.system.utils.TimeUtils;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -65,12 +65,7 @@ public class AttemptManager {
         attempts.remove(uuid);
     }
 
-    public void unregisterCache(String oldUUIDStr) {
-        try {
-            if (oldUUIDStr != null) {
-                UUID oldUUID = UUID.fromString(oldUUIDStr);
-                attempts.remove(oldUUID);
-            }
-        } catch (IllegalArgumentException ignored) {}
+    public void unregisterCache(UUID uuid) {
+        attempts.remove(uuid);
     }
 }

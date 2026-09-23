@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.commands;
+package pl.dawcou.astralogin.commands.admin;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;

@@ -1,115 +1,93 @@
 package pl.dawcou.astralogin.auth.sessions;
 
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.system.TimeUtils;
+import pl.dawcou.astralogin.data.PlayerDataManager;
+import pl.dawcou.astralogin.system.utils.TimeUtils;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
+//--------------------------------------------------
+// Menedżer sesji dwuetapowej weryfikacji (2FA) w plikach gracza
+//--------------------------------------------------
 public class TwoFactorSessionManager {
 
     private final AstraLogin plugin;
-    private final File sessionFile;
-    private FileConfiguration sessionConfig;
+    private final PlayerDataManager playerDataManager;
 
-    private final Map<UUID, Long> TwoFactorSessions = new HashMap<>();
-    private final Map<UUID, String> TwoFactorSessionsIP = new HashMap<>();
+    private final Map<UUID, Long> twoFactorSessions = new ConcurrentHashMap<>();
+    private final Map<UUID, String> twoFactorSessionsIP = new ConcurrentHashMap<>();
 
-    public TwoFactorSessionManager(AstraLogin plugin) {
+    public TwoFactorSessionManager(AstraLogin plugin, PlayerDataManager playerDataManager) {
         this.plugin = plugin;
-        File dataDir = new File(plugin.getDataFolder(), "data/players");
-        if (!dataDir.exists()) {
-            dataDir.mkdirs();
-        }
-        sessionFile = new File(dataDir, "session_data.yml");
-        sessionConfig = YamlConfiguration.loadConfiguration(sessionFile);
+        this.playerDataManager = playerDataManager;
     }
 
-    public void save2FAToConfig() {
-        long now = System.currentTimeMillis();
-        long limit = get2FALimitMillis();
-
-        TwoFactorSessions.forEach((uuid, timestamp) -> {
-            if (now - timestamp < limit) {
-                String path = "sessions." + uuid;
-                sessionConfig.set(path + ".2fa-timestamp", timestamp);
-                sessionConfig.set(path + ".2fa-ip", TwoFactorSessionsIP.get(uuid));
-            } else {
-                String path = "sessions." + uuid;
-                sessionConfig.set(path + ".2fa-timestamp", null);
-                sessionConfig.set(path + ".2fa-ip", null);
-            }
-        });
-
-        save();
-    }
-
+    /**
+     * Zapisuje aktywną sesję 2FA w pamięci RAM i w pliku JSON gracza.
+     */
     public void saveSession2FA(UUID uuid, String ip) {
         if (uuid == null) return;
 
         long now = System.currentTimeMillis();
-        String path = "sessions." + uuid;
 
-        TwoFactorSessions.put(uuid, now);
-        TwoFactorSessionsIP.put(uuid, ip);
+        twoFactorSessions.put(uuid, now);
+        if (ip != null) {
+            twoFactorSessionsIP.put(uuid, ip);
+        }
 
-        sessionConfig.set(path + ".2fa-timestamp", now);
-        sessionConfig.set(path + ".2fa-ip", ip);
-
-        save();
+        playerDataManager.set(uuid, "sessions.2fa.timestamp", now);
+        if (ip != null) {
+            playerDataManager.set(uuid, "sessions.2fa.ip", ip);
+        }
     }
 
+    /**
+     * Sprawdza ważność sesji 2FA gracza.
+     */
+    public boolean hasActive2FASession(UUID uuid) {
+        if (uuid == null) return false;
+
+        long now = System.currentTimeMillis();
+        long limit = get2FALimitMillis();
+
+        // 1. Sprawdzamy najpierw RAM
+        if (twoFactorSessions.containsKey(uuid)) {
+            long timestamp = twoFactorSessions.get(uuid);
+            if (now - timestamp >= limit) {
+                deleteSession2FA(uuid);
+                return false;
+            }
+            return true;
+        }
+
+        // 2. Wczytujemy dane z pliku gracza w razie braku w RAM
+        long timestamp = playerDataManager.getLong(uuid, "sessions.2fa.timestamp", 0L);
+        String savedIP = playerDataManager.getString(uuid, "sessions.2fa.ip");
+
+        if (timestamp > 0 && (now - timestamp < limit)) {
+            twoFactorSessions.put(uuid, timestamp);
+            if (savedIP != null) {
+                twoFactorSessionsIP.put(uuid, savedIP);
+            }
+            return true;
+        }
+
+        deleteSession2FA(uuid);
+        return false;
+    }
+
+    /**
+     * Usuwa sesję 2FA z pamięci RAM i z pliku gracza.
+     */
     public void deleteSession2FA(UUID uuid) {
         if (uuid == null) return;
 
-        TwoFactorSessions.remove(uuid);
-        TwoFactorSessionsIP.remove(uuid);
+        twoFactorSessions.remove(uuid);
+        twoFactorSessionsIP.remove(uuid);
 
-        String path = "sessions." + uuid;
-        if (sessionConfig.contains(path)) {
-            sessionConfig.set(path + ".2fa-timestamp", null);
-            sessionConfig.set(path + ".2fa-ip", null);
-
-            var section = sessionConfig.getConfigurationSection(path);
-            if (section == null || section.getKeys(false).isEmpty()) {
-                sessionConfig.set(path, null);
-            }
-
-            save();
-        }
-    }
-
-    public void load2FAFromConfig() {
-        if (!sessionFile.exists()) return;
-
-        sessionConfig = YamlConfiguration.loadConfiguration(sessionFile);
-        ConfigurationSection section = sessionConfig.getConfigurationSection("sessions");
-        if (section == null) return;
-
-        long dfaLimit = get2FALimitMillis();
-        long now = System.currentTimeMillis();
-
-        TwoFactorSessions.clear();
-        TwoFactorSessionsIP.clear();
-
-        for (String uuidStr : section.getKeys(false)) {
-            try {
-                UUID uuid = UUID.fromString(uuidStr);
-                long timestamp = sessionConfig.getLong("sessions." + uuidStr + ".2fa-timestamp");
-                String ip = sessionConfig.getString("sessions." + uuidStr + ".2fa-ip");
-
-                if (timestamp > 0 && (now - timestamp < dfaLimit)) {
-                    TwoFactorSessions.put(uuid, timestamp);
-                    TwoFactorSessionsIP.put(uuid, ip);
-                }
-            } catch (IllegalArgumentException ignored) {}
-        }
+        playerDataManager.remove(uuid, "sessions.2fa");
     }
 
     public long get2FALimitMillis() {
@@ -117,31 +95,33 @@ public class TwoFactorSessionManager {
         return TimeUtils.parseTime(timeStr, 172800000L);
     }
 
-    public boolean hasActive2FASession(UUID uuid) {
-        if (uuid == null || !TwoFactorSessions.containsKey(uuid)) return false;
-
-        long timestamp = TwoFactorSessions.get(uuid);
+    /**
+     * Wczytuje i weryfikuje aktywne sesje 2FA z plików graczy.
+     */
+    public int loadSessionsFromFiles() {
+        int count = 0;
         long now = System.currentTimeMillis();
+        long limit = get2FALimitMillis();
 
-        if (now - timestamp >= get2FALimitMillis()) {
-            deleteSession2FA(uuid);
-            return false;
+        for (UUID uuid : playerDataManager.getAllPlayerUUIDs()) {
+            long timestamp = playerDataManager.getLong(uuid, "sessions.2fa.timestamp", 0L);
+            String savedIP = playerDataManager.getString(uuid, "sessions.2fa.ip");
+
+            if (timestamp > 0 && (now - timestamp < limit)) {
+                twoFactorSessions.put(uuid, timestamp);
+                if (savedIP != null) {
+                    twoFactorSessionsIP.put(uuid, savedIP);
+                }
+                count++;
+            } else if (timestamp > 0) {
+                deleteSession2FA(uuid);
+            }
         }
-        return true;
+        return count;
     }
 
     public void reload() {
-        sessionConfig = YamlConfiguration.loadConfiguration(sessionFile);
-        load2FAFromConfig();
-    }
-
-    private void save() {
-        synchronized (sessionConfig) {
-            try {
-                sessionConfig.save(sessionFile);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        twoFactorSessions.clear();
+        twoFactorSessionsIP.clear();
     }
 }

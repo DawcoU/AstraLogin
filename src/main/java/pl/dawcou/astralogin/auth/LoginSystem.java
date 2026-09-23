@@ -11,10 +11,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffectType;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.manage.spawn.SpawnType;
-import pl.dawcou.astralogin.system.TimeUtils;
+import pl.dawcou.astralogin.auth.passwords.PasswordValidator;
+import pl.dawcou.astralogin.system.utils.TimeUtils;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class LoginSystem implements CommandExecutor, TabCompleter {
 
@@ -48,7 +50,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            if (plugin.getPasswordManager().getPassword(p.getUniqueId().toString()) != null) {
+            if (plugin.getPasswordManager().getPassword(p.getUniqueId()) != null) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.has-account"));
                 return true;
             }
@@ -63,12 +65,28 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                 return true;
             }
 
+            // Blokuje niedozwolone znaki
+            for (String password : new String[]{args[0], args[1]}) {
+                PasswordValidator.ValidationResult result = PasswordValidator.validate(password, plugin.getConfig(), plugin.getLogger());
+
+                if (result == PasswordValidator.ValidationResult.INVALID_CHARACTERS) {
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.invalid-characters"));
+                    return true;
+                } else if (result == PasswordValidator.ValidationResult.ONLY_LETTERS_FORBIDDEN) {
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.only-letters-forbidden"));
+                    return true;
+                } else if (result == PasswordValidator.ValidationResult.ONLY_DIGITS_FORBIDDEN) {
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.only-digits-forbidden"));
+                    return true;
+                }
+            }
+
             // Pobieramy min z configu, ale Math.max pilnuje, żeby wartość NIGDY nie była mniejsza niż 5
-            int min = plugin.getConfig().getInt("features.password.min-password-length");
+            int min = plugin.getConfig().getInt("features.password.min-password-length", 6);
             min = Math.max(5, min);
 
             // Pobieramy max z configu, ale Math.min pilnuje, żeby wartość NIGDY nie przekroczyła 32
-            int max = plugin.getConfig().getInt("features.password.max-password-length");
+            int max = plugin.getConfig().getInt("features.password.max-password-length", 24);
             max = Math.min(32, max);
 
             // Dodatkowe zabezpieczenie: gdyby admin w configu ustawił min większe niż max (np. min: 20, max: 10)
@@ -106,17 +124,17 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                 }
 
                 // 2. Zapisujemy dane
-                plugin.getPasswordManager().savePassword(uuidString, hashedPass);
+                plugin.getPasswordManager().savePassword(playerUUID, hashedPass);
                 plugin.getIPManager().saveIP(uuidString, ip);
 
                 // 3. Wracamy na główny wątek (Sync)
                 plugin.getSchedulerManager().runSync(() -> {
                     if (!p.isOnline()) return;
 
-                    plugin.getAccountManager().recordRegister(playerUUID, playerName, ip);
+                    plugin.getAccountManager().recordRegister(playerUUID, playerName);
 
                     // SPRAWDZAMY CZY MA JUŻ AKTYWNE 2FA (np. po restarcie hasła przez admina)
-                    boolean is2FAEnabled = plugin.getAccountManager().getConfig().getBoolean("accounts." + uuidString + ".2fa-enabled", false);
+                    boolean is2FAEnabled = plugin.getTwoFactorManager().has2FA(playerUUID);
 
                     if (is2FAEnabled) {
                         // Wrzucamy go do poczekalni 2FA!
@@ -152,15 +170,16 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            String uuid = p.getUniqueId().toString();
-            String password = plugin.getPasswordManager().getPassword(uuid);
+            UUID playerUUID = p.getUniqueId();
+            String uuidString = playerUUID.toString();
+            String password = plugin.getPasswordManager().getPassword(playerUUID);
 
             if (password == null) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.no-account"));
                 return true;
             }
 
-            if (loggedIn.contains(p.getUniqueId())) {
+            if (loggedIn.contains(playerUUID)) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.already-logged"));
                 return true;
             }
@@ -168,8 +187,6 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
             if (args.length == 1) {
                 String inputPassword = args[0];
                 String currentIP = p.getAddress().getAddress().getHostAddress();
-                UUID playerUUID = p.getUniqueId();
-                String uuidString = playerUUID.toString();
 
                 plugin.getSchedulerManager().runAsync(() -> {
                     // Sprawdzamy poprawność nowym systemem z obsługą UUID dla limitera
@@ -178,14 +195,14 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                     switch (result.status()) {
                         case SUCCESS:
                             if (result.rehashNeeded() && result.newHash() != null) {
-                                plugin.getPasswordManager().savePassword(uuidString, result.newHash());
+                                plugin.getPasswordManager().savePassword(playerUUID, result.newHash());
                             }
 
                             plugin.getIPManager().saveIP(uuidString, currentIP);
 
                             // POBIERAMY STATUSY: Czy sesje 2FA są aktywne w konfiguracji pluginu?
                             boolean is2FASessionEnabled = plugin.getConfig().getBoolean("security.2fa.session.enabled", true);
-                            boolean is2FAEnabled = plugin.getAccountManager().getConfig().getBoolean("accounts." + uuidString + ".2fa-enabled", false);
+                            boolean is2FAEnabled = plugin.getTwoFactorManager().has2FA(playerUUID);
 
                             // Jeśli opcja sesji 2FA jest wyłączona w configu, 'hasActive2FA' ZAWSZE traktujemy jako false
                             boolean hasActive2FA = is2FASessionEnabled && plugin.getSessionManager().getTwoFactorSessionManager().hasActive2FASession(playerUUID);
@@ -224,7 +241,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                                             currentIP,
                                             plugin.getIpTrustManager().getLoginSuccessPoints()
                                     );
-                                    plugin.getAccountManager().recordLogin(playerUUID, p.getName(), currentIP);
+                                    plugin.getAccountManager().recordLogin(playerUUID, p.getName());
 
                                     // Zapisujemy sesję hasła
                                     plugin.getSessionManager().saveSession(playerUUID, currentIP);
@@ -303,6 +320,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
 
         if (useLastLoc) {
             plugin.getSpawnManager().teleportToLastLocation(p);
+            plugin.getSpawnManager().deletePlayerSpawn(uuid);
         } else {
             // Jeśli opcja jest wyłączona, wtedy leci na after_login
             plugin.getSpawnManager().teleport(p, SpawnType.AFTER_LOGIN);
@@ -320,7 +338,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        List<String> hints = new java.util.ArrayList<>();
+        List<String> hints = new ArrayList<>();
         String cmd = command.getName();
 
         if (cmd.equalsIgnoreCase("zaloguj") || cmd.equalsIgnoreCase("login")) {
@@ -340,6 +358,6 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
         String lastArg = args[args.length - 1].toLowerCase();
         return hints.stream()
                 .filter(s -> s.toLowerCase().startsWith(lastArg))
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
     }
 }

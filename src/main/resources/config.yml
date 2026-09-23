@@ -2,6 +2,7 @@
 # |                     AstraLogin - Configuration file                   |
 # +-----------------------------------------------------------------------+
 
+
 # =========================================
 #             General Settings
 # =========================================
@@ -39,6 +40,7 @@ settings:
 
     # What is the maximum number of automatic backups? Older ones will be deleted.
     limit: 10
+
 
 # =====================================
 #           Security Settings
@@ -130,12 +132,21 @@ security:
     # IP-Lock: Prevents login if the player's IP address has changed.
     enabled: true
 
-    # How many parts (octets) of the IPv4 address should the protection check when verifying the session/IP?
-    # 4 = Full IP checking (strict, secure, but fails with dynamic IP)
-    # 3 = Checks 3 parts (e.g., 46.205.197.X)
-    # 2 = Checks 2 parts (e.g., 46.205.X.X - recommended for dynamic IPs in Poland)
-    # 1 = Checks only 1 part (e.g., 46.X.X.X - very loose)
-    ip-check-octets: 2
+    # Advanced IP verification precision settings
+    verification:
+      # How many parts (octets) of the IPv4 address should be checked?
+      # 4 = Full IP checking (strict, secure, but fails with dynamic IP)
+      # 3 = Checks 3 parts (e.g., 46.205.197.X)
+      # 2 = Checks 2 parts (e.g., 46.205.X.X - recommended for dynamic IPs in Poland)
+      # 1 = Checks only 1 part (e.g., 46.X.X.X - very loose)
+      ipv4-check-octets: 2
+
+      # How many 16-bit blocks of the IPv6 address should be checked?
+      # 8 = Full IPv6 checking (128-bit, very strict, breaks on ISP interface rotation)
+      # 4 = Checks 4 blocks / 64-bit prefix (e.g., 2001:db8:85a3:8d3d:XXXX:XXXX:XXXX:XXXX - recommended for home networks)
+      # 2 = Checks 2 blocks / 32-bit prefix (e.g., 2001:db8:XXXX:XXXX:XXXX:XXXX:XXXX:XXXX)
+      # 1 = Checks 1 block / 16-bit prefix (very loose)
+      ipv6-check-blocks: 4
 
   # Protection against spam entering the server (e.g. bots/attacks)
   anti-spam:
@@ -179,6 +190,7 @@ security:
       max-concurrent-hashings: 2
       # Cooldown period per player between login attempts (in milliseconds)
       player-cooldown-ms: 2000
+
 
 # =================================
 #          LOGIN FEATURES
@@ -226,6 +238,21 @@ features:
 
     # Maximum number of characters in a password
     max-password-length: 24
+
+    # Password character validation settings
+    validation:
+      # Enable or disable allowed character checks for passwords
+      enabled: true
+
+      # Regex pattern defining allowed characters in passwords
+      pattern: "^[a-zA-Z0-9!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?]+$"
+
+      # Block passwords that consist ONLY of letters (e.g. "Password")
+      block-only-letters: false
+
+      # Block passwords that consist ONLY of digits (e.g. "12345678")
+      block-only-digits: false
+
 
 # =========================
 #          VISUALS

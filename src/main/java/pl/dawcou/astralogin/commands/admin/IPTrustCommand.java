@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.commands;
+package pl.dawcou.astralogin.commands.admin;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -138,10 +138,6 @@ public class IPTrustCommand implements CommandExecutor, TabCompleter {
 
                     case BAD:
                         rate = plugin.getLanguageManager().getMessage("ip-trust.rate-bad");
-                        break;
-
-                    case NEUTRAL:
-                        rate = plugin.getLanguageManager().getMessage("ip-trust.rate-neutral");
                         break;
 
                     case GOOD:

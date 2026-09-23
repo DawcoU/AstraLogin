@@ -1,20 +1,26 @@
-package pl.dawcou.astralogin.auth.security.twofactor;
+package pl.dawcou.astralogin.auth.security;
 
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
-import org.bukkit.configuration.file.FileConfiguration;
-import pl.dawcou.astralogin.auth.accounts.AccountManager;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.passwords.PasswordHasher;
-import pl.dawcou.astralogin.system.TimeUtils;
+import pl.dawcou.astralogin.data.PlayerDataManager;
+import pl.dawcou.astralogin.system.utils.TimeUtils;
 
 import java.security.SecureRandom;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+//--------------------------------------------------
+// Menedżer dwuetapowej weryfikacji (2FA) oparty na PlayerDataManager
+//--------------------------------------------------
 public class TwoFactorManager {
 
     private final AstraLogin plugin;
+    private final PlayerDataManager playerDataManager;
     private final GoogleAuthenticator gAuth;
 
     private final SecureRandom secureRandom = new SecureRandom();
@@ -27,9 +33,10 @@ public class TwoFactorManager {
     // Mapa przechowująca kody zapasowe tymczasowo
     private final Map<UUID, List<String>> pendingBackupCodes = new ConcurrentHashMap<>();
 
-    public TwoFactorManager(AstraLogin plugin) {
+    public TwoFactorManager(AstraLogin plugin, PlayerDataManager playerDataManager) {
         this.plugin = plugin;
-        gAuth = new GoogleAuthenticator();
+        this.playerDataManager = playerDataManager;
+        this.gAuth = new GoogleAuthenticator();
     }
 
     /**
@@ -106,11 +113,7 @@ public class TwoFactorManager {
     }
 
     public void useBackupCode(UUID uuid, String inputCode, java.util.function.Consumer<PasswordHasher.VerificationResult> callback) {
-        AccountManager accountManager = plugin.getAccountManager();
-        FileConfiguration config = accountManager.getConfig();
-        String path = "accounts." + uuid.toString() + ".backup-codes";
-
-        List<String> savedCodes = config.getStringList(path);
+        List<String> savedCodes = getSavedBackupCodes(uuid);
         if (savedCodes.isEmpty()) {
             callback.accept(new PasswordHasher.VerificationResult(
                     PasswordHasher.HashStatus.INVALID_PASSWORD, false, null
@@ -152,12 +155,11 @@ public class TwoFactorManager {
                     savedCodes.remove(finalCodeToRemove);
 
                     if (savedCodes.isEmpty()) {
-                        config.set(path, null);
+                        playerDataManager.remove(uuid, "2fa.backup-codes");
                     } else {
-                        config.set(path, savedCodes);
+                        saveBackupCodes(uuid, savedCodes);
                     }
 
-                    accountManager.saveConfig();
                     callback.accept(new PasswordHasher.VerificationResult(
                             PasswordHasher.HashStatus.SUCCESS, false, null
                     ));
@@ -171,11 +173,11 @@ public class TwoFactorManager {
     }
 
     public String getSavedSecret(UUID uuid) {
-        return plugin.getAccountManager().getConfig().getString("accounts." + uuid + ".2fa-secret");
+        return playerDataManager.getString(uuid, "2fa.secret");
     }
 
     /**
-     * Zapisuje aktywowane 2FA do pliku kont gracza accounts.yml.
+     * Zapisuje aktywowane 2FA do pliku gracza w JSON.
      */
     public void save2FA(UUID uuid, String secret, Runnable onComplete) {
         List<String> codes = pendingBackupCodes.get(uuid);
@@ -197,18 +199,13 @@ public class TwoFactorManager {
             }
 
             plugin.getSchedulerManager().runSync(() -> {
-                AccountManager accountManager = plugin.getAccountManager();
-                FileConfiguration config = accountManager.getConfig();
-                String path = "accounts." + uuid.toString() + ".";
-
-                config.set(path + "2fa-enabled", true);
-                config.set(path + "2fa-secret", secret);
+                playerDataManager.set(uuid, "2fa.enabled", true);
+                playerDataManager.set(uuid, "2fa.secret", secret);
 
                 if (!hashedCodes.isEmpty()) {
-                    config.set(path + "backup-codes", hashedCodes);
+                    saveBackupCodes(uuid, hashedCodes);
                 }
 
-                accountManager.saveConfig();
                 invalidateSetup(uuid);
 
                 if (onComplete != null) {
@@ -219,22 +216,16 @@ public class TwoFactorManager {
     }
 
     public void delete2FA(UUID uuid) {
-        AccountManager accountManager = plugin.getAccountManager();
-        FileConfiguration config = accountManager.getConfig();
-
-        // Usuwamy dane z konfiguracji
-        config.set("accounts." + uuid.toString() + ".2fa-enabled", null);
-        config.set("accounts." + uuid + ".2fa-secret", null);
-        config.set("accounts." + uuid + ".backup-codes", null);
-
-        accountManager.saveConfig();
+        playerDataManager.remove(uuid, "2fa.enabled");
+        playerDataManager.remove(uuid, "2fa.secret");
+        playerDataManager.remove(uuid, "2fa.backup-codes");
 
         // Czyścimy ewentualne sesje
         invalidateSetup(uuid);
     }
 
-    public boolean has2FA(String uuid) {
-        return plugin.getAccountManager().getConfig().getBoolean("accounts." + uuid + ".2fa-enabled", false);
+    public boolean has2FA(UUID uuid) {
+        return playerDataManager.getBoolean(uuid, "2fa.enabled", false);
     }
 
     public String getRemainingTime(UUID uuid) {
@@ -252,5 +243,25 @@ public class TwoFactorManager {
         int part1 = 1000 + secureRandom.nextInt(9000);
         int part2 = 1000 + secureRandom.nextInt(9000);
         return part1 + "-" + part2;
+    }
+
+    // Helpery do zapisu/odczytu listy kodów z PlayerDataManager
+    private List<String> getSavedBackupCodes(UUID uuid) {
+        List<String> list = new ArrayList<>();
+        String raw = playerDataManager.getString(uuid, "2fa.backup-codes");
+        if (raw != null && !raw.isEmpty()) {
+            for (String code : raw.split(",")) {
+                if (!code.isEmpty()) list.add(code);
+            }
+        }
+        return list;
+    }
+
+    private void saveBackupCodes(UUID uuid, List<String> codes) {
+        if (codes == null || codes.isEmpty()) {
+            playerDataManager.remove(uuid, "2fa.backup-codes");
+            return;
+        }
+        playerDataManager.set(uuid, "2fa.backup-codes", String.join(",", codes));
     }
 }

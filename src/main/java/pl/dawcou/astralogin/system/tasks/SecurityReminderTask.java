@@ -3,7 +3,7 @@ package pl.dawcou.astralogin.system.tasks;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.system.TimeUtils;
+import pl.dawcou.astralogin.system.utils.TimeUtils;
 import pl.dawcou.astralogin.system.SchedulerManager;
 
 import java.util.List;
@@ -39,8 +39,8 @@ public class SecurityReminderTask {
                     continue;
                 }
 
-                boolean has2FA = plugin.getTwoFactorManager().has2FA(uuid.toString());
-                boolean hasPin = plugin.getPinManager().hasPIN(uuid.toString());
+                boolean has2FA = plugin.getTwoFactorManager().has2FA(uuid);
+                boolean hasPin = plugin.getPinManager().hasPIN(uuid);
 
                 if (has2FA && hasPin) {
                     continue;

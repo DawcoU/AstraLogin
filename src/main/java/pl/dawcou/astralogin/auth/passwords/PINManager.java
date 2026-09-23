@@ -1,43 +1,23 @@
 package pl.dawcou.astralogin.auth.passwords;
 
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.data.PlayerDataManager;
 
-import java.io.File;
-import java.io.IOException;
 import java.security.SecureRandom;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.UUID;
 
+//--------------------------------------------------
+// Menedżer kodów PIN z wykorzystaniem PlayerDataManager
+//--------------------------------------------------
 public class PINManager {
 
     private final AstraLogin plugin;
-    private final File file;
-    private FileConfiguration config;
-
+    private final PlayerDataManager playerDataManager;
     private static final SecureRandom secureRandom = new SecureRandom();
 
-    private final Map<String, String> PINCache = new HashMap<>();
-
-    public PINManager(AstraLogin plugin) {
+    public PINManager(AstraLogin plugin, PlayerDataManager playerDataManager) {
         this.plugin = plugin;
-
-        File dataDir = new File(plugin.getDataFolder(), "data/players");
-        if (!dataDir.exists()) {
-            dataDir.mkdirs();
-        }
-
-        file = new File(dataDir, "passwords.yml");
-        if (!file.exists()) {
-            try {
-                file.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        reload();
+        this.playerDataManager = playerDataManager;
     }
 
     public String generatePIN(int length) {
@@ -46,48 +26,19 @@ public class PINManager {
         return String.format("%0" + length + "d", pinNumber);
     }
 
-    public void savePIN(String uuid, String PIN) {
-        PINCache.put(uuid, PIN);
-        config.set("passwords." + uuid + ".pin", PIN);
-        save();
+    public void savePIN(UUID uuid, String pin) {
+        playerDataManager.set(uuid, "auth.pin", pin);
     }
 
-    public String getPIN(String uuid) {
-        return PINCache.get(uuid);
+    public String getPIN(UUID uuid) {
+        return playerDataManager.getString(uuid, "auth.pin");
     }
 
-    public boolean hasPIN(String uuid) {
-        return PINCache.containsKey(uuid);
+    public boolean hasPIN(UUID uuid) {
+        return playerDataManager.has(uuid, "auth.pin");
     }
 
-    public void deletePIN(String uuid) {
-        PINCache.remove(uuid);
-        config.set("passwords." + uuid, null);
-        save();
-    }
-
-    public void reload() {
-        config = YamlConfiguration.loadConfiguration(file);
-        PINCache.clear();
-
-        if (config.getConfigurationSection("passwords") != null) {
-            for (String key : config.getConfigurationSection("passwords").getKeys(false)) {
-                String pin = config.getString("passwords." + key + ".pin");
-
-                if (pin != null) {
-                    PINCache.put(key, pin);
-                }
-            }
-        }
-    }
-
-    private void save() {
-        synchronized (config) {
-            try {
-                config.save(file);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+    public void deletePIN(UUID uuid) {
+        playerDataManager.remove(uuid, "auth.pin");
     }
 }

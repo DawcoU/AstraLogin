@@ -1,7 +1,6 @@
-package pl.dawcou.astralogin.commands;
+package pl.dawcou.astralogin.commands.admin;
 
 import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -13,6 +12,7 @@ import pl.dawcou.astralogin.auth.security.ip.IPManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class IPManagerCommand implements CommandExecutor, TabCompleter {
@@ -38,8 +38,8 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
         }
 
         String targetName = args[1];
-        OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
-        String uuid = target.getUniqueId().toString();
+        UUID targetUuid = plugin.getAccountManager().getUuidByUsername(targetName);
+        String uuid = targetUuid.toString();
 
         IPManager ipManager = plugin.getIPManager();
         IPBanManager banManager = ipManager.getIpBanManager();
@@ -119,12 +119,12 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
                 // 2. Pobieramy gracza online (jeśli gracz jest offline, getPlayerExact zwróci null)
                 Player onlineTarget = Bukkit.getPlayerExact(targetName);
-                String savedIP = ipManager.getIP(uuid.toString());
+                String savedIP = ipManager.getIP(uuid);
 
                 if (plugin.getConfig().getBoolean("security.ip-security.enabled", true) && onlineTarget != null) {
                     String currentIp = onlineTarget.getAddress().getAddress().getHostAddress();
 
-                    if (savedIP != null && !ipManager.checkIP(uuid.toString(), savedIP, currentIp)) {
+                    if (savedIP != null && !ipManager.checkIP(uuid, savedIP, currentIp)) {
 
                         plugin.getLogManager().log("Player " + targetName + " was kicked after unbypass (IP Mismatch). Current IP: " + currentIp + ", Saved IP: " + savedIP);
                         plugin.getIpTrustManager().addTrustScore(

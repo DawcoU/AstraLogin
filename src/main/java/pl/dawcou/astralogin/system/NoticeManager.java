@@ -28,7 +28,7 @@ public class NoticeManager {
         return getPrefix(Bukkit.getConsoleSender());
     }
 
-    // --- METODY POWIADOMIEŃ CONFIGU I SYSTEMOWE ---
+    // --- METODY POWIADOMIEŃ KOMEND I POMOCY ---
 
     public void sendHelp(CommandSender sender) {
         String p = getPrefix(sender) + " ";
@@ -65,15 +65,37 @@ public class NoticeManager {
         sender.sendMessage(p + "§b§l=================================");
     }
 
+    // --- METODY POWIADOMIEŃ PLIKÓW I KONFIGURACJI ---
+
     public void sendConfigUpdateNotice() {
-        String msg = getLang().equalsIgnoreCase("pl") ? "§aPomyślnie dopisano brakujące linijki do configu" : "§aSuccessfully added missing lines to the config";
+        String msg = getLang().equalsIgnoreCase("pl")
+                ? "§aPomyślnie dopisano brakujące klucze do pliku konfiguracyjnego"
+                : "§aMissing keys were successfully added to the configuration file";
         Bukkit.getConsoleSender().sendMessage(getConsolePrefix() + " " + msg);
     }
 
     public void sendConfigErrorNotice(String error) {
-        String msg = getLang().equalsIgnoreCase("pl") ? "§cBłąd podczas zapisu configu: " : "§cError while saving config: ";
-        Bukkit.getConsoleSender().sendMessage(getConsolePrefix() + " " + msg + error);
+        String msg = getLang().equalsIgnoreCase("pl")
+                ? "Błąd podczas zapisu pliku konfiguracyjnego:"
+                : "Error while saving config:";
+        plugin.getLogger().severe(msg + " " + error);
     }
+
+    public void sendLangUpdateSuccess(String fileName) {
+        String msg = getLang().equalsIgnoreCase("pl")
+                ? "§aDodano brakujące klucze w pliku językowym:"
+                : "§aAdded missing keys in language file:";
+        Bukkit.getConsoleSender().sendMessage(getConsolePrefix() + " " + msg + " §e" + fileName);
+    }
+
+    public void sendLangUpdateError(String fileName, String error) {
+        String msg = getLang().equalsIgnoreCase("pl")
+                ? "Nie udało się zaktualizować pliku językowego (" + fileName + "):"
+                : "Failed to update language file (" + fileName + "):";
+        plugin.getLogger().severe(msg + " " + error);
+    }
+
+    // --- METODY POWIADOMIEŃ BŁĘDÓW I SYSTEMOWYCH ---
 
     public void sendPlayerLocationReadError(String playerName) {
         String msg = getLang().equalsIgnoreCase("pl")
@@ -84,23 +106,16 @@ public class NoticeManager {
 
     public void sendLoggerError(Exception e) {
         String msg = getLang().equalsIgnoreCase("pl")
-                ? "KRYTYCZNY BŁĄD: Nie udało się aktywować filtra logów! Hasła mogą być widoczne w konsoli Błąd: " + e.getMessage()
-                : "CRITICAL ERROR: Failed to activate log filter! Passwords may be visible in console Error: " + e.getMessage();
+                ? "KRYTYCZNY BŁĄD: Nie udało się aktywować filtra logów! Hasła mogą być widoczne w konsoli. Błąd: " + e.getMessage()
+                : "CRITICAL ERROR: Failed to activate log filter! Passwords may be visible in console. Error: " + e.getMessage();
         plugin.getLogger().severe(msg);
     }
 
     public void sendPremiumCheckError(String player, Exception e) {
         String msg = getLang().equalsIgnoreCase("pl")
-                ? "Nie udało się zweryfikować gracza: (" + player + ") Błąd: " + e.getMessage()
-                : "Failed to verify player: (" + player + ") Error: " + e.getMessage();
-        plugin.getLogger().warning(msg);
-    }
-
-    public void sendPremiumFastCheckError(String player, Exception e) {
-        String msg = getLang().equalsIgnoreCase("pl")
-                ? "Nie udało się zweryfikować gracza w bazie Mojang: (" + player + ") Błąd: " + e.getMessage()
-                : "Could not verify player in Mojang database: (" + player + ") Error: " + e.getMessage();
-        plugin.getLogger().warning(msg);
+                ? "Nie udało się zweryfikować gracza " + player + ". Błąd: " + e.getMessage()
+                : "Failed to verify player " + player + ". Error: " + e.getMessage();
+        plugin.getLogger().severe(msg);
     }
 
     public void sendLogSaveError(String fileName) {
@@ -112,19 +127,19 @@ public class NoticeManager {
 
     public void sendBackupSaveError(String error) {
         String msg = getLang().equalsIgnoreCase("pl")
-                ? "Nie udało się wykonać automatycznej kopii zapasowej, Błąd:"
-                : "Automatic backup failed, Error:";
+                ? "Nie udało się wykonać automatycznej kopii zapasowej. Błąd:"
+                : "Automatic backup failed. Error:";
         plugin.getLogger().severe(msg + " " + error);
     }
 
     public void sendBackupSave(String fileName) {
-        String msg = getLang().equalsIgnoreCase("pl") ?
-                "§aPomyślnie wykonano automatyczną kopię zapasową w pliku: §e" :
-                "§aAutomatic backup to file successfully completed: §e";
+        String msg = getLang().equalsIgnoreCase("pl")
+                ? "§aPomyślnie wykonano automatyczną kopię zapasową w pliku: §e"
+                : "§aAutomatic backup to file successfully completed: §e";
         Bukkit.getConsoleSender().sendMessage(getConsolePrefix() + " " + msg + fileName);
     }
 
-    // --- MIGRACJA ---
+    // --- MIGRACJA I SESJE ---
 
     public void sendMigrationNotice(String oldName, String newName) {
         String msg = getLang().equalsIgnoreCase("pl")
@@ -148,25 +163,13 @@ public class NoticeManager {
     }
 
     public void sendSessionsLoaded(int count) {
-        String msg = getLang().equalsIgnoreCase("pl") ?
-                "§eWczytano §6" + count + " §eaktywnych sesji z pliku" :
-                "§eLoaded §6" + count + " §eactive sessions from file";
+        String msg = getLang().equalsIgnoreCase("pl")
+                ? "§eWczytano §6" + count + " §eaktywnych sesji z pliku"
+                : "§eLoaded §6" + count + " §eactive sessions from file";
         Bukkit.getConsoleSender().sendMessage(getConsolePrefix() + " " + msg);
     }
 
-    public void sendLangUpdateSuccess(String fileName) {
-        String msg = getLang().equalsIgnoreCase("pl") ?
-                "§aDodano brakujące linijki w pliku językowym:" :
-                "§aAdded missing lines in the language file";
-        Bukkit.getConsoleSender().sendMessage(getConsolePrefix() + " " + msg + " §e" + fileName);
-    }
-
-    public void sendLangUpdateError(String fileName, String error) {
-        String msg = getLang().equalsIgnoreCase("pl")
-                ? "Nie udało się zaktualizować pliku językowego (" + fileName + "):"
-                : "Failed to update language file (" + fileName + "): ";
-        plugin.getLogger().severe(msg + " " + error);
-    }
+    // --- LOGO STARTOWE I KOŃCOWE ---
 
     public void sendStartupLogo() {
         String v = plugin.getDescription().getVersion();
@@ -176,7 +179,7 @@ public class NoticeManager {
         String statusLabel = getLang().equalsIgnoreCase("pl") ? "   §6Status: " : "   §6Status: ";
 
         String review = getLang().equalsIgnoreCase("pl")
-                ? "§bPodoba się plugin? Zostaw opinię na Discord'zie!"
+                ? "§bPodoba Ci się plugin? Zostaw opinię na Discordzie!"
                 : "§bLike the plugin? Leave a review on Discord!";
 
         String prefix = getConsolePrefix();
@@ -199,28 +202,30 @@ public class NoticeManager {
         String prefix = getConsolePrefix();
 
         Bukkit.getConsoleSender().sendMessage("");
-        Bukkit.getConsoleSender().sendMessage("§7------------ " + prefix + " §7---------");
+        Bukkit.getConsoleSender().sendMessage("§7------------ " + prefix + " §7------------");
         Bukkit.getConsoleSender().sendMessage("§6   Status: " + status + " §7- " + farewell);
-        Bukkit.getConsoleSender().sendMessage("§7----------------------------------------------");
+        Bukkit.getConsoleSender().sendMessage("§7-------------------------------------------");
         Bukkit.getConsoleSender().sendMessage("");
     }
 
     // --- METODY POWIADOMIEŃ WERSJI I AKTUALIZACJI ---
 
-    public void sendVersionOk() {
+    public void sendVersionOk(CommandSender target) {
+        String prefix = getPrefix(target);
         String msg = getLang().equalsIgnoreCase("pl")
                 ? "§aAstraLogin jest aktualny §f(§ev" + plugin.getDescription().getVersion() + "§f)"
                 : "§aAstraLogin is up to date §f(§ev" + plugin.getDescription().getVersion() + "§f)";
-        Bukkit.getConsoleSender().sendMessage(getConsolePrefix() + " " + msg);
+
+        target.sendMessage(prefix + " " + msg);
     }
 
     public void sendExperimentalNotice(CommandSender target) {
         String devTitle = getLang().equalsIgnoreCase("pl")
-                ? "§bUżywasz eksperymentalną wersję: §fv"
+                ? "§bUżywasz eksperymentalnej wersji: §fv"
                 : "§bYou are using an experimental version: §fv";
         String warning = getLang().equalsIgnoreCase("pl")
-                ? "§cUżywaj tylko dla testów! kod jest w fazie rozwoju!"
-                : "§cUse only for testing! the code is in development!";
+                ? "§cUżywaj tylko dla testów! Kod jest w fazie rozwoju!"
+                : "§cUse only for testing! The code is in development!";
 
         String prefix = getPrefix(target);
 
@@ -234,8 +239,8 @@ public class NoticeManager {
 
     public void sendPreReleaseNotice(CommandSender target, String version) {
         String title = getLang().equalsIgnoreCase("pl")
-                ? "§6[Pre-Release] §eDostępna jest wersja testowa: §b" + plugin.getDescription().getVersion()
-                : "§6[Pre-Release] §eTest version available: §b" + plugin.getDescription().getVersion();
+                ? "§6[Pre-Release] §eDostępna jest wersja testowa: §b" + version
+                : "§6[Pre-Release] §eTest version available: §b" + version;
         String info = getLang().equalsIgnoreCase("pl")
                 ? "§cUwaga: Wersja wyłącznie do celów testowych! Może zawierać błędy."
                 : "§cNotice: For testing purposes only! May contain bugs.";
@@ -257,7 +262,7 @@ public class NoticeManager {
 
     public void sendVersionDevNotice(CommandSender target, String latestStable) {
         String devTitle = getLang().equalsIgnoreCase("pl")
-                ? "§bUżywasz nowszej wersji nie publicznej: §fv"
+                ? "§bUżywasz nowszej wersji niepublicznej: §fv"
                 : "§bYou are using a newer, non-public version: §fv";
         String stableInfo = getLang().equalsIgnoreCase("pl")
                 ? "§eNajnowsza publiczna wersja AstraLogin to: §fv"
@@ -292,7 +297,7 @@ public class NoticeManager {
         target.sendMessage("§7------------ " + prefix + " §7------------");
         target.sendMessage(title + version);
         target.sendMessage(download + "§f§nhttps://modrinth.com/plugin/astralogin/version/" + version);
-        target.sendMessage("§7----------------------------------------------");
+        target.sendMessage("§7-------------------------------------------");
         target.sendMessage("");
     }
 
@@ -311,7 +316,7 @@ public class NoticeManager {
         target.sendMessage("§7------------ " + prefix + " §7------------");
         target.sendMessage(title + version);
         target.sendMessage(download + "§f§nhttps://modrinth.com/plugin/astralogin/version/" + version);
-        target.sendMessage("§7----------------------------------------------");
+        target.sendMessage("§7-------------------------------------------");
         target.sendMessage("");
     }
 
@@ -330,7 +335,7 @@ public class NoticeManager {
         target.sendMessage("§7------------ " + prefix + " §7------------");
         target.sendMessage(title + version);
         target.sendMessage(download + "§f§nhttps://modrinth.com/plugin/astralogin/version/" + version);
-        target.sendMessage("§7----------------------------------------------");
+        target.sendMessage("§7-------------------------------------------");
         target.sendMessage("");
     }
 

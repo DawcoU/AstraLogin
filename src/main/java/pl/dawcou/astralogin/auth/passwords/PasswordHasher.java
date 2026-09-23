@@ -16,7 +16,7 @@ import java.util.concurrent.Semaphore;
 public class PasswordHasher {
 
     private final AstraLogin plugin;
-    private final boolean argon2Available = true; // BouncyCastle Pure Java jest zawsze dostępne
+    private final boolean argon2Available = true;
     private final SecureRandom secureRandom = new SecureRandom();
 
     // Globalny czas ostatniego przeliczenia hasła na serwerze (w ms)

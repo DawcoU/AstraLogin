@@ -23,8 +23,8 @@ import pl.dawcou.astralogin.auth.manage.spawn.SpawnType;
 import pl.dawcou.astralogin.auth.security.premium.protocol.PacketListener;
 import pl.dawcou.astralogin.auth.security.ip.IPManager;
 import pl.dawcou.astralogin.auth.security.ip.IPTrustManager;
-import pl.dawcou.astralogin.system.TimeUtils;
-import pl.dawcou.astralogin.auth.security.twofactor.TwoFactorManager;
+import pl.dawcou.astralogin.system.utils.TimeUtils;
+import pl.dawcou.astralogin.auth.security.TwoFactorManager;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -45,7 +45,7 @@ public class LoginListeners implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
-        handleQuit(e.getPlayer());
+        handleQuit(e.getPlayer(), false);
     }
 
     @EventHandler
@@ -54,7 +54,6 @@ public class LoginListeners implements Listener {
         Player p = e.getPlayer();
         UUID uuid = p.getUniqueId();
         String ip = p.getAddress().getAddress().getHostAddress();
-        String path = "accounts." + p.getUniqueId() + ".";
 
         // Update Checker
         if (plugin.getConfig().getBoolean("settings.check-updates", true)
@@ -62,13 +61,6 @@ public class LoginListeners implements Listener {
 
             plugin.getUpdateChecker().checkForUpdates(p);
 
-        }
-
-        if (plugin.getPasswordManager().isRegistered(uuid.toString())) {
-            if (!plugin.getAccountManager().getConfig().getBoolean(path + "is-registered")) {
-                plugin.getAccountManager().getConfig().set(path + "is-registered", true);
-                plugin.getAccountManager().saveConfig();
-            }
         }
 
         plugin.getSchedulerManager().runAsync(() -> {
@@ -87,7 +79,7 @@ public class LoginListeners implements Listener {
                 boolean passwordBypassedBySession = false;
 
                 // --- LOGIKA SESJI ---
-                if (plugin.getConfig().getBoolean("features.session.enabled") && plugin.getPasswordManager().isRegistered(uuid.toString())
+                if (plugin.getConfig().getBoolean("features.session.enabled") && plugin.getPasswordManager().isRegistered(uuid)
                         && level != IPTrustManager.TrustLevel.FATAL
                         && level != IPTrustManager.TrustLevel.BAD) {
                     if (p.getAddress() != null) {
@@ -100,7 +92,7 @@ public class LoginListeners implements Listener {
                         else if (plugin.getSessionManager().hasActiveSession(uuid, currentIP)) {
 
                             // POBIERAMY STATUSY 2FA DLA TEGO KONKRETNEGO GRACZA
-                            boolean is2FAEnabled = plugin.getAccountManager().getConfig().getBoolean("accounts." + uuid + ".2fa-enabled", false);
+                            boolean is2FAEnabled = plugin.getTwoFactorManager().has2FA(uuid);
 
                             if (is2FAEnabled) {
                                 // Gracz MA włączone 2FA na koncie -> sprawdzamy sesję drugiego stopnia
@@ -171,7 +163,7 @@ public class LoginListeners implements Listener {
                     );
                     plugin.getAdventure().player(p).showTitle(title2fa);
                 } else {
-                    if (plugin.getPasswordManager().isRegistered(uuid.toString())) {
+                    if (plugin.getPasswordManager().isRegistered(uuid)) {
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.reminder"));
 
                         // WYSYŁANIE SAMEGO SUBTYTUŁU DLA LOGOWANIA:
@@ -381,8 +373,8 @@ public class LoginListeners implements Listener {
         }
     }
 
-    public void handleQuit(Player p) {
-        // 1. Pobieramy aktualne instancje bezpośrednio z pluginu
+    public void handleQuit(Player p, boolean isShutdown) {
+        // Pobieramy aktualne instancje bezpośrednio z pluginu
         UUID uuid = p.getUniqueId();
         LoginSystem loginSystem = plugin.getLoginSystem();
         SpawnManager spawnManager = plugin.getSpawnManager();
@@ -390,11 +382,8 @@ public class LoginListeners implements Listener {
         InventoryManager inventoryManager = plugin.getInventoryManager();
         TwoFactorManager twoFactorManager = plugin.getTwoFactorManager();
 
-        // 2. Logika zapisu (tylko jeśli gracz był zalogowany)
-        // KROK 1: Najpierw upewniamy się, czy obiekty w ogóle istnieją w RAMie (Bezpiecznik)
         if (loginSystem != null && loginSystem.getLoggedIn() != null) {
 
-            // KROK 2: Dopiero tutaj robimy czystą logikę Zalogowany vs Niezalogowany
             if (loginSystem.getLoggedIn().contains(p.getUniqueId())) {
 
                 // --- GRACZ BYŁ ZALOGOWANY ---
@@ -414,28 +403,35 @@ public class LoginListeners implements Listener {
             }
         }
 
-        // 3. Logika widoczności (silnikowe odświeżenie)
+        // Logika widoczności (silnikowe odświeżenie)
         for (Player online : Bukkit.getOnlinePlayers()) {
             online.showPlayer(plugin, p);
         }
 
-        // 4. Usuwamy z mapy zalogowanych
+        // Usuwamy z mapy zalogowanych
         if (loginSystem != null && loginSystem.getLoggedIn() != null) {
             loginSystem.getLoggedIn().remove(p.getUniqueId());
         }
 
-        // 5. ZAPIS (sesji)
+        // ZAPIS (sesji)
         if (sessionManager != null) {
-            sessionManager.saveSessionsToConfig();
-            sessionManager.getTwoFactorSessionManager().save2FAToConfig();
+            sessionManager.reload();
+            sessionManager.getTwoFactorSessionManager().reload();
         }
 
-        // 6. CZYSZCZENIE (zamrożonych setup'ów)
+        // CZYSZCZENIE (zamrożonych setup'ów)
         if (twoFactorManager != null) {
             twoFactorManager.invalidateSetup(uuid);
         }
 
+        // Czyszczenie pamięci
         plugin.getPremiumManager().removeAuthenticatedPlayer(uuid);
+        plugin.getPremiumManager().clearPendingBypass(uuid);
+
         plugin.getPasswordManager().getPasswordHasher().cleanupPlayer(uuid);
+
+        if (!isShutdown) {
+            plugin.getPlayerDataManager().unloadPlayer(uuid);
+        }
     }
 }

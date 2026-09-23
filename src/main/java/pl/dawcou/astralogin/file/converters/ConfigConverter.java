@@ -34,6 +34,7 @@ public class ConfigConverter {
         migrated |= migrateTimer(config);
         migrated |= migrateFeaturesToSecurity(config);
         migrated |= migrateHashingSettings(config);
+        migrated |= migrateIpSecurity(config);
 
         if (migrated) {
             saveConfig(config, configFile);
@@ -187,6 +188,40 @@ public class ConfigConverter {
     }
 
     /*
+     * Migrates legacy ip-security settings to the new verification sub-section.
+     */
+    private boolean migrateIpSecurity(FileConfiguration config) {
+        ConfigurationSection ipSec = config.getConfigurationSection("ip-security");
+        if (ipSec == null) {
+            return false;
+        }
+
+        boolean migrated = false;
+
+        // Move legacy ip-check-octets to verification.ipv4-check-octets
+        if (ipSec.contains("ip-check-octets")) {
+            plugin.getNoticeManager().sendMigrationNotice("ip-security.ip-check-octets", "ip-security.verification.ipv4-check-octets");
+
+            ConfigurationSection verification = ipSec.getConfigurationSection("verification");
+            if (verification == null) {
+                verification = ipSec.createSection("verification");
+            }
+
+            verification.set("ipv4-check-octets", ipSec.getInt("ip-check-octets", 2));
+            verification.set("ipv6-check-blocks", 4);
+
+            ipSec.set("ip-check-octets", null);
+            migrated = true;
+        }
+
+        if (migrated) {
+            plugin.getNoticeManager().sendSuccessMigrationNotice("config.yml (ip-security section)");
+        }
+
+        return migrated;
+    }
+
+    /*
      * Thread-safe saving of configuration files.
      */
     private void saveConfig(FileConfiguration config, File file) {
@@ -233,8 +268,11 @@ public class ConfigConverter {
             }
         }
 
-        // Check hashing
+        // Check hashing and IP security
         ConfigurationSection security = config.getConfigurationSection("security");
-        return security != null && !security.contains("hashing");
+        ConfigurationSection ipSec = config.getConfigurationSection("ip-security");
+
+        return (security != null && !security.contains("hashing"))
+                || (ipSec != null && ipSec.contains("ip-check-octets"));
     }
 }

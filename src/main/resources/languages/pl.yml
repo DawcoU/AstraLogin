@@ -65,6 +65,10 @@ messages:
     changed: "&aTwoje hasło zostało pomyślnie zmienione!"
     identical: "&cWpisane nowe hasło jest identyczne ze starym!"
     error: "&cWystąpił błąd krytyczny podczas weryfikacji hasła. Zgłoś to administracji"
+    validation:
+      invalid-characters: "&cTwoje hasło zawiera niedozwolone znaki! Użyj tylko liter, cyfr i podstawowych znaków"
+      only-letters-forbidden: "&cTwoje hasło nie może składać się z samych liter! Dodaj przynajmniej jedną cyfrę lub znak specjalny"
+      only-digits-forbidden: "&cTwoje hasło nie może składać się z samych cyfr! Dodaj przynajmniej jedną literę lub znak specjalny"
 
 
   # --- PIN'y ---
@@ -209,7 +213,7 @@ messages:
       footer: "&8--------------------------------"
 
     status:
-      not-active-register: "&cNiezarejestrowany"
+      not-registered: "&cNiezarejestrowany"
       active-2fa: "&aWłączone"
       not-active-2fa: "&cWyłączone"
 
@@ -286,6 +290,7 @@ messages:
   # --- Reset całego konta /zresetujkonto ---
   purge-account:
     usage: "&cPoprawne użycie: &e/zresetujkonto <nick>"
+    not-found: "&cNie znaleziono gracza &6%target &cw bazie danych serwera"
     admin-success: "&aPomyślnie usunięto WSZYSTKIE dane konta gracza &e%player%"
 
     player-kick: "&cTwoje konto zostało całkowicie usunięte z bazy danych serwera przez administratora"

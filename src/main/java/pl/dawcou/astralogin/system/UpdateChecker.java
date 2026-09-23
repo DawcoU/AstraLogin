@@ -71,7 +71,7 @@ public class UpdateChecker {
                 if (current.contains("-")) {
                     plugin.getNoticeManager().sendExperimentalNotice(sender);
                 } else {
-                    plugin.getNoticeManager().sendVersionOk();
+                    plugin.getNoticeManager().sendVersionOk(sender);
                 }
             });
             return;
@@ -142,7 +142,7 @@ public class UpdateChecker {
             } else if (isCurrentExperimental) {
                 plugin.getNoticeManager().sendExperimentalNotice(sender);
             } else {
-                plugin.getNoticeManager().sendVersionOk();
+                plugin.getNoticeManager().sendVersionOk(sender);
             }
         });
     }

@@ -1,17 +1,12 @@
 package pl.dawcou.astralogin.auth.security.ip;
 
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import pl.dawcou.astralogin.AstraLogin;
-
-import java.io.File;
-import java.io.IOException;
+import pl.dawcou.astralogin.data.GlobalDataManager;
 
 public class IPTrustManager {
 
     private final AstraLogin plugin;
-    private final File file;
-    private FileConfiguration config;
+    private final GlobalDataManager globalDataManager;
 
     private static final int MAX_EVENT_POINTS = 10;
 
@@ -75,22 +70,9 @@ public class IPTrustManager {
         return multiIpPoints;
     }
 
-    public IPTrustManager(AstraLogin plugin) {
+    public IPTrustManager(AstraLogin plugin, GlobalDataManager globalDataManager) {
         this.plugin = plugin;
-
-        File dataDir = new File(plugin.getDataFolder(), "data/global");
-        if (!dataDir.exists()) {
-            dataDir.mkdirs();
-        }
-
-        file = new File(dataDir, "ip-trust.yml");
-        if (!file.exists()) {
-            try {
-                file.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        this.globalDataManager = globalDataManager;
 
         reload();
     }
@@ -105,7 +87,6 @@ public class IPTrustManager {
                 "security.ip-trust.score.max",
                 30
         );
-
 
         fatalLevel = plugin.getConfig().getInt(
                 "security.ip-trust.levels.fatal",
@@ -126,7 +107,6 @@ public class IPTrustManager {
                 "security.ip-trust.levels.good",
                 15
         );
-
 
         loginSuccessPoints = getTrustPoints(
                 "security.ip-trust.points.login.success",
@@ -229,62 +209,50 @@ public class IPTrustManager {
         return TrustLevel.IDEAL;
     }
 
-    // Pomocnicza metoda zamieniająca IP na bezpieczny klucz YAML (kropki na podkreślenia)
-    private String sanitizeIp(String ip) {
-        if (ip == null) return "unknown";
-        return ip.replace('.', '_');
-    }
-
     public void resetTrustIP(String ip) {
-        config.set("ips." + sanitizeIp(ip), null);
-        save();
+        if (ip == null) return;
+        // Usuwa cały obiekt IP (ip_trust -> 127.0.0.1)
+        globalDataManager.removeExplicit("ip_trust", ip);
     }
 
     public boolean hasIP(String ip) {
-        return config.contains("ips." + sanitizeIp(ip));
+        if (ip == null) return false;
+        // Sprawdza, czy istnieje pole "score" wewnątrz danego IP
+        return globalDataManager.getElementExplicit("ip_trust", ip, "score") != null;
     }
 
     public int getTrustScore(String ip) {
-        String safeIp = sanitizeIp(ip);
-        int score = config.getInt(
-                "ips." + safeIp + ".score",
-                0
-        );
+        if (ip == null) return 0;
+
+        int score = globalDataManager.getIntExplicit(0, "ip_trust", ip, "score");
 
         int fixed = Math.max(
                 minTrust,
                 Math.min(maxTrust, score)
         );
 
+        // Jeśli wartość w pliku była poza zakresem min/max, naprawiamy ją w JSONie
         if (score != fixed) {
-            config.set(
-                    "ips." + safeIp + ".score",
-                    fixed
-            );
-
-            save();
+            globalDataManager.setExplicit(fixed, "ip_trust", ip, "score");
         }
 
         return fixed;
     }
 
-    public void addTrustScore(String ip, int score) {
-        if (!plugin.getConfig().getBoolean("security.ip-trust.enabled", true)) {
-            return;
-        }
-        String safeIp = sanitizeIp(ip);
-        int newScore = Math.max(minTrust, Math.min(maxTrust, getTrustScore(ip) + score));
-
-        config.set("ips." + safeIp + ".score", newScore);
-        save();
-    }
-
     public void setTrustScore(String ip, int score) {
-        String safeIp = sanitizeIp(ip);
+        if (ip == null) return;
         int newScore = Math.max(minTrust, Math.min(maxTrust, score));
 
-        config.set("ips." + safeIp + ".score", newScore);
-        save();
+        globalDataManager.setExplicit(newScore, "ip_trust", ip, "score");
+    }
+
+    public void addTrustScore(String ip, int score) {
+        if (!plugin.getConfig().getBoolean("security.ip-trust.enabled", true) || ip == null) {
+            return;
+        }
+        int newScore = Math.max(minTrust, Math.min(maxTrust, getTrustScore(ip) + score));
+
+        globalDataManager.setExplicit(newScore, "ip_trust", ip, "score");
     }
 
     public int getTrustPoints(String path, boolean positive) {
@@ -314,19 +282,7 @@ public class IPTrustManager {
         return points;
     }
 
-    private void save() {
-        synchronized (config) {
-            try {
-                config.save(file);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
     public void reload() {
-        config = YamlConfiguration.loadConfiguration(file);
-
         loadSettings();
         validateLevels();
     }

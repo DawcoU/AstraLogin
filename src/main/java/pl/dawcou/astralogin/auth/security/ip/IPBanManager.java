@@ -1,45 +1,34 @@
 package pl.dawcou.astralogin.auth.security.ip;
 
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.system.TimeUtils;
+import pl.dawcou.astralogin.data.GlobalDataManager;
+import pl.dawcou.astralogin.system.utils.TimeUtils;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
+//--------------------------------------------------
+// Menedżer blokad IP oparty o GlobalDataManager
+//--------------------------------------------------
 public class IPBanManager {
 
     private final AstraLogin plugin;
-    private final File bansFile;
-    private FileConfiguration bansConfig;
+    private final GlobalDataManager globalDataManager;
 
-    private final Map<String, Integer> ipAttempts = new HashMap<>();
-    private final Map<String, Long> ipBans = new HashMap<>();
-    private final Map<String, String> banReasons = new HashMap<>();
-    private final Map<String, String> ipBannedUuid = new HashMap<>();
+    private final Map<String, Integer> ipAttempts = new ConcurrentHashMap<>();
+    private final Map<String, Long> ipBans = new ConcurrentHashMap<>();
+    private final Map<String, String> banReasons = new ConcurrentHashMap<>();
+    private final Map<String, String> ipBannedUuid = new ConcurrentHashMap<>();
 
-    // Zbiór przechowywujący UUID graczy z bypassem ochrony IP
-    private final Set<String> ipBypassUuids = new HashSet<>();
+    private final Set<String> ipBypassUuids = ConcurrentHashMap.newKeySet();
 
-    public IPBanManager(AstraLogin plugin) {
+    public IPBanManager(AstraLogin plugin, GlobalDataManager globalDataManager) {
         this.plugin = plugin;
-
-        File globalDir = new File(plugin.getDataFolder(), "data/global");
-        if (!globalDir.exists()) {
-            globalDir.mkdirs();
-        }
-
-        bansFile = new File(globalDir, "ip_bans.yml");
-        if (!bansFile.exists()) {
-            try {
-                bansFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
+        this.globalDataManager = globalDataManager;
         loadBans();
     }
 
@@ -103,7 +92,6 @@ public class IPBanManager {
         unbanIP(ip);
     }
 
-    // --- LOGIKA BYPASS IP ---
     public boolean hasBypass(String uuid) {
         return ipBypassUuids.contains(uuid);
     }
@@ -118,59 +106,69 @@ public class IPBanManager {
     }
 
     public void saveBans() {
-        synchronized (bansFile) {
-            bansConfig = new YamlConfiguration();
-            long now = System.currentTimeMillis();
+        JsonObject bansJson = new JsonObject();
+        long now = System.currentTimeMillis();
 
-            for (Map.Entry<String, Long> entry : ipBans.entrySet()) {
-                String ip = entry.getKey();
-                long expireTime = entry.getValue();
+        for (Map.Entry<String, Long> entry : ipBans.entrySet()) {
+            String ip = entry.getKey();
+            long expireTime = entry.getValue();
 
-                if (expireTime > now) {
-                    String cleanIp = ip.replace(".", "_");
-                    bansConfig.set("bans." + cleanIp + ".ip", ip);
-                    bansConfig.set("bans." + cleanIp + ".expire", expireTime);
-                    bansConfig.set("bans." + cleanIp + ".reason", banReasons.getOrDefault(ip, "UNKNOWN"));
-                    bansConfig.set("bans." + cleanIp + ".uuid", ipBannedUuid.getOrDefault(ip, "UNKNOWN"));
-                }
-            }
+            if (expireTime > now) {
+                JsonObject banData = new JsonObject();
+                banData.addProperty("ip", ip);
+                banData.addProperty("expire", expireTime);
+                banData.addProperty("reason", banReasons.getOrDefault(ip, "UNKNOWN"));
+                banData.addProperty("uuid", ipBannedUuid.getOrDefault(ip, "UNKNOWN"));
 
-            bansConfig.set("bypasses", new java.util.ArrayList<>(ipBypassUuids));
-
-            try {
-                bansConfig.save(bansFile);
-            } catch (IOException e) {
-                e.printStackTrace();
+                bansJson.add(ip, banData);
             }
         }
+
+        JsonArray bypassesArray = new JsonArray();
+        for (String uuid : ipBypassUuids) {
+            bypassesArray.add(uuid);
+        }
+
+        // Zapisujemy cały obiekt banów i tablicę bypassów przez setExplicit
+        globalDataManager.setExplicit(bansJson, "ip_bans");
+        globalDataManager.setExplicit(bypassesArray, "ip_bypasses");
     }
 
     public void loadBans() {
-        bansConfig = YamlConfiguration.loadConfiguration(bansFile);
         ipBans.clear();
         banReasons.clear();
         ipBannedUuid.clear();
         ipBypassUuids.clear();
 
-        if (bansConfig.getConfigurationSection("bans") != null) {
+        // Pobieramy JsonElement za pomocą getElementExplicit, żeby ominąć kropki
+        JsonElement bansElement = globalDataManager.getElementExplicit("ip_bans");
+        if (bansElement != null && bansElement.isJsonObject()) {
+            JsonObject bansJson = bansElement.getAsJsonObject();
             long now = System.currentTimeMillis();
-            for (String key : bansConfig.getConfigurationSection("bans").getKeys(false)) {
-                String path = "bans." + key + ".";
-                String ip = bansConfig.getString(path + "ip");
-                long expire = bansConfig.getLong(path + "expire");
-                String reason = bansConfig.getString(path + "reason");
-                String uuid = bansConfig.getString(path + "uuid");
 
-                if (ip != null && expire > now) {
-                    ipBans.put(ip, expire);
-                    if (reason != null) banReasons.put(ip, reason);
-                    if (uuid != null) ipBannedUuid.put(ip, uuid);
+            for (Map.Entry<String, JsonElement> entry : bansJson.entrySet()) {
+                if (entry.getValue().isJsonObject()) {
+                    JsonObject banData = entry.getValue().getAsJsonObject();
+                    String ip = banData.has("ip") ? banData.get("ip").getAsString() : entry.getKey();
+                    long expire = banData.has("expire") ? banData.get("expire").getAsLong() : 0;
+                    String reason = banData.has("reason") ? banData.get("reason").getAsString() : "UNKNOWN";
+                    String uuid = banData.has("uuid") ? banData.get("uuid").getAsString() : "UNKNOWN";
+
+                    if (ip != null && expire > now) {
+                        ipBans.put(ip, expire);
+                        banReasons.put(ip, reason);
+                        ipBannedUuid.put(ip, uuid);
+                    }
                 }
             }
         }
 
-        if (bansConfig.isList("bypasses")) {
-            ipBypassUuids.addAll(bansConfig.getStringList("bypasses"));
+        // Pobieramy bezpośrednio JsonElement, sprawdzamy czy to JsonArray
+        JsonElement bypassesElement = globalDataManager.getElementExplicit("ip_bypasses");
+        if (bypassesElement != null && bypassesElement.isJsonArray()) {
+            for (JsonElement element : bypassesElement.getAsJsonArray()) {
+                ipBypassUuids.add(element.getAsString());
+            }
         }
     }
 }

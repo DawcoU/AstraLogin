@@ -16,12 +16,31 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class PremiumManager {
 
+    // --- ENUM STANÓW BYPASSU ---
+    public enum BypassState {
+        ALLOWED,       // Ustalono na START: Gracz zarejestrowany, czeka na weryfikację pakietową Mojang
+        DENIED,        // Ustalono na START: Brak zarejestrowania lub wymuszone hasło (OSTATECZNE - NIE DO NADPISANIA)
+        AUTHENTICATED  // Ustalono na SUCCESS: Przedł pomyślnie szyfrowanie Mojang i ma pełny bypass
+    }
+
+    private static class StateEntry {
+        private final BypassState state;
+        private final long timestamp;
+
+        public StateEntry(BypassState state) {
+            this.state = state;
+            this.timestamp = System.currentTimeMillis();
+        }
+    }
+
     private final AstraLogin plugin;
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final Map<UUID, Boolean> premiumCache = new ConcurrentHashMap<>();
     private final Map<UUID, Long> premiumCacheTime = new ConcurrentHashMap<>();
-    private final Map<UUID, Boolean> activeSessions = new ConcurrentHashMap<>();
+
+    // Jedna główna mapa zarządzająca stanem gracza
+    private final Map<UUID, StateEntry> playerStates = new ConcurrentHashMap<>();
 
     public Map<UUID, Boolean> getPremiumCache() {
         return Collections.unmodifiableMap(premiumCache);
@@ -34,25 +53,20 @@ public class PremiumManager {
     public boolean isPremium(Player p) {
         UUID uuid = p.getUniqueId();
 
-        // 1. Pobieramy wariant z configu
         String mode = plugin.getConfig().getString("security.auto-login.mode", "FULL");
 
-        // 2. Jeśli zwrócą false, natychmiast przerywamy
         if (!premiumLoginRequirements(mode)) {
             return false;
         }
 
-        // 3. Dopiero teraz sprawdzamy resztę warunków (baza danych)
-        if (!plugin.getPasswordManager().isRegistered(uuid.toString())) {
+        if (!plugin.getPasswordManager().isRegistered(uuid)) {
             return false;
         }
 
-        // 4. Obsługa trybu FULL
         if ("FULL".equalsIgnoreCase(mode)) {
             return isAuthenticated(uuid);
         }
 
-        // 5. Obsługa trybu MINI (Cache + HTTP Mojang API)
         Boolean cached = checkCache(uuid);
         if (cached != null) {
             return cached;
@@ -102,7 +116,7 @@ public class PremiumManager {
 
             return statusCode == 200;
         } catch (Exception e) {
-            plugin.getNoticeManager().sendPremiumFastCheckError(username, e);
+            plugin.getNoticeManager().sendPremiumCheckError(username, e);
             return false;
         }
     }
@@ -135,16 +149,20 @@ public class PremiumManager {
                 premiumCacheTime.remove(uuid);
             }
         });
+
+        // Czyścimy porzucone stany z pakietów (np. połączenia zerwane przed dołączeniem do świata > 30s)
+        playerStates.forEach((uuid, entry) -> {
+            if (now - entry.timestamp >= 30_000 && entry.state != BypassState.AUTHENTICATED) {
+                playerStates.remove(uuid);
+            }
+        });
     }
 
-    // Weryfikacja wymagań dla logowania Premium (FULL / MINI)
     public boolean premiumLoginRequirements(String mode) {
-        // Podstawowe warunki odrzucane na starcie
         if (Bukkit.getOnlineMode() || !plugin.getConfig().getBoolean("security.auto-login.enabled")) {
             return false;
         }
 
-        // Sprawdzanie konkretnego trybu
         if (mode.equalsIgnoreCase("FULL")) {
             return plugin.getServer().getPluginManager().getPlugin("ProtocolLib") != null;
         }
@@ -156,19 +174,41 @@ public class PremiumManager {
         return false;
     }
 
+    /**
+     * Ustawia stan na pakiecie START. Jest to decyzja nadrzędna.
+     */
+    public void markPendingBypass(UUID uuid, boolean status) {
+        playerStates.put(uuid, new StateEntry(status ? BypassState.ALLOWED : BypassState.DENIED));
+    }
+
+    /**
+     * Zmienia stan na AUTHENTICATED po SUCCESS, ale TYLKO jeśli na START gracz nie dostał DENIED.
+     */
     public void setAuthenticated(UUID uuid, boolean authenticated) {
-        if (authenticated) {
-            activeSessions.put(uuid, true);
-        } else {
-            activeSessions.remove(uuid);
+        if (!authenticated) {
+            playerStates.put(uuid, new StateEntry(BypassState.DENIED));
+            return;
         }
+
+        StateEntry current = playerStates.get(uuid);
+        // Jeśli na starcie zabroniono bypassu (DENIED), to żaden późniejszy kod tego NIE NADPIŚE
+        if (current != null && current.state == BypassState.DENIED) {
+            return;
+        }
+
+        playerStates.put(uuid, new StateEntry(BypassState.AUTHENTICATED));
     }
 
     public boolean isAuthenticated(UUID uuid) {
-        return activeSessions.getOrDefault(uuid, false);
+        StateEntry entry = playerStates.get(uuid);
+        return entry != null && entry.state == BypassState.AUTHENTICATED;
     }
 
     public void removeAuthenticatedPlayer(UUID uuid) {
-        activeSessions.remove(uuid);
+        playerStates.remove(uuid);
+    }
+
+    public void clearPendingBypass(UUID uuid) {
+        playerStates.remove(uuid);
     }
 }

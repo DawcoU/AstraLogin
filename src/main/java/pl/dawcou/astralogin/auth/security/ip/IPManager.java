@@ -1,58 +1,47 @@
 package pl.dawcou.astralogin.auth.security.ip;
 
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.data.GlobalDataManager;
+import pl.dawcou.astralogin.data.PlayerDataManager;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.*;
 
-//--------------------------------------------------
-// IPManager - zarzadzanie plikami i cache IP
-//--------------------------------------------------
 public class IPManager {
 
+    // ----------------------------------------------------------------------------------------------------
+    // Fields & Dependencies
+    // ----------------------------------------------------------------------------------------------------
     private final AstraLogin plugin;
-    private final File file;
-    private FileConfiguration config;
+    private final PlayerDataManager playerDataManager;
+    private final GlobalDataManager globalDataManager;
     private final IPBanManager ipBanManager;
 
-    public static int ipCheckOctets = 4;
+    private int ipv4CheckOctets = 2;
+    private int ipv6CheckBlocks = 4;
 
-    private final Map<String, String> uuidToIpCache = new HashMap<>();
-    private final Map<String, Integer> ipCountCache = new HashMap<>();
+    // ----------------------------------------------------------------------------------------------------
+    // Constructor
+    // ----------------------------------------------------------------------------------------------------
+    public IPManager(AstraLogin plugin, PlayerDataManager playerDataManager, GlobalDataManager globalDataManager) {
+        this.plugin = plugin;
+        this.playerDataManager = playerDataManager;
+        this.globalDataManager = globalDataManager;
+        this.ipBanManager = new IPBanManager(plugin, globalDataManager);
 
-    public Map<String, String> getUuidToIpCache() {
-        return uuidToIpCache;
+        reload();
     }
 
     public IPBanManager getIpBanManager() {
         return ipBanManager;
     }
 
-    public IPManager(AstraLogin plugin) {
-        this.plugin = plugin;
-        this.ipBanManager = new IPBanManager(plugin);
-
-        File dataDir = new File(plugin.getDataFolder(), "data/players");
-        if (!dataDir.exists()) {
-            dataDir.mkdirs();
-        }
-
-        file = new File(dataDir, "ips.yml");
-        if (!file.exists()) {
-            try {
-                file.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        reload();
-    }
-
+    // ----------------------------------------------------------------------------------------------------
+    // IP Verification Methods
+    // ----------------------------------------------------------------------------------------------------
     public boolean checkIP(String uuid, String savedIP, String currentIP) {
         if (uuid != null && ipBanManager.hasBypass(uuid)) {
             return true;
@@ -62,61 +51,113 @@ public class IPManager {
 
     public boolean isValidIP(String savedIP, String currentIP) {
         if (savedIP == null || currentIP == null) return false;
-        if (savedIP.equals(currentIP)) return true;
+        if (savedIP.equalsIgnoreCase(currentIP)) return true;
 
-        if (savedIP.contains(".") && currentIP.contains(".")) {
-            String[] s = savedIP.split("\\.");
-            String[] c = currentIP.split("\\.");
+        try {
+            InetAddress savedAddr = InetAddress.getByName(savedIP);
+            InetAddress currentAddr = InetAddress.getByName(currentIP);
 
-            if (s.length < 4 || c.length < 4) {
+            byte[] savedBytes = savedAddr.getAddress();
+            byte[] currentBytes = currentAddr.getAddress();
+
+            // Return false if protocol versions differ (e.g. IPv4 vs IPv6)
+            if (savedBytes.length != currentBytes.length) {
                 return false;
             }
 
-            int octets = ipCheckOctets;
-            if (octets < 1) octets = 1;
-            if (octets > 4) octets = 4;
-
-            for (int i = 0; i < octets; i++) {
-                if (!s[i].equals(c[i])) {
-                    return false;
+            // IPv4 handling (4 bytes)
+            if (savedBytes.length == 4) {
+                for (int i = 0; i < ipv4CheckOctets; i++) {
+                    if (savedBytes[i] != currentBytes[i]) {
+                        return false;
+                    }
                 }
+                return true;
             }
-            return true;
+
+            // IPv6 handling (16 bytes = 8 blocks of 2 bytes each)
+            if (savedBytes.length == 16) {
+                int bytesToCheck = ipv6CheckBlocks * 2;
+                for (int i = 0; i < bytesToCheck; i++) {
+                    if (savedBytes[i] != currentBytes[i]) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+        } catch (UnknownHostException e) {
+            // Fallback for invalid IP strings
+            return savedIP.equalsIgnoreCase(currentIP);
         }
 
-        return savedIP.equalsIgnoreCase(currentIP);
+        return false;
     }
 
+    // ----------------------------------------------------------------------------------------------------
+    // Player Data IP Operations
+    // ----------------------------------------------------------------------------------------------------
     public void saveIP(String uuid, String ip) {
-        String oldIp = uuidToIpCache.get(uuid);
-        if (oldIp != null && ipCountCache.containsKey(oldIp)) {
-            ipCountCache.put(oldIp, Math.max(0, ipCountCache.get(oldIp) - 1));
+        try {
+            UUID parsedUuid = UUID.fromString(uuid);
+            playerDataManager.set(parsedUuid, "auth.last-ip", ip);
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("Could not parse UUID for IP saving: " + uuid);
         }
-
-        uuidToIpCache.put(uuid, ip);
-        ipCountCache.put(ip, ipCountCache.getOrDefault(ip, 0) + 1);
-
-        config.set("ips." + uuid, ip);
-        save();
     }
 
     public String getIP(String uuid) {
-        return uuidToIpCache.get(uuid);
+        try {
+            UUID parsedUuid = UUID.fromString(uuid);
+            return playerDataManager.getString(parsedUuid, "auth.last-ip");
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("Could not parse UUID for IP retrieval: " + uuid);
+            return null;
+        }
     }
 
     public void deleteIP(String uuid) {
-        String ip = uuidToIpCache.remove(uuid);
-        if (ip != null && ipCountCache.containsKey(ip)) {
-            ipCountCache.put(ip, Math.max(0, ipCountCache.get(ip) - 1));
+        try {
+            UUID parsedUuid = UUID.fromString(uuid);
+            playerDataManager.remove(parsedUuid, "auth.last-ip");
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("Could not parse UUID for IP deletion: " + uuid);
         }
-        config.set("ips." + uuid, null);
-        save();
+    }
+
+    // ----------------------------------------------------------------------------------------------------
+    // Utility & Mapping Methods
+    // ----------------------------------------------------------------------------------------------------
+    public Map<String, List<String>> getIpToNamesMap() {
+        Map<String, List<String>> ipToNamesMap = new HashMap<>();
+        JsonObject uuidsObj = globalDataManager.getJsonObject("usermap.uuids");
+
+        if (uuidsObj != null) {
+            for (Map.Entry<String, JsonElement> entry : uuidsObj.entrySet()) {
+                String name = entry.getKey();
+                try {
+                    UUID uuid = UUID.fromString(entry.getValue().getAsString());
+                    String ip = playerDataManager.getString(uuid, "auth.last-ip");
+
+                    if (ip != null && !ip.isEmpty()) {
+                        ipToNamesMap.computeIfAbsent(ip, k -> new ArrayList<>()).add(name);
+                    }
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+
+        return ipToNamesMap;
     }
 
     public int getNumberOfAccountsByIP(String ip) {
-        return ipCountCache.getOrDefault(ip, 0);
+        if (ip == null || ip.isEmpty()) return 0;
+        List<String> names = getIpToNamesMap().get(ip);
+        return names != null ? names.size() : 0;
     }
 
+    // ----------------------------------------------------------------------------------------------------
+    // IP Ban Manager Wrappers
+    // ----------------------------------------------------------------------------------------------------
     public boolean isIPBanned(String ip) {
         return ipBanManager.isIPBanned(ip);
     }
@@ -126,25 +167,11 @@ public class IPManager {
     }
 
     public void banIPWithMillis(String ip, long durationMillis, String reason) {
-        String uuid = null;
-        for (Map.Entry<String, String> entry : uuidToIpCache.entrySet()) {
-            if (entry.getValue().equals(ip)) {
-                uuid = entry.getKey();
-                break;
-            }
-        }
-        ipBanManager.banIPWithMillis(ip, durationMillis, reason, uuid);
+        ipBanManager.banIPWithMillis(ip, durationMillis, reason, null);
     }
 
     public void addIPAttempt(String ip) {
-        String uuid = null;
-        for (Map.Entry<String, String> entry : uuidToIpCache.entrySet()) {
-            if (entry.getValue().equals(ip)) {
-                uuid = entry.getKey();
-                break;
-            }
-        }
-        ipBanManager.addIPAttempt(ip, uuid);
+        ipBanManager.addIPAttempt(ip, null);
     }
 
     public long getIPBanTimeLeft(String ip) {
@@ -155,32 +182,16 @@ public class IPManager {
         ipBanManager.resetIPAttempts(ip);
     }
 
+    // ----------------------------------------------------------------------------------------------------
+    // Configuration Reload
+    // ----------------------------------------------------------------------------------------------------
     public void reload() {
-        config = YamlConfiguration.loadConfiguration(file);
+        int v4Octets = plugin.getConfig().getInt("ip-security.verification.ipv4-check-octets", 2);
+        this.ipv4CheckOctets = Math.max(1, Math.min(4, v4Octets));
 
-        uuidToIpCache.clear();
-        ipCountCache.clear();
-
-        if (config.getConfigurationSection("ips") != null) {
-            for (String key : config.getConfigurationSection("ips").getKeys(false)) {
-                String ip = config.getString("ips." + key);
-                if (ip != null) {
-                    uuidToIpCache.put(key, ip);
-                    ipCountCache.put(ip, ipCountCache.getOrDefault(ip, 0) + 1);
-                }
-            }
-        }
+        int v6Blocks = plugin.getConfig().getInt("ip-security.verification.ipv6-check-blocks", 4);
+        this.ipv6CheckBlocks = Math.max(1, Math.min(8, v6Blocks));
 
         ipBanManager.loadBans();
-    }
-
-    private void save() {
-        synchronized (config) {
-            try {
-                config.save(file);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
     }
 }

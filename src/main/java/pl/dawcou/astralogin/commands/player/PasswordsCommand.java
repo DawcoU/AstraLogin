@@ -1,16 +1,15 @@
-package pl.dawcou.astralogin.commands;
+package pl.dawcou.astralogin.commands.player;
 
 import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.passwords.PasswordHasher;
-import pl.dawcou.astralogin.system.TimeUtils;
+import pl.dawcou.astralogin.auth.passwords.PasswordValidator;
+import pl.dawcou.astralogin.system.utils.TimeUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,35 +38,25 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            String targetName = args[0];
-            UUID targetUUID = null;
-            FileConfiguration accountsConfig = plugin.getAccountManager().getConfig();
-
-            if (accountsConfig.getConfigurationSection("accounts") != null) {
-                for (String uuidKey : accountsConfig.getConfigurationSection("accounts").getKeys(false)) {
-                    String knownName = accountsConfig.getString("accounts." + uuidKey + ".last-known-name");
-                    if (knownName != null && knownName.equalsIgnoreCase(targetName)) {
-                        targetUUID = UUID.fromString(uuidKey);
-                        targetName = knownName;
-                        break;
-                    }
-                }
-            }
+            String targetInput = args[0];
+            UUID targetUUID = plugin.getAccountManager().getUuidByUsername(targetInput);
 
             if (targetUUID == null) {
-                OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
-                targetUUID = target.getUniqueId();
-            }
-
-            String uuidString = targetUUID.toString();
-
-            if (!plugin.getPasswordManager().isRegistered(uuidString)) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-password.no-account"));
                 return true;
             }
 
-            plugin.getPasswordManager().deletePassword(uuidString);
-            plugin.getAccountManager().invalidateRegistration(targetUUID);
+            String targetName = plugin.getAccountManager().getRegisteredNameIgnoreCase(targetInput);
+            if (targetName == null) {
+                targetName = targetInput;
+            }
+
+            if (!plugin.getPasswordManager().isRegistered(targetUUID)) {
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-password.no-account"));
+                return true;
+            }
+
+            plugin.getPasswordManager().deletePassword(targetUUID);
 
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-password.admin-success")
                     .replace("%player%", targetName));
@@ -99,9 +88,9 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
 
             String ip = p.getAddress().getAddress().getHostAddress();
             String PIN = args[0];
-            String uuidString = p.getUniqueId().toString();
+            UUID playerUUID = p.getUniqueId();
 
-            String hashedPIN = plugin.getPinManager().getPIN(uuidString);
+            String hashedPIN = plugin.getPinManager().getPIN(playerUUID);
 
             if (hashedPIN == null) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("forgot-password.no-has-pin"));
@@ -109,20 +98,19 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
             }
 
             plugin.getSchedulerManager().runAsync(() -> {
-                PasswordHasher.VerificationResult result = plugin.getPasswordManager().getPasswordHasher().verifyPassword(p.getUniqueId(), PIN, hashedPIN);
+                PasswordHasher.VerificationResult result = plugin.getPasswordManager().getPasswordHasher().verifyPassword(playerUUID, PIN, hashedPIN);
 
                 switch (result.status()) {
                     case SUCCESS:
                         if (result.rehashNeeded() && result.newHash() != null) {
-                            plugin.getPasswordManager().savePassword(uuidString, result.newHash());
+                            plugin.getPasswordManager().savePassword(playerUUID, result.newHash());
                         }
 
                         plugin.getSchedulerManager().runSync(() -> {
                             p.kickPlayer(plugin.getLanguageManager().getMessage("forgot-password.player-kick"));
                         });
 
-                        plugin.getPasswordManager().deletePassword(uuidString);
-                        plugin.getAccountManager().invalidateRegistration(p.getUniqueId());
+                        plugin.getPasswordManager().deletePassword(playerUUID);
 
                         plugin.getLogManager().log("Player " + p.getName() + " reset his password using PIN");
                         break;
@@ -182,7 +170,9 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            String currentPassword = plugin.getPasswordManager().getPassword(p.getUniqueId().toString());
+            UUID playerUUID = p.getUniqueId();
+
+            String currentPassword = plugin.getPasswordManager().getPassword(playerUUID);
             if (currentPassword == null) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.wrong-old"));
                 return true;
@@ -193,10 +183,26 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            int min = plugin.getConfig().getInt("features.password.min-password-length");
+            // Blokuje niedozwolone znaki
+            for (String password : new String[]{args[1], args[2]}) {
+                PasswordValidator.ValidationResult result = PasswordValidator.validate(password, plugin.getConfig(), plugin.getLogger());
+
+                if (result == PasswordValidator.ValidationResult.INVALID_CHARACTERS) {
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.invalid-characters"));
+                    return true;
+                } else if (result == PasswordValidator.ValidationResult.ONLY_LETTERS_FORBIDDEN) {
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.only-letters-forbidden"));
+                    return true;
+                } else if (result == PasswordValidator.ValidationResult.ONLY_DIGITS_FORBIDDEN) {
+                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.only-digits-forbidden"));
+                    return true;
+                }
+            }
+
+            int min = plugin.getConfig().getInt("features.password.min-password-length", 6);
             min = Math.max(5, min);
 
-            int max = plugin.getConfig().getInt("features.password.max-password-length");
+            int max = plugin.getConfig().getInt("features.password.max-password-length", 24);
             max = Math.min(32, max);
 
             if (min > max) {
@@ -214,9 +220,6 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            UUID playerUUID = p.getUniqueId();
-            String uuidString = playerUUID.toString();
-
             plugin.getSchedulerManager().runAsync(() -> {
                 PasswordHasher hasher = plugin.getPasswordManager().getPasswordHasher();
                 PasswordHasher.VerificationResult result = hasher.verifyPassword(playerUUID, oldPassword, currentPassword);
@@ -230,7 +233,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                             return;
                         }
 
-                        plugin.getPasswordManager().savePassword(uuidString, newHashPassword);
+                        plugin.getPasswordManager().savePassword(playerUUID, newHashPassword);
 
                         plugin.getSchedulerManager().runSync(() -> {
                             if (plugin.getLoginSystem().getLoggedIn().contains(playerUUID)) {

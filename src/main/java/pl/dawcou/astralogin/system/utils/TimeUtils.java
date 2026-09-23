@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.system;
+package pl.dawcou.astralogin.system.utils;
 
 public class TimeUtils {
 

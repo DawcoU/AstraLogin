@@ -2,7 +2,7 @@ package pl.dawcou.astralogin.file;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.system.TimeUtils;
+import pl.dawcou.astralogin.system.utils.TimeUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;

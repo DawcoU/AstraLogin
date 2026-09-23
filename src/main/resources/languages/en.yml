@@ -65,6 +65,10 @@ messages:
     changed: "&aYour password has been successfully changed!"
     identical: "&cThe new password cannot be the same as the old one!"
     error: "&cA critical error occurred while verifying your password. Contact administration"
+    validation:
+      invalid-characters: "&cYour password contains invalid characters! Use only letters, digits, and basic symbols"
+      only-letters-forbidden: "&cYour password cannot consist only of letters! Include at least one digit or special character"
+      only-digits-forbidden: "&cYour password cannot consist only of digits! Include at least one letter or special character"
 
 
   # --- PINs ---
@@ -192,7 +196,7 @@ messages:
     unsetup-instructions: "&cTo disable 2FA, enter the code: /2fa unsetup <code>"
 
 
-  # --- Account Info Command (/konto) ---
+  # --- Account Info Command (/account) ---
   account:
     usage: "&cCorrect usage: &e/account <player>"
     not-found: "&cPlayer &6%target% &chas never registered on this server"
@@ -209,21 +213,21 @@ messages:
       footer: "&8--------------------------------"
 
     status:
-      not-active-register: "&cUnregistered"
+      not-registered: "&cUnregistered"
       active-2fa: "&aEnabled"
       not-active-2fa: "&cDisabled"
 
 
-  # --- Accounts List Command (/kontalista) ---
+  # --- Accounts List Command (/accountslist) ---
   accounts-list:
-    generating: "&7Loading IP address List..."
-    empty: "&cThe IP address database is empty"
-    header: "&7===== &6Registered IP addresses &7====="
+    generating: "&7Loading registered accounts list..."
+    empty: "&cThe account database is empty"
+    header: "&7===== &6Registered Accounts &7====="
     format: "&7- &e%name% &7(&aUUID: &b%uuid%&7)"
     footer: "&7======================================="
 
 
-  # --- IP List Command (/listaip) ---
+  # --- IP List Command (/iplist) ---
   ip-list:
     generating: "&7Loading IP List..."
     empty: "&cThe IP address database is empty"
@@ -232,7 +236,7 @@ messages:
     footer: "&7==========================================="
 
 
-  # --- Move Account Command (/przenieskonto) ---
+  # --- Move Account Command (/moveaccount) ---
   account-move:
     usage: "&cCorrect usage: &e/moveaccount <old nick, new nick>"
     start: "&aStarting verification and migration process for &e%old% &a--> &e%new%"
@@ -253,7 +257,7 @@ messages:
     hover: "&4Click here to transfer the account"
 
 
-  # --- Reset Password (/zresetujhaslo) ---
+  # --- Reset Password (/resetpassword) ---
   reset-password:
     usage: "&cCorrect usage: &e/resetpassword <player>"
     no-account: "&cThis player does not have a registered password!"
@@ -273,7 +277,7 @@ messages:
     player-message: "&cYour PIN has been reset by the administrator!"
 
 
-  # --- Reset IP (/zresetujip) ---
+  # --- Reset IP (/resetip) ---
   reset-ip:
     usage: "&cCorrect usage: &e/resetip <player>"
     no-ip: "&cThis player does not have a saved IP address!"
@@ -283,9 +287,10 @@ messages:
     player-kick: "&cYour IP address has been reset by an administrator!"
 
 
-  # --- Purge Account (/zresetujkonto) ---
+  # --- Purge Account (/resetaccount) ---
   purge-account:
     usage: "&cCorrect usage: &e/purgeaccount <player>"
+    not-found: "&cPlayer &6%target% &cnot found in server database"
     admin-success: "&aSuccessfully purged ALL account data for player &e%player%"
 
     player-kick: "&cYour account has been completely removed from the server database by an administrator"

@@ -20,26 +20,38 @@ Paper or its forks are strongly recommended for the best experience.
 
 ### 🚀 Key Features
 
-* **Advanced Security:** Password hashing using the **BCrypt** or **Argon2id** algorithm, ensuring no plain text is ever stored and protecting against dictionary attacks. 🛡️🔑
-* **Smart Brute-Force Protection:** 🚫🤖
-    * Automatically kicks players after exceeding failed login attempts.
-    * **Margin of Error:** Configure extra "mercy" chances (margin) before a final action is taken.
-    * **Temporary IP Ban:** If the limit is reached, the user's IP is temporarily banned in RAM to prevent further attacks without bloating your database.
-* **Two-Factor Authentication (2FA):** Next-level account security! Players can link their accounts to authenticator apps to protect themselves from hackers. 📱🔐
-* **Account Management & Statistics:** Comprehensive tracking of player data, including registration/last login dates, 2FA status, UUIDs, and more! 📊🔍
-* **Session System:** Allows players to rejoin without re-typing their password within a configurable time limit (IP-based). 🕒🔄
-* **Equipment Protection:** Complete concealment of player inventory and armor during the login process to prevent exploits. 🛡️🎒
-* **Location Protection:** Teleports unauthorized players to a secure location (or spawn) and restores their previous position only after successful login. 📍🌍
-* **Inventory Storage:** Safely caches player items in a single-file system until they are authorized. 📦💾
-* **Visual Effects:** 🎨✨
-    * **Blindness Effect:** Keeps unauthorized players in total darkness. 🌑
-    * **HEX Colors:** Full support for modern HEX color codes in the prefix and all messages via MiniMessage/Legacy! 🌈
-* **Admin Utilities:** 🛠️⚙️
-    * **Auto-Updater:** Configuration files automatically update when you install a newer plugin version.
-    * **Update Notifications:** Notifies administrators when a new version is available, with warnings about pre-release versions, newer versions, and available patches. 🛜
-* **AutoLogin Premium:** Automatic login for premium accounts. Supports **FULL** authentication (secure Mojang handshake) and a legacy **MINI** prototype (only checks if the nickname exists in Mojang database without full authentication; allows cracked logins with that nickname without a password). ✅👤
-* **Password recovery:** Using the PIN as a separate source of authentication confirmation, you can reset your password yourself. 🔑🔄
-* **Security Reminders:** Periodically reminds players to boost their account security by enabling 2FA or setting up a recovery PIN. 🔔🛡️
+* **Advanced Security:** Password hashing using the **BCrypt** or **Argon2id** algorithm, ensuring no plain text is ever stored and protecting against dictionary attacks. 🛡️🔑🔐💻
+* **Strict Input Validation:** Prevents players from registering with unauthorized characters, emojis, or special symbols. Includes a configurable regex pattern and pre-built rules to block weak passwords, such as those made entirely of letters or entirely of numbers. 🛑🔤🚫⚠️
+* **Detailed Event Logging:** All key server events, including player logins, suspicious access attempts, and administrative actions, are logged to dedicated files in the `logs` folder inside the plugin directory. 📁📝📜🔍
+* **Smart Brute-Force Protection:** 🚫🤖🔨
+  * **Failed Attempts Limit:** Automatically kicks players after exceeding allowed login attempts. 🥾❌
+  * **Margin of Error:** Configure extra "mercy" chances (margin) before a final action is taken. ⏳🛡️
+  * **IP Ban Protection:** If the limit is reached, the user's IP is banned to prevent further attacks without bloating your database. 🚫🛡️🌐🔒
+
+* **Two-Factor Authentication (2FA):** Next-level account security! Players can link their accounts to authenticator apps to protect themselves from hackers. 📱🔐📲🛡️
+* **Account Management & Statistics:** Comprehensive tracking of player data, including registration/last login dates, 2FA status, UUIDs, and more! 📊🔍📈👤
+* **Session System:** Allows players to rejoin without re-typing their password within a configurable time limit (IP-based). 🕒🔄💻
+  * **Dedicated 2FA Sessions:** Separately manages 2FA verification, allowing players to authenticate their 2FA code periodically (e.g., once every 2 days) independently from the main login session. 📱🕒🔐⌛
+
+* **In-Game Player Protection:** 🛡️🌍
+  * **Equipment Protection:** Complete concealment of player inventory and armor during the login process to prevent exploits and unauthorized spying on other players' gear. 🎒🗡️🦺
+  * **Location Protection:** Teleports unauthorized players to a secure location (or spawn) and restores their previous position only after successful login, preventing coordinate leaks and exploits. 📍🌍🗺️✨
+  * **Inventory Storage:** Temporarily holds player items during the login process until they are authorized. 📦💾🔒
+
+* **Visual Effects:** 🎨✨🎆
+  * **Blindness Effect:** Keeps unauthorized players in total darkness. 🌑🕶️
+  * **HEX Colors:** Full support for modern HEX color codes in the prefix and all messages via MiniMessage/Legacy! 🌈🎨🖌️
+
+* **Admin Utilities:** 🛠️⚙️🧰
+  * **Auto-Updater:** Configuration files automatically update when you install a newer plugin version. 🔄⚡
+  * **Update Notifications:** Notifies administrators when a new version is available, with warnings about pre-release versions, newer versions, and available patches. 🛜🔔⚠️
+
+* **AutoLogin Premium:** Automatic login system for premium accounts: 🌟👤💻
+  * **FULL Mode:** Secure, complete Mojang authentication handshake. 🔒✅
+  * **MINI Mode:** Prototype mode that checks nickname existence in Mojang database without full authentication, allowing cracked logins with that nickname without a password. 🧪🔓
+
+* **Password Recovery:** Using the PIN as a separate source of authentication confirmation, you can reset your password yourself. 🔑🔄📌🛡️
+* **Security Reminders:** Periodically reminds players to boost their account security by enabling 2FA or setting up a recovery PIN. 🔔🛡️⏰📢
 
 ---
 
