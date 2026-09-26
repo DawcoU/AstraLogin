@@ -134,7 +134,7 @@ public class LanguageManager {
         File langFolder = new File(plugin.getDataFolder(), "languages");
         if (!langFolder.exists()) langFolder.mkdirs();
 
-        String[] defaultLangs = {"pl.yml", "en.yml"};
+        String[] defaultLangs = {"pl.yml", "en.yml", "de.yml", "es.yml"};
         for (String langFile : defaultLangs) {
             File file = new File(langFolder, langFile);
             if (!file.exists()) {

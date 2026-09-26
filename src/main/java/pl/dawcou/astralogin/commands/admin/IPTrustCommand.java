@@ -4,8 +4,10 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.security.ip.IPTrustManager;
+import pl.dawcou.astralogin.system.utils.SoundManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,9 +25,14 @@ public class IPTrustCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        Player p = (sender instanceof Player) ? (Player) sender : null;
+
         if (command.getName().equalsIgnoreCase("zaufanieip") || command.getName().equalsIgnoreCase("iptrust")) {
             if (args.length == 0) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-trust.usage"));
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                }
                 return true;
             }
 
@@ -35,21 +42,33 @@ public class IPTrustCommand implements CommandExecutor, TabCompleter {
             if (action.equalsIgnoreCase("reset")) {
                 if (args.length != 2) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-trust.usage"));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
                 if (!sender.hasPermission("astralogin.iptrust.reset")) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
                 String ip = args[1];
 
                 if (ip == null) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-trust.usage"));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
                 if (!ipTrustManager.hasIP(ip)) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-trust.ip-not-found")
                             .replace("%ip%", ip));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
 
@@ -60,6 +79,9 @@ public class IPTrustCommand implements CommandExecutor, TabCompleter {
                         .replace("%ip%", args[1]);
 
                 sender.sendMessage(successMsg);
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
+                }
 
                 String adminName = sender.getName();
 
@@ -69,10 +91,16 @@ public class IPTrustCommand implements CommandExecutor, TabCompleter {
             } else if (action.equalsIgnoreCase("set")) {
                 if (args.length != 3) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-trust.usage"));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
                 if (!sender.hasPermission("astralogin.iptrust.set")) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
 
@@ -83,17 +111,26 @@ public class IPTrustCommand implements CommandExecutor, TabCompleter {
 
                 if (ip == null) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-trust.usage"));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
                 if (!ipTrustManager.hasIP(ip)) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-trust.ip-not-found")
                             .replace("%ip%", ip));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
                 try {
                     score = Integer.parseInt(scoreArg);
                 } catch (NumberFormatException e) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-trust.invalid-number"));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
 
@@ -104,26 +141,41 @@ public class IPTrustCommand implements CommandExecutor, TabCompleter {
                         .replace("%score%", String.valueOf(score));
 
                 sender.sendMessage(successMsg);
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
+                }
                 return true;
 
             } else if (action.equalsIgnoreCase("info")) {
                 if (args.length != 2) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-trust.usage"));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
                 if (!sender.hasPermission("astralogin.iptrust.info")) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
                 String ip = args[1];
 
                 if (ip == null) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-trust.usage"));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
                 if (!ipTrustManager.hasIP(ip)) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-trust.ip-not-found")
                             .replace("%ip%", ip));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
 
@@ -160,9 +212,15 @@ public class IPTrustCommand implements CommandExecutor, TabCompleter {
                             .replace("%score%", String.valueOf(score))
                             .replace("%rate%", rate));
                 }
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
+                }
                 return true;
             }
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-trust.usage"));
+            if (p != null) {
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+            }
             return true;
         }
         return false;

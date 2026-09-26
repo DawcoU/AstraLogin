@@ -54,8 +54,6 @@ public class AccountManager {
             plugin.getGlobalDataManager().remove("usermap.names." + lowerName);
             plugin.getGlobalDataManager().remove("usermap.uuids." + lowerName);
         }
-
-        playerDataManager.remove(uuid, "account");
     }
 
     private String getCurrentDateTime() {

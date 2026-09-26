@@ -35,7 +35,9 @@ public class TechnicalListeners implements Listener {
         // Nadanie efektu blindness graczowi po śmierci w czasie logowania
         if (!plugin.getLoginSystem().getLoggedIn().contains(uuid)) {
             if (plugin.getConfig().getBoolean("visuals.use-blindness")) {
-                p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, Integer.MAX_VALUE, 0, false, false));
+                plugin.getSchedulerManager().runForEntity(p, () -> {
+                    p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, Integer.MAX_VALUE, 0, false, false));
+                });
             }
         }
     }

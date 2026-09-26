@@ -125,7 +125,9 @@ public class SessionManager {
         int loaded2FASessions = twoFactorSessionManager.loadSessionsFromFiles();
         int totalLoaded = loadedStandardSessions + loaded2FASessions;
 
-        plugin.getNoticeManager().sendSessionsLoaded(totalLoaded);
+        if (totalLoaded > 0) {
+            plugin.getNoticeManager().sendSessionsLoaded(totalLoaded);
+        }
     }
 
     public void reload() {

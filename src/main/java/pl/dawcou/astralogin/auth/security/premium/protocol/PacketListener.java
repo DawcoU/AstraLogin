@@ -8,8 +8,10 @@ import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.mojang.authlib.GameProfile;
 import io.netty.channel.Channel;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.security.premium.api.MojangApiService;
 import pl.dawcou.astralogin.auth.security.premium.protocol.cipher.EncryptionUtils;
@@ -18,7 +20,9 @@ import pl.dawcou.astralogin.auth.security.premium.session.PremiumSessionManager;
 import javax.crypto.SecretKey;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.MessageDigest;
 import java.util.Arrays;
@@ -409,7 +413,7 @@ public class PacketListener implements Listener {
                             sessionManager.removeSession(channel);
 
                             // Generate standard offline profile (v3 UUID)
-                            UUID offlineUuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                            UUID offlineUuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(StandardCharsets.UTF_8));
                             GameProfile offlineNmsProfile = new GameProfile(offlineUuid, username);
                             WrappedGameProfile offlineWrappedProfile = WrappedGameProfile.fromHandle(offlineNmsProfile);
 
@@ -420,42 +424,112 @@ public class PacketListener implements Listener {
 
                             // CRITICAL: We MUST enable AES encryption on Netty pipeline, because client already enabled it!
                             nettyExtractor.enableEncryptionOnChannel(channel, sharedSecret, () -> {
-                                PacketListener.this.plugin.getSchedulerManager().runSync(() -> {
-                                    new LoginCompleter(PacketListener.this.plugin)
-                                            .complete(channel, offlineUuid, offlineWrappedProfile);
-                                });
+                                try {
+                                    InetAddress address = ((java.net.InetSocketAddress) channel.remoteAddress()).getAddress();
 
-                                debug("DEBUG [7.4] 🔓 Encryption injected and offline login completed for " + username);
+                                    // Odpalamy AsyncPlayerPreLoginEvent dla profilu OFFLINE
+                                    AsyncPlayerPreLoginEvent preLoginEvent = new AsyncPlayerPreLoginEvent(
+                                            username,
+                                            address,
+                                            offlineUuid
+                                    );
+
+                                    Bukkit.getPluginManager().callEvent(preLoginEvent);
+
+                                    if (preLoginEvent.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED) {
+                                        debug("DEBUG [7.3b] ❌ Pre-login event denied offline connection: " + preLoginEvent.getKickMessage());
+                                        if (channel.isOpen()) {
+                                            channel.close();
+                                        }
+                                        return;
+                                    }
+
+                                    // Dokończenie logowania synchronicznie
+                                    PacketListener.this.plugin.getSchedulerManager().runSync(() -> {
+                                        new LoginCompleter(PacketListener.this.plugin)
+                                                .complete(channel, offlineUuid, offlineWrappedProfile);
+                                    });
+
+                                    debug("DEBUG [7.4] 🔓 Encryption injected and offline login completed for " + username);
+
+                                } catch (Exception e) {
+                                    plugin.getLogger().severe("[7.ERR] ❌ Error during offline AsyncPlayerPreLoginEvent execution: "
+                                            + e.getClass().getName() + ": " + e.getMessage());
+                                    e.printStackTrace();
+                                    if (channel.isOpen()) {
+                                        channel.close();
+                                    }
+                                }
                             });
-
                             return;
                         }
 
+                        //------------------------------------------------------------------------------
+                        // Pobieranie UUID oraz pola 'name' z nmsHandle
+                        //------------------------------------------------------------------------------
                         GameProfile nmsHandle = (GameProfile) mojangProfile.getHandle();
                         UUID uuid = null;
+                        String name = null;
 
                         try {
                             java.lang.reflect.Field idField = GameProfile.class.getDeclaredField("id");
                             idField.setAccessible(true);
                             uuid = (UUID) idField.get(nmsHandle);
+
+                            java.lang.reflect.Field nameField = GameProfile.class.getDeclaredField("name");
+                            nameField.setAccessible(true);
+                            name = (String) nameField.get(nmsHandle);
                         } catch (Exception e) {
-                            // Gdyby pole nazywało się inaczej
-                            plugin.getLogger().severe("Could not extract UUID from GameProfile: " + e.getMessage());
+                            plugin.getLogger().severe("Could not extract data from GameProfile: " + e.getMessage());
+                        }
+
+                        if (name == null) {
+                            name = username;
                         }
 
                         // Wstrzykujemy szyfrowanie bezpośrednio do obiektu Channel
                         debug("DEBUG [7.0] 🔐 Enabling AES encryption on premium channel.");
 
                         UUID finalUUID = uuid;
+                        String finalName = name;
 
                         nettyExtractor.enableEncryptionOnChannel(channel, sharedSecret, () -> {
                             debug("DEBUG [7.1] 🚀 Passing premium profile to LoginCompleter.");
 
-                            // Dokończenie logowania gracza wywoływane jest synchronicznie bo jest inaczej niebezpiecznie na nowszych wersjach Paper'a
-                            PacketListener.this.plugin.getSchedulerManager().runSync(() -> {
-                                new LoginCompleter(PacketListener.this.plugin)
-                                        .complete(channel, finalUUID, mojangProfile);
-                            });
+                            try {
+                                InetAddress address = ((java.net.InetSocketAddress) channel.remoteAddress()).getAddress();
+
+                                AsyncPlayerPreLoginEvent preLoginEvent =
+                                        new AsyncPlayerPreLoginEvent(
+                                                finalName,
+                                                address,
+                                                finalUUID
+                                        );
+
+                                Bukkit.getPluginManager().callEvent(preLoginEvent);
+
+                                if (preLoginEvent.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED) {
+                                    debug("DEBUG [7.2] ❌ Pre-login event denied connection: " + preLoginEvent.getKickMessage());
+                                    if (channel.isOpen()) {
+                                        channel.close();
+                                    }
+                                    return;
+                                }
+
+                                // Sync completion
+                                PacketListener.this.plugin.getSchedulerManager().runSync(() -> {
+                                    new LoginCompleter(PacketListener.this.plugin)
+                                            .complete(channel, finalUUID, mojangProfile);
+                                });
+
+                            } catch (Exception e) {
+                                plugin.getLogger().severe("[7.ERR] ❌ Error during AsyncPlayerPreLoginEvent execution: "
+                                        + e.getClass().getName() + ": " + e.getMessage());
+                                e.printStackTrace();
+                                if (channel.isOpen()) {
+                                    channel.close();
+                                }
+                            }
                         });
 
                     } catch (Exception e) {

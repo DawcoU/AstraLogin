@@ -103,13 +103,23 @@ public class UpdateChecker {
             if (isLatestPreRelease) {
                 if (cleanCurrent.equals(cleanLatest)) {
                     if (!isCurrentExperimental) {
-                        // Masz 4.4.0 na serwerze, a na sieci jest 4.4.0-rc1 -> masz wersję dev/niepubliczną
+                        // Masz np. 4.5.0 na serwerze, a na sieci jest 4.5.0-beta2
                         plugin.getNoticeManager().sendVersionDevNotice(sender, latest.getVersion());
                         return;
                     } else {
-                        // Obydwie to wersje testowe tej samej gałęzi
+                        // Obydwie to wersje testowe (np. 4.5.0-beta1 vs 4.5.0-beta2)
+                        int currentBuild = extractBuildNumber(current);
+                        int latestBuild = extractBuildNumber(latest.getVersion());
+
                         plugin.getNoticeManager().sendExperimentalNotice(sender);
-                        plugin.getNoticeManager().sendPreReleaseNotice(sender, latest.getVersion());
+
+                        if (latestBuild > currentBuild) {
+                            // Na stronie jest nowsza beta!
+                            plugin.getNoticeManager().sendPreReleaseNotice(sender, latest.getVersion());
+                        } else if (currentBuild > latestBuild) {
+                            // Masz nowszą betę niż na stronie (dev)
+                            plugin.getNoticeManager().sendVersionDevNotice(sender, latest.getVersion());
+                        }
                         return;
                     }
                 }
@@ -145,6 +155,16 @@ public class UpdateChecker {
                 plugin.getNoticeManager().sendVersionOk(sender);
             }
         });
+    }
+
+    // --------------------------------------------------------------------------------
+    // Helper method to extract trailing digits from version string
+    // --------------------------------------------------------------------------------
+    private int extractBuildNumber(String version) {
+        if (!version.contains("-")) return 0;
+        String suffix = version.substring(version.indexOf("-") + 1);
+        String numbersOnly = suffix.replaceAll("\\D+", "");
+        return numbersOnly.isEmpty() ? 0 : Integer.parseInt(numbersOnly);
     }
 
     private static class ModrinthVersion {

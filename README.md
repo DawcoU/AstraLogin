@@ -9,6 +9,7 @@ Developed in Java 17 and leveraging the Paper API for maximum efficiency, it is 
 ⭐ AstraLogin supports:
 - Paper
 - Purpur
+- Folia
 - Arclight (supported, but not recommended)
 - Spigot (supported, but not recommended)
 
@@ -21,6 +22,7 @@ Paper or its forks are strongly recommended for the best experience.
 ### 🚀 Key Features
 
 * **Advanced Security:** Password hashing using the **BCrypt** or **Argon2id** algorithm, ensuring no plain text is ever stored and protecting against dictionary attacks. 🛡️🔑🔐💻
+* **Suspicious Activity Alerts:** Sends real-time notifications to administrators with permissions when suspicious actions occur, such as a player logging in from an unknown IP address completely different from their saved profile IP. 🚨🌐⚠️🛡️
 * **Strict Input Validation:** Prevents players from registering with unauthorized characters, emojis, or special symbols. Includes a configurable regex pattern and pre-built rules to block weak passwords, such as those made entirely of letters or entirely of numbers. 🛑🔤🚫⚠️
 * **Detailed Event Logging:** All key server events, including player logins, suspicious access attempts, and administrative actions, are logged to dedicated files in the `logs` folder inside the plugin directory. 📁📝📜🔍
 * **Smart Brute-Force Protection:** 🚫🤖🔨
@@ -41,6 +43,9 @@ Paper or its forks are strongly recommended for the best experience.
 * **Visual Effects:** 🎨✨🎆
   * **Blindness Effect:** Keeps unauthorized players in total darkness. 🌑🕶️
   * **HEX Colors:** Full support for modern HEX color codes in the prefix and all messages via MiniMessage/Legacy! 🌈🎨🖌️
+  * **Interactive Sound Effects:** Plays custom, configurable sound effects during various player actions (e.g., successful login, wrong password entry, invalid password format) to enhance the user experience. 🔊🎶✨
+
+* **Localization & Multilingual Support:** Native built-in language files with full translation support for **English**, **Polish**, **Spanish**, and **German**. 🌐🇵🇱🇬🇧🇪🇸🇩🇪
 
 * **Admin Utilities:** 🛠️⚙️🧰
   * **Auto-Updater:** Configuration files automatically update when you install a newer plugin version. 🔄⚡
@@ -80,6 +85,7 @@ Paper or its forks are strongly recommended for the best experience.
 
 **Other Permissions:**
 * `astralogin.update` – Receive a notification when a new version is available. 📡🔔
+* `astralogin.alerts` – Sends alerts about suspicious player activity 🔔👁️
 
 ---
 

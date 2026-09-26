@@ -49,23 +49,77 @@ public class PasswordHasher {
         ERROR
     }
 
+    public record HashingResult(HashStatus status, String hash, long remainingSeconds) {
+        public HashingResult(HashStatus status, String hash) {
+            this(status, hash, 0L);
+        }
+
+        public boolean isSuccess() {
+            return status == HashStatus.SUCCESS && hash != null;
+        }
+    }
+
     public record VerificationResult(HashStatus status, boolean rehashNeeded, String newHash, long remainingSeconds) {
         // Konstruktor pomocniczy dla zwykłych statusów (bez czasu)
-            public VerificationResult(HashStatus status, boolean success, String newHash) {
-                this(status, success, newHash, 0L);
-            }
-
-            public boolean isSuccess() {
-                return status == HashStatus.SUCCESS;
-            }
+        public VerificationResult(HashStatus status, boolean success, String newHash) {
+            this(status, success, newHash, 0L);
         }
 
+        public boolean isSuccess() {
+            return status == HashStatus.SUCCESS;
+        }
+    }
+
+    // Główna z UUID gracza (do komend /register, /zmienhaslo)
     // --- GENEROWANIE HASHA ---
-    public String hashPassword(String password) {
+    public HashingResult hashPassword(String password) {
+        return hashPassword(null, password);
+    }
+
+    public HashingResult hashPassword(UUID playerUuid, String password) {
         if (password == null || password.isEmpty()) {
-            return null;
+            return new HashingResult(HashStatus.INVALID_PASSWORD, null);
         }
 
+        long now = System.currentTimeMillis();
+        long rawCooldownMs = plugin.getConfig().getLong("security.hashing.rate-limit.player-cooldown-ms", 2000L);
+        long safeCooldownMs = Math.max(100L, Math.min(60000L, rawCooldownMs));
+
+        // Cooldown gracza
+        if (playerUuid != null) {
+            long lastPlayerTry = playerCooldowns.getOrDefault(playerUuid, 0L);
+            long timePassed = now - lastPlayerTry;
+
+            if (timePassed < safeCooldownMs) {
+                long remainingMs = safeCooldownMs - timePassed;
+                long remainingSeconds = (long) Math.ceil(remainingMs / 1000.0);
+                return new HashingResult(HashStatus.RATE_LIMITED_PLAYER, null, remainingSeconds);
+            }
+            playerCooldowns.put(playerUuid, now);
+        }
+
+        // Semafor CPU
+        if (!hashingSemaphore.tryAcquire()) {
+            return new HashingResult(HashStatus.RATE_LIMITED_SERVER, null);
+        }
+
+        try {
+            String generatedHash = generateHashByConfig(password);
+
+            if (generatedHash == null) {
+                return new HashingResult(HashStatus.ERROR, null);
+            }
+
+            return new HashingResult(HashStatus.SUCCESS, generatedHash);
+        } catch (Throwable t) {
+            plugin.getLogger().severe("Error while hashing password: " + t.getMessage());
+            return new HashingResult(HashStatus.ERROR, null);
+        } finally {
+            hashingSemaphore.release();
+        }
+    }
+
+    private String generateHashByConfig(String password) {
         String algorithmStr = plugin.getConfig().getString("security.hashing.algorithm", "ARGON2ID");
         HashAlgorithm algorithm;
 
@@ -79,11 +133,9 @@ public class PasswordHasher {
             algorithm = HashAlgorithm.BCRYPT;
         }
 
-        if (algorithm == HashAlgorithm.BCRYPT) {
-            return hashBCrypt(password);
-        } else {
-            return hashArgon2(password);
-        }
+        return (algorithm == HashAlgorithm.BCRYPT)
+                ? hashBCrypt(password)
+                : hashArgon2(password);
     }
 
     private String hashBCrypt(String password) {
@@ -200,7 +252,7 @@ public class PasswordHasher {
 
             String newHash = null;
             if (needsRehash) {
-                newHash = hashPassword(rawPassword);
+                newHash = generateHashByConfig(rawPassword);
             }
 
             return new VerificationResult(HashStatus.SUCCESS, needsRehash, newHash);

@@ -89,27 +89,26 @@ messages:
     max-attempts-ban: "&cZbyt wiele nieudanych prób! Zostałeś zbanowany na &6%time%"
     multiaccount: "&cOsiągnięto limit kont dla tego adresu IP!"
     ip-spam: "&cWykryto zbyt dużo prób połączenia z Twojego adresu IP! Jesteś zablokowany na &6%time%"
-    ip-mismatch: "&cTwój adres IP nie zgadza się z tym kontem!"
+    suspicious-ip-alert: "&cWykryto podejrzaną aktywność! Gracz &4%target% &cwszedł z nieznanego adresu IP: &6%ip%"
 
-
-  security-reminder:
-    no-2fa-no-pin:
-      - "&c----------------------------------------"
-      - "&eTwoje konto nie jest w pełni zabezpieczone!"
-      - "&f1. Włącz 2FA przez &a/2fa <setup>&f, aby nikt nie ukradł Twojego konta"
-      - "&f2. Ustaw PIN przez &a/pin <setup>&f, aby móc odzyskać konto po zapomnieniu hasła"
-      - "&c----------------------------------------"
-    no-2fa-has-pin:
-      - "&c----------------------------------------"
-      - "&eTwoje konto nie ma jeszcze włączonego 2FA!"
-      - "&fZwiększ bezpieczeństwo konta za pomocą &a/2fa <setup>"
-      - "&c----------------------------------------"
-    has-2fa-no-pin:
-      - "&e----------------------------------------"
-      - "&aPrawie gotowe!"
-      - "&fMasz włączone 2FA, ale nie masz ustawionego PIN-u odzyskiwania"
-      - "&fUstaw go przez &a/pin <setup>&f, aby móc odzyskać dostęp do konta"
-      - "&e----------------------------------------"
+    security-reminder:
+      no-2fa-no-pin:
+        - "&c----------------------------------------"
+        - "&eTwoje konto nie jest w pełni zabezpieczone!"
+        - "&f1. Włącz 2FA przez &a/2fa <setup>&f, aby nikt nie ukradł Twojego konta"
+        - "&f2. Ustaw PIN przez &a/pin <setup>&f, aby móc odzyskać konto po zapomnieniu hasła"
+        - "&c----------------------------------------"
+      no-2fa-has-pin:
+        - "&c----------------------------------------"
+        - "&eTwoje konto nie ma jeszcze włączonego 2FA!"
+        - "&fZwiększ bezpieczeństwo konta za pomocą &a/2fa <setup>"
+        - "&c----------------------------------------"
+      has-2fa-no-pin:
+        - "&e----------------------------------------"
+        - "&aPrawie gotowe!"
+        - "&fMasz włączone 2FA, ale nie masz ustawionego PIN-u odzyskiwania"
+        - "&fUstaw go przez &a/pin <setup>&f, aby móc odzyskać dostęp do konta"
+        - "&e----------------------------------------"
 
 
   # --- Zaufanie IP ---

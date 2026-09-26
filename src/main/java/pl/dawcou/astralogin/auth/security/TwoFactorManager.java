@@ -188,7 +188,7 @@ public class TwoFactorManager {
             if (codes != null) {
                 for (String code : codes) {
                     String cleanCode = code.trim().toUpperCase();
-                    String hashed = plugin.getPasswordManager().getPasswordHasher().hashPassword(cleanCode);
+                    String hashed = plugin.getPasswordManager().getPasswordHasher().hashPassword(cleanCode).hash();
 
                     if (hashed != null) {
                         hashedCodes.add(hashed);

@@ -8,6 +8,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.passwords.PINManager;
+import pl.dawcou.astralogin.system.utils.SoundManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,10 +32,16 @@ public class PINCommand implements CommandExecutor, TabCompleter {
         if (command.getName().equalsIgnoreCase("zresetujpin") || command.getName().equalsIgnoreCase("resetpin")) {
             if (!sender.hasPermission("astralogin.resetpin")) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                }
                 return true;
             }
             if (args.length < 1) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-pin.usage"));
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                }
                 return true;
             }
 
@@ -43,6 +50,9 @@ public class PINCommand implements CommandExecutor, TabCompleter {
 
             if (targetUUID == null) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found"));
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                }
                 return true;
             }
 
@@ -53,6 +63,9 @@ public class PINCommand implements CommandExecutor, TabCompleter {
 
             if (!pinManager.hasPIN(targetUUID)) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-pin.no-has-pin"));
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                }
                 return true;
             }
 
@@ -60,6 +73,9 @@ public class PINCommand implements CommandExecutor, TabCompleter {
 
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-pin.admin-success")
                     .replace("%player%", targetName));
+            if (p != null) {
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
+            }
 
             String adminName = sender.getName();
             plugin.getLogManager().log("Admin " + adminName + " reset PIN for player " + targetName);
@@ -83,6 +99,7 @@ public class PINCommand implements CommandExecutor, TabCompleter {
 
             if (args.length < 1) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("pin.usage"));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 return true;
             }
 
@@ -95,11 +112,13 @@ public class PINCommand implements CommandExecutor, TabCompleter {
                 if ("RANDOM".equalsIgnoreCase(method)) {
                     if (args.length != 1) {
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("pin.usage"));
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                         return true;
                     }
 
                     if (pinManager.hasPIN(playerUUID)) {
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("pin.already-set"));
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                         return true;
                     }
 
@@ -110,13 +129,14 @@ public class PINCommand implements CommandExecutor, TabCompleter {
                     String generatedPIN = pinManager.generatePIN(length);
 
                     plugin.getSchedulerManager().runAsync(() -> {
-                        String hashedPIN = plugin.getPasswordManager().getPasswordHasher().hashPassword(generatedPIN);
+                        String hashedPIN = plugin.getPasswordManager().getPasswordHasher().hashPassword(generatedPIN).hash();
 
                         pinManager.savePIN(playerUUID, hashedPIN);
 
                         plugin.getSchedulerManager().runSync(() -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("pin.set-success")
                                     .replace("%pin%", generatedPIN));
+                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
 
                             plugin.getLogManager().log("Player " + p.getName() + " has registered his PIN code");
                         });
@@ -124,6 +144,7 @@ public class PINCommand implements CommandExecutor, TabCompleter {
                 } else if ("TYPING".equalsIgnoreCase(method)) {
                     if (args.length != 2) {
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("pin.set-usage"));
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                         return true;
                     }
 
@@ -131,6 +152,7 @@ public class PINCommand implements CommandExecutor, TabCompleter {
 
                     if (pinManager.hasPIN(playerUUID)) {
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("pin.already-set"));
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                         return true;
                     }
 
@@ -140,22 +162,25 @@ public class PINCommand implements CommandExecutor, TabCompleter {
 
                     if (!PIN.matches("\\d+")) {
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("pin.contains-letters"));
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.INVALID_PASSWORD_FORMAT);
                         return true;
                     }
 
                     if (PIN.length() != length) {
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("pin.invalid-length")
                                 .replace("%length%", String.valueOf(length)));
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.INVALID_PASSWORD_FORMAT);
                         return true;
                     }
 
                     plugin.getSchedulerManager().runAsync(() -> {
-                        String hashedPIN = plugin.getPasswordManager().getPasswordHasher().hashPassword(PIN);
+                        String hashedPIN = plugin.getPasswordManager().getPasswordHasher().hashPassword(PIN).hash();
 
                         pinManager.savePIN(playerUUID, hashedPIN);
 
                         plugin.getSchedulerManager().runSync(() -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("pin.typed-success"));
+                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
 
                             plugin.getLogManager().log("Player " + p.getName() + " has registered his PIN code");
                         });

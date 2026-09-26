@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.security.ip.IPBanManager;
 import pl.dawcou.astralogin.auth.security.ip.IPManager;
+import pl.dawcou.astralogin.system.utils.SoundManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,8 +26,13 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        Player p = (sender instanceof Player) ? (Player) sender : null;
+
         if (args.length < 2) {
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.usage"));
+            if (p != null) {
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+            }
             return true;
         }
 
@@ -34,11 +40,23 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
         if (!sender.hasPermission("astralogin.ipmanager." + action)) {
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
+            if (p != null) {
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+            }
             return true;
         }
 
         String targetName = args[1];
         UUID targetUuid = plugin.getAccountManager().getUuidByUsername(targetName);
+
+        if (targetUuid == null) {
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found"));
+            if (p != null) {
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+            }
+            return true;
+        }
+
         String uuid = targetUuid.toString();
 
         IPManager ipManager = plugin.getIPManager();
@@ -50,6 +68,9 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
                 if (playerIp == null) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.no-ip")
                             .replace("%player%", targetName));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
 
@@ -66,18 +87,27 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
                             .replace("%time%", String.valueOf(timeLeft))
                             .replace("%reason%", reason));
                 }
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
+                }
                 break;
 
             case "unban":
                 if (playerIp == null) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.no-ip")
                             .replace("%player%", targetName));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
 
                 if (!banManager.isIPBanned(playerIp)) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.not-banned")
                             .replace("%player%", targetName));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
 
@@ -87,12 +117,18 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.unban-success")
                         .replace("%player%", targetName)
                         .replace("%ip%", playerIp));
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
+                }
                 break;
 
             case "bypass":
                 if (banManager.hasBypass(uuid)) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass-active")
                             .replace("%player%", targetName));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
 
@@ -101,12 +137,18 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass-enabled")
                         .replace("%player%", targetName));
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
+                }
                 break;
 
             case "unbypass":
                 if (!banManager.hasBypass(uuid)) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass-not-active")
                             .replace("%player%", targetName));
+                    if (p != null) {
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    }
                     return true;
                 }
 
@@ -116,6 +158,9 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass-disabled")
                         .replace("%player%", targetName));
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
+                }
 
                 // 2. Pobieramy gracza online (jeśli gracz jest offline, getPlayerExact zwróci null)
                 Player onlineTarget = Bukkit.getPlayerExact(targetName);
@@ -126,20 +171,22 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
                     if (savedIP != null && !ipManager.checkIP(uuid, savedIP, currentIp)) {
 
-                        plugin.getLogManager().log("Player " + targetName + " was kicked after unbypass (IP Mismatch). Current IP: " + currentIp + ", Saved IP: " + savedIP);
+                        plugin.getLogManager().log("Player " + targetName + " was detected with an IP mismatch after unbypass. Current IP: " + currentIp + ", Saved IP: " + savedIP);
                         plugin.getIpTrustManager().addTrustScore(
                                 currentIp,
                                 plugin.getIpTrustManager().getUnknownIpLoginPoints()
                         );
 
-                        String kickMessage = plugin.getLanguageManager().getMessage("security.ip-mismatch");
-                        onlineTarget.kickPlayer(kickMessage);
+                        plugin.getLoginSystem().getSuspiciousPlayers().add(targetUuid);
                     }
                 }
                 break;
 
             default:
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.usage"));
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                }
                 break;
         }
 

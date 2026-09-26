@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.passwords.PasswordHasher;
 import pl.dawcou.astralogin.auth.passwords.PasswordValidator;
+import pl.dawcou.astralogin.system.utils.SoundManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 
 import java.util.ArrayList;
@@ -31,10 +32,16 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
         if (command.getName().equalsIgnoreCase("zresetujhaslo") || command.getName().equalsIgnoreCase("resetpassword")) {
             if (!sender.hasPermission("astralogin.resetpassword")) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                }
                 return true;
             }
             if (args.length < 1) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-password.usage"));
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                }
                 return true;
             }
 
@@ -43,6 +50,9 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
 
             if (targetUUID == null) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-password.no-account"));
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                }
                 return true;
             }
 
@@ -53,6 +63,9 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
 
             if (!plugin.getPasswordManager().isRegistered(targetUUID)) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-password.no-account"));
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                }
                 return true;
             }
 
@@ -63,6 +76,9 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
 
             String adminName = sender.getName();
             plugin.getLogManager().log("Admin " + adminName + " reset password for player " + targetName);
+            if (p != null) {
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
+            }
 
             Player targetP = Bukkit.getPlayer(targetUUID);
 
@@ -83,6 +99,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
 
             if (args.length != 1) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("forgot-password.usage"));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 return true;
             }
 
@@ -94,6 +111,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
 
             if (hashedPIN == null) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("forgot-password.no-has-pin"));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 return true;
             }
 
@@ -118,6 +136,8 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                     case INVALID_PASSWORD:
                         plugin.getSchedulerManager().runSync(() -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("forgot-password.wrong-pin"));
+                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.WRONG_PASSWORD);
+
                             plugin.getIpTrustManager().addTrustScore(ip, plugin.getIpTrustManager().getFailedPasswordPoints());
                             plugin.getAttemptManager().checkCrime(p, "PIN");
                         });
@@ -126,6 +146,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                     case RATE_LIMITED_SERVER:
                         plugin.getSchedulerManager().runSync(() -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("auth.login.server-busy"));
+                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                         });
                         break;
 
@@ -134,6 +155,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                         plugin.getSchedulerManager().runSync(() -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.rate-limit")
                                     .replace("%time%", TimeUtils.formatTime(seconds)));
+                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                         });
                         break;
 
@@ -141,6 +163,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                     default:
                         plugin.getSchedulerManager().runSync(() -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("auth.login.error"));
+                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                         });
                         break;
                 }
@@ -157,6 +180,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
 
             if (args.length != 3) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.change-usage"));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 return true;
             }
 
@@ -167,6 +191,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
 
             if (oldPassword.equals(newPassword)) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.identical"));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.INVALID_PASSWORD_FORMAT);
                 return true;
             }
 
@@ -175,27 +200,35 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
             String currentPassword = plugin.getPasswordManager().getPassword(playerUUID);
             if (currentPassword == null) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.wrong-old"));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.INVALID_PASSWORD_FORMAT);
                 return true;
             }
 
             if (!newPassword.equals(newPasswordConfirm)) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.not-match"));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.INVALID_PASSWORD_FORMAT);
                 return true;
             }
 
-            // Blokuje niedozwolone znaki
-            for (String password : new String[]{args[1], args[2]}) {
+            // Block disallowed characters
+            for (String password : new String[]{args[0], args[1]}) {
                 PasswordValidator.ValidationResult result = PasswordValidator.validate(password, plugin.getConfig(), plugin.getLogger());
 
-                if (result == PasswordValidator.ValidationResult.INVALID_CHARACTERS) {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.invalid-characters"));
-                    return true;
-                } else if (result == PasswordValidator.ValidationResult.ONLY_LETTERS_FORBIDDEN) {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.only-letters-forbidden"));
-                    return true;
-                } else if (result == PasswordValidator.ValidationResult.ONLY_DIGITS_FORBIDDEN) {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.only-digits-forbidden"));
-                    return true;
+                switch (result) {
+                    case INVALID_CHARACTERS:
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.invalid-characters"));
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.INVALID_PASSWORD_FORMAT);
+                        return true;
+                    case ONLY_LETTERS_FORBIDDEN:
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.only-letters-forbidden"));
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.INVALID_PASSWORD_FORMAT);
+                        return true;
+                    case ONLY_DIGITS_FORBIDDEN:
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.only-digits-forbidden"));
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.INVALID_PASSWORD_FORMAT);
+                        return true;
+                    default:
+                        break;
                 }
             }
 
@@ -212,11 +245,13 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
 
             if (newPassword.length() < min) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.too-short").replace("%min%", String.valueOf(min)));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.INVALID_PASSWORD_FORMAT);
                 return true;
             }
 
             if (newPassword.length() > max) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.too-long").replace("%max%", String.valueOf(max)));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.INVALID_PASSWORD_FORMAT);
                 return true;
             }
 
@@ -226,29 +261,56 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
 
                 switch (result.status()) {
                     case SUCCESS:
-                        String newHashPassword = hasher.hashPassword(newPassword);
+                        // Generate hash for new password with UUID passing
+                        PasswordHasher.HashingResult hashResult = hasher.hashPassword(playerUUID, newPassword);
 
-                        if (newHashPassword == null) {
-                            plugin.getSchedulerManager().runSync(() -> p.sendMessage(plugin.getLanguageManager().getWithPrefix("general.error")));
-                            return;
+                        switch (hashResult.status()) {
+                            case SUCCESS:
+                                String newHashPassword = hashResult.hash();
+                                plugin.getPasswordManager().savePassword(playerUUID, newHashPassword);
+
+                                plugin.getSchedulerManager().runSync(() -> {
+                                    if (plugin.getLoginSystem().getLoggedIn().contains(playerUUID)) {
+                                        p.kickPlayer(plugin.getLanguageManager().getMessage("password.changed-kick"));
+                                    } else {
+                                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.changed"));
+                                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
+                                    }
+
+                                    plugin.getLogManager().log("Player " + p.getName() + " changed his password");
+                                });
+                                break;
+
+                            case RATE_LIMITED_SERVER:
+                                plugin.getSchedulerManager().runSync(() -> {
+                                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.server-busy"));
+                                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                                });
+                                break;
+
+                            case RATE_LIMITED_PLAYER:
+                                long seconds = hashResult.remainingSeconds();
+                                plugin.getSchedulerManager().runSync(() -> {
+                                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.rate-limit")
+                                            .replace("%time%", TimeUtils.formatTime(seconds)));
+                                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                                });
+                                break;
+
+                            case ERROR:
+                            default:
+                                plugin.getSchedulerManager().runSync(() -> {
+                                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.error"));
+                                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                                });
+                                break;
                         }
-
-                        plugin.getPasswordManager().savePassword(playerUUID, newHashPassword);
-
-                        plugin.getSchedulerManager().runSync(() -> {
-                            if (plugin.getLoginSystem().getLoggedIn().contains(playerUUID)) {
-                                p.kickPlayer(plugin.getLanguageManager().getMessage("password.changed-kick"));
-                            } else {
-                                p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.changed"));
-                            }
-
-                            plugin.getLogManager().log("Player " + p.getName() + " changed his password");
-                        });
                         break;
 
                     case INVALID_PASSWORD:
                         plugin.getSchedulerManager().runSync(() -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.wrong-old"));
+                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.WRONG_PASSWORD);
                             plugin.getIpTrustManager().addTrustScore(ip, plugin.getIpTrustManager().getFailedPasswordPoints());
 
                             plugin.getAttemptManager().checkCrime(p, "Password");
@@ -258,6 +320,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                     case RATE_LIMITED_SERVER:
                         plugin.getSchedulerManager().runSync(() -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.server-busy"));
+                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                         });
                         break;
 
@@ -266,6 +329,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                         plugin.getSchedulerManager().runSync(() -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.rate-limit")
                                     .replace("%time%", TimeUtils.formatTime(seconds)));
+                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                         });
                         break;
 
@@ -273,6 +337,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                     default:
                         plugin.getSchedulerManager().runSync(() -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.error"));
+                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                         });
                         break;
                 }

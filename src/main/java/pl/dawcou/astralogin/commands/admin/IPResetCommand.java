@@ -7,6 +7,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.security.ip.IPManager;
+import pl.dawcou.astralogin.system.utils.SoundManager;
 
 import java.util.UUID;
 
@@ -25,14 +26,22 @@ public class IPResetCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        Player p = (sender instanceof Player) ? (Player) sender : null;
+
         if (command.getName().equalsIgnoreCase("zresetujip") || command.getName().equalsIgnoreCase("resetip")) {
             if (!sender.hasPermission("astralogin.resetip")) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                }
                 return true;
             }
 
             if (args.length != 1) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-ip.usage"));
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                }
                 return true;
             }
 
@@ -41,6 +50,9 @@ public class IPResetCommand implements CommandExecutor {
 
             if (targetUuid == null) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found"));
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                }
                 return true;
             }
 
@@ -48,6 +60,9 @@ public class IPResetCommand implements CommandExecutor {
 
             if (ipManager.getIP(uuid) == null) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-ip.no-ip"));
+                if (p != null) {
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                }
                 return true;
             }
 
@@ -63,6 +78,9 @@ public class IPResetCommand implements CommandExecutor {
                     .replace("%player%", targetName);
 
             sender.sendMessage(successMsg);
+            if (p != null) {
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
+            }
 
             String adminName = sender.getName();
             plugin.getLogManager().log("Admin " + adminName + " reset IP for player " + targetName);

@@ -89,27 +89,26 @@ messages:
     max-attempts-ban: "&cToo many failed attempts! You have been banned for &6%time%"
     multiaccount: "&cAccount limit for this IP address has been reached!"
     ip-spam: "&cToo many connection attempts from your IP address! You are blocked on &6%time%"
-    ip-mismatch: "&cYour IP address does not match this account!"
+    suspicious-ip-alert: "&cSuspicious activity detected! Player &4%target% &cjoined from an unknown IP address: &6%ip%"
 
-
-  security-reminder:
-    no-2fa-no-pin:
-      - "&c----------------------------------------"
-      - "&eYour account is not fully secured!"
-      - "&f1. Enable 2FA using &a/2fa <setup>&f to prevent account theft"
-      - "&f2. Set a PIN using &a/pin <setup>&f to recover your account if you forget your password"
-      - "&c----------------------------------------"
-    no-2fa-has-pin:
-      - "&c----------------------------------------"
-      - "&eYour account does not have 2FA enabled yet!"
-      - "&fIncrease your account security using &a/2fa <setup>"
-      - "&c----------------------------------------"
-    has-2fa-no-pin:
-      - "&e----------------------------------------"
-      - "&aAlmost there!"
-      - "&fYou have 2FA enabled, but you haven't set a recovery PIN"
-      - "&fSet it using &a/pin <setup>&f so you can recover access to your account"
-      - "&e----------------------------------------"
+    security-reminder:
+      no-2fa-no-pin:
+        - "&c----------------------------------------"
+        - "&eYour account is not fully secured!"
+        - "&f1. Enable 2FA using &a/2fa <setup>&f to prevent account theft"
+        - "&f2. Set a PIN using &a/pin <setup>&f to recover your account if you forget your password"
+        - "&c----------------------------------------"
+      no-2fa-has-pin:
+        - "&c----------------------------------------"
+        - "&eYour account does not have 2FA enabled yet!"
+        - "&fIncrease your account security using &a/2fa <setup>"
+        - "&c----------------------------------------"
+      has-2fa-no-pin:
+        - "&e----------------------------------------"
+        - "&aAlmost there!"
+        - "&fYou have 2FA enabled, but you haven't set a recovery PIN"
+        - "&fSet it using &a/pin <setup>&f so you can recover access to your account"
+        - "&e----------------------------------------"
 
 
   # --- IP Trust ---

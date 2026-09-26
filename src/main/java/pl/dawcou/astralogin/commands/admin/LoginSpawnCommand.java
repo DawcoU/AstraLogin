@@ -10,6 +10,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.manage.spawn.SpawnType;
+import pl.dawcou.astralogin.system.utils.SoundManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,24 +37,27 @@ public class LoginSpawnCommand implements CommandExecutor, TabCompleter {
             if (args.length > 0 && args[0].equalsIgnoreCase("setspawn")) {
                 if (!p.hasPermission("astralogin.spawn.set")) {
                     p.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     return true;
                 }
 
                 if (args.length < 2) {
                     p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.usage"));
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     return true;
                 }
 
                 String type = args[1].toLowerCase();
                 SpawnType spawnType = SpawnType.parse(args[1]);
 
-                // Sprawdzamy czy typ jest poprawny
+                // Checking if the type is valid
                 if (spawnType == null) {
                     p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.invalid-type"));
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     return true;
                 }
 
-                // 1. LOGIKA POTWIERDZENIA NADPISANIA
+                // 1. OVERWRITE CONFIRMATION LOGIC
                 boolean confirmed = (args.length > 2 && args[2].equalsIgnoreCase("confirm"));
 
                 if (plugin.getSpawnManager().hasSpawn(spawnType) && !confirmed) {
@@ -70,49 +74,56 @@ public class LoginSpawnCommand implements CommandExecutor, TabCompleter {
                             .hoverEvent(LegacyComponentSerializer.legacySection().deserialize(hoverTextStr));
 
                     plugin.getAdventure().player(p).sendMessage(baseMsg.append(confirmBtn));
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     return true;
                 }
 
-                // 2. WŁAŚCIWE USTAWIENIE SPAWNU
+                // 2. ACTUAL SPAWN SETTING
                 plugin.getSpawnManager().setSpawn(spawnType, p);
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.set-success").replace("%type%", type));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
                 return true;
             }
 
             if (args.length > 0 && args[0].equalsIgnoreCase("delspawn")) {
                 if (!p.hasPermission("astralogin.spawn.delete")) {
                     p.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     return true;
                 }
 
                 if (args.length < 2) {
                     p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.usage"));
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     return true;
                 }
 
                 String type = args[1].toLowerCase();
                 SpawnType spawnType = SpawnType.parse(args[1]);
 
-                // 1. LOGIKA POTWIERDZENIA
+                // 1. CONFIRMATION LOGIC
                 boolean confirmed = (args.length > 2 && args[2].equalsIgnoreCase("confirm"));
 
                 if (confirmed) {
                     if (plugin.getSpawnManager().hasSpawn(spawnType)) {
                         plugin.getSpawnManager().delSpawn(spawnType);
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.deleted-success").replace("%type%", type));
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
                     } else {
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.does-not-exist").replace("%type%", type));
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     }
                     return true;
                 }
 
-                // 2. SPRAWDZAMY CZY W OGÓLE ISTNIEJE
+                // 2. CHECK IF EXISTS AT ALL
                 if (!plugin.getSpawnManager().hasSpawn(spawnType)) {
                     p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.does-not-exist").replace("%type%", type));
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     return true;
                 }
 
-                // 3. POKAZYWANIE PRZYCISKU
+                // 3. SHOW BUTTON
                 String baseMsgStr = plugin.getLanguageManager().getWithPrefix("spawn.delete-confirm").replace("%type%", type);
                 String btnTextStr = plugin.getLanguageManager().getMessage("spawn.delete-button");
                 String hoverTextStr = plugin.getLanguageManager().getMessage("spawn.delete-hover").replace("%type%", type);
@@ -126,10 +137,12 @@ public class LoginSpawnCommand implements CommandExecutor, TabCompleter {
                         .hoverEvent(LegacyComponentSerializer.legacySection().deserialize(hoverTextStr));
 
                 plugin.getAdventure().player(p).sendMessage(baseMsg.append(confirmBtn));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 return true;
             }
 
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.usage"));
+            plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
 
             return true;
         }

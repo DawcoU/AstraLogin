@@ -41,13 +41,13 @@ import pl.dawcou.astralogin.system.SchedulerManager;
 import pl.dawcou.astralogin.system.UpdateChecker;
 import pl.dawcou.astralogin.auth.security.TwoFactorManager;
 import pl.dawcou.astralogin.system.tasks.SecurityReminderTask;
+import pl.dawcou.astralogin.system.utils.SoundManager;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor, TabCompleter {
+public class AstraLogin extends JavaPlugin implements Listener {
 
     // ----------------------------------------------------------------------------------------------------
     // PREFIXY
@@ -74,6 +74,7 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
     private GlobalDataManager globalDataManager;
 
     private SchedulerManager schedulerManager;
+    private SoundManager soundManager;
     private LanguageManager languageManager;
     private AccountManager accountManager;
     private LogManager logManager;
@@ -114,6 +115,7 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
     private LoginListeners loginListeners;
     private TechnicalListeners technicalListeners;
 
+    private AstraLoginCommand astraLoginCommand;
     private PasswordsCommand passwordsCommand;
     private PINCommand pinCommand;
     private IPResetCommand ipResetCommand;
@@ -136,6 +138,7 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
     public GlobalDataManager getGlobalDataManager() { return globalDataManager; }
 
     public SchedulerManager getSchedulerManager() { return schedulerManager; }
+    public SoundManager getSoundManager() { return soundManager; }
     public BackupManager getBackupManager() { return backupManager; }
     public LanguageManager getLanguageManager() { return languageManager; }
     public AccountManager getAccountManager() { return accountManager; }
@@ -201,6 +204,7 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
         }
 
         schedulerManager = new SchedulerManager(this);
+        soundManager = new SoundManager(this);
         backupManager = new BackupManager(this);
 
         loginSystem = new LoginSystem(this);
@@ -234,6 +238,8 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
         spawnManager = new SpawnManager(this, playerDataManager, globalDataManager);
 
         // --- MANAGERY ---
+        astraLoginCommand = new AstraLoginCommand(this);
+
         // --- KOMENDY HASŁA ---
         passwordManager = new PasswordManager(this, playerDataManager);
         passwordsCommand = new PasswordsCommand(this);
@@ -278,7 +284,7 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
             getLogger().warning("ProtocolLib is missing from the server! Premium autologin will be disabled.");
         }
 
-        loginListeners = new LoginListeners(this, packetListener);
+        loginListeners = new LoginListeners(this);
         technicalListeners = new TechnicalListeners(this);
         AccountCommand accountCommand = new AccountCommand(this);
         TwoFactorCommand twoFactorCommand = new TwoFactorCommand(this, twoFactorManager, loginSystem);
@@ -312,7 +318,7 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
         registerCommand("wyloguj", accountCommand);
 
         // Komendy administracyjne
-        registerCommand("astralogin", this, this);
+        registerCommand("astralogin", astraLoginCommand, astraLoginCommand);
         registerCommand("zresetujhaslo", passwordsCommand);
         registerCommand("zresetujpin", pinCommand);
         registerCommand("zresetujip", ipResetCommand);
@@ -431,65 +437,6 @@ public class AstraLogin extends JavaPlugin implements Listener, CommandExecutor,
         spawnManager.reload();
         sessionManager.reload();
         premiumManager.cleanCache();
-    }
-
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (command.getName().equalsIgnoreCase("astralogin") || command.getName().equalsIgnoreCase("al")) {
-
-            // Brak argumentów lub komenda /al help /al pomoc
-            if (args.length == 0 || (args.length == 1 && (args[0].equalsIgnoreCase("help") || args[0].equalsIgnoreCase("pomoc")))) {
-                noticeManager.sendHelp(sender);
-                return true;
-            }
-
-            // Komenda /al reload
-            if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
-                if (!sender.hasPermission("astralogin.reload")) {
-                    sender.sendMessage(languageManager.getWithPrefix("general.no-permission"));
-                    return true;
-                }
-
-                reload();
-
-                sender.sendMessage(getLanguageManager().getWithPrefix("general.reload-success"));
-                return true;
-            }
-
-            // Komenda /al info
-            if (args.length == 1 && args[0].equalsIgnoreCase("info")) {
-                String prefix = (sender instanceof ConsoleCommandSender) ? PREFIX2 : PREFIX;
-
-                sender.sendMessage(languageManager.parseToLegacy("<gray>------------ " + prefix + " <gray>----------"));
-                sender.sendMessage("§aPlugin created by: §e " + getAuthor());
-                sender.sendMessage("§aPlugin version: §ev" + getDescription().getVersion());
-                sender.sendMessage("");
-                sender.sendMessage("§6Copyright © 2026 " + getAuthor() + " All rights reserved");
-                sender.sendMessage("§7-----------------------");
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        List<String> hints = new java.util.ArrayList<>();
-        String cmd = command.getName();
-
-        if (cmd.equalsIgnoreCase("astralogin") || cmd.equalsIgnoreCase("al")) {
-            if (args.length == 1) {
-                hints.add("info");
-                hints.add("help");
-                if (sender.hasPermission("astralogin.reload")) hints.add("reload");
-            }
-        }
-
-        String lastArg = args[args.length - 1].toLowerCase();
-        return hints.stream()
-                .filter(s -> s.toLowerCase().startsWith(lastArg))
-                .collect(java.util.stream.Collectors.toList());
     }
 
     private void registerCommand(String name, CommandExecutor executor) {

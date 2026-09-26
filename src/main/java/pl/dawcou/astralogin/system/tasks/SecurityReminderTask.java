@@ -3,6 +3,7 @@ package pl.dawcou.astralogin.system.tasks;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.system.utils.SoundManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 import pl.dawcou.astralogin.system.SchedulerManager;
 
@@ -50,11 +51,14 @@ public class SecurityReminderTask {
 
                 if ((now - lastReminder) >= intervalMillis) {
                     if (!has2FA && !hasPin) {
-                        sendReminderMessage(player, "security-reminder.no-2fa-no-pin");
+                        sendReminderMessage(player, "security.security-reminder.no-2fa-no-pin");
+                        plugin.getSoundManager().playSound(player, SoundManager.SoundType.SECURITY_REMINDER);
                     } else if (!has2FA) {
-                        sendReminderMessage(player, "security-reminder.no-2fa-has-pin");
+                        sendReminderMessage(player, "security.security-reminder.no-2fa-has-pin");
+                        plugin.getSoundManager().playSound(player, SoundManager.SoundType.SECURITY_REMINDER);
                     } else {
-                        sendReminderMessage(player, "security-reminder.has-2fa-no-pin");
+                        sendReminderMessage(player, "security.security-reminder.has-2fa-no-pin");
+                        plugin.getSoundManager().playSound(player, SoundManager.SoundType.SECURITY_REMINDER);
                     }
 
                     plugin.getAccountManager().setLastSecurityReminderTime(uuid, now);

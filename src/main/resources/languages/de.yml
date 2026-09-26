@@ -1,0 +1,328 @@
+# #############################################################
+# #                                                           #
+# #               AstraLogin - Sprachdatei                    #
+# #                  Sprache: Deutsch (DE)                    #
+# #                                                           #
+# #############################################################
+
+# Du kannst Farbcodes (z. B. &a, &c, &l), HEX-Codes, Farbverläufe und Platzhalter wie %time%, %player%, %min% verwenden.
+
+messages:
+
+  # --- General / System ---
+  general:
+    only-players: "&cDieser Befehl kann nur von Spielern ausgeführt werden!"
+    no-permission: "&cDu hast keine Berechtigung dazu!"
+    reload-success: "&aKonfiguration erfolgreich neu geladen!"
+    blocked-action: "&cDu kannst diese Aktion erst ausführen, wenn du dich anmeldest!"
+
+
+  # --- Login ---
+  login:
+    server-busy: "&cDer Server verarbeitet derzeit zu viele Anmeldungen. Versuche es gleich erneut"
+    rate-limit: "&cZu viele Anmeldeversuche! Bitte warte &6%time%&c, bevor du es erneut versuchst"
+
+    already-logged: "&cDu bist bereits angemeldet/registriert!"
+    already-online: "&cEin Spieler mit diesem Namen ist bereits auf dem Server!"
+    wrong-casing: "&cBetrete den Server mit der korrekten Groß-/Kleinschreibung!\n&7Korrekter Name: &6%registered%"
+    no-account: "&cDu hast kein Konto! Tippe &e/register <Passwort, Wiederholung>"
+    success: "&aErfolgreich angemeldet!"
+    reminder: "&eBitte melde dich an: &f/login <Passwort>"
+    usage: "&cRichtige Verwendung: &e/login <Passwort>"
+    has-account: "&cDu hast bereits ein Konto! Tippe &e/login <Passwort>"
+
+
+  # --- Register ---
+  register:
+    success: "&aErfolgreich registriert!"
+    reminder: "&eBitte registriere dich: &f/register <Passwort, Wiederholung>"
+    usage: "&cRichtige Verwendung: &e/register <Passwort, Wiederholung>"
+
+
+  # --- Premium Login ---
+  premium:
+    success: "&ePremium-Konto &aerkannt, automatisch angemeldet!"
+
+
+  # --- /forgotpassword ---
+  forgot-password:
+    usage: "&cRichtige Verwendung: &e/forgotpassword <PIN>"
+    wrong-pin: "&cFalscher PIN!"
+    no-has-pin: "&cDu hast keinen registrierten PIN!"
+
+    player-kick: "&aDein Passwort wurde erfolgreich zurückgesetzt!"
+
+
+  # --- Passwords ---
+  password:
+    wrong: "&cFalsches Passwort!"
+    not-match: "&cDie Passwörter stimmen nicht überein!"
+    too-short: "&cPasswort ist zu kurz! Mindestens &6%min% &cZeichen"
+    too-long: "&cPasswort ist zu lang! Maximal &6%max% &cZeichen"
+    change-usage: "&cRichtige Verwendung: &e/changepassword <alt, neu, Wiederholung>"
+    wrong-old: "&cAltes Passwort ist falsch!"
+    changed-kick: "&aDein Passwort wurde geändert! &eBitte melde dich erneut an"
+    changed: "&aDein Passwort wurde erfolgreich geändert!"
+    identical: "&cDas neue Passwort darf nicht mit dem alten identisch sein!"
+    error: "&cEin kritischer Fehler ist bei der Überprüfung deines Passworts aufgetreten. Kontaktiere das Team"
+    validation:
+      invalid-characters: "&cDein Passwort enthält ungültige Zeichen! Verwende nur Buchstaben, Zahlen und einfache Symbole"
+      only-letters-forbidden: "&cDein Passwort darf nicht nur aus Buchstaben bestehen! Füge mindestens eine Zahl oder ein Sonderzeichen hinzu"
+      only-digits-forbidden: "&cDein Passwort darf nicht nur aus Zahlen bestehen! Füge mindestens einen Buchstaben oder ein Sonderzeichen hinzu"
+
+
+  # --- PINs ---
+  pin:
+    usage: "&cRichtige Verwendung: &e/pin <setup>"
+    set-usage: "&cRichtige Verwendung: &e/pin <setup, PIN>"
+    invalid-length: "&cDer PIN muss genau &6%length% &cZiffern lang sein!"
+    contains-letters: "&cDer PIN darf nur Zahlen enthalten!"
+    already-set: "&cDu hast bereits einen PIN eingerichtet!"
+    set-success: "&aPIN-Code erfolgreich generiert, &eSpeichere ihn: &6%pin%"
+    typed-success: "&aDein PIN-Code wurde erfolgreich eingerichtet!"
+
+
+  # --- Security and Bans ---
+  security:
+    timeout: "&cDie Anmeldezeit ist abgelaufen!"
+    max-attempts: "&cZu viele fehlgeschlagene Anmeldeversuche! Verbleibende Versuche: &6%remaining%"
+    max-attempts-ban: "&cZu viele fehlgeschlagene Versuche! Du wurdest für &6%time% &cgebannt"
+    multiaccount: "&cDas Kontolimit für diese IP-Adresse wurde erreicht!"
+    ip-spam: "&cZu viele Verbindungsversuche von deiner IP-Adresse! Du bist für &6%time% &cgesperrt"
+    suspicious-ip-alert: "&cVerdächtige Aktivität erkannt! Spieler &4%target% &chat sich von einer unbekannten IP-Adresse verbunden: &6%ip%"
+
+    security-reminder:
+      no-2fa-no-pin:
+        - "&c----------------------------------------"
+        - "&eDein Konto ist nicht vollständig gesichert!"
+        - "&f1. Aktiviere 2FA mit &a/2fa <setup>&f, um Kontodiebstahl zu verhindern"
+        - "&f2. Richte einen PIN mit &a/pin <setup>&f ein, um dein Konto bei Passwortverlust wiederherzustellen"
+        - "&c----------------------------------------"
+      no-2fa-has-pin:
+        - "&c----------------------------------------"
+        - "&eDein Konto hat noch kein 2FA aktiviert!"
+        - "&fErhöhe deine Kontosicherheit mit &a/2fa <setup>"
+        - "&c----------------------------------------"
+      has-2fa-no-pin:
+        - "&e----------------------------------------"
+        - "&aFast geschafft!"
+        - "&fDu hast 2FA aktiviert, aber noch keinen Wiederherstellungs-PIN eingerichtet"
+        - "&fRichte ihn mit &a/pin <setup>&f ein, um den Zugriff im Notfall wiederherzustellen"
+        - "&e----------------------------------------"
+
+
+  # --- IP Trust ---
+  ip-trust:
+    usage: "&cRichtige Verwendung: &6/iptrust <reset, info, set, IP-Adresse, Punkte>"
+    ip-not-found: "&cIP-Adresse nicht gefunden: &6(%ip%)"
+    invalid-number: "&cDie Punkteanzahl darf nur Zahlen enthalten!"
+    reset-success: "&aReputation für IP erfolgreich zurückgesetzt: &e(%ip%)"
+    set-success: "&aReputation erfolgreich gesetzt: &6(%score%) &afür IP: &e(%ip%)"
+    ip-info:
+      - "&7&m-------------------------"
+      - "&6&lReputation der IP-Adresse (%ip%):"
+      - "&eVertrauenswert: &f%score%"
+      - "&6Bewertung: %rate%"
+      - "&7&m-------------------------"
+    rate-fatal: "&0Kritisch"
+    rate-bad: "&cSchlecht"
+    rate-neutral: "&7Neutral"
+    rate-good: "&aGut"
+    rate-ideal: "&bIdeal"
+
+
+  # --- IP Management and Bans /ipmanager ---
+  ip-manager:
+    usage: "&cVerwendung: /ipmanager <info, unban, bypass, unbypass, Spieler>"
+    no-ip: "&cKeine registrierte IP-Adresse für Spieler &6%player% &cgefunden!"
+    info-not-banned: "&aSpieler &6%player% &7(IP-Adresse: %ip%) &ahat keinen aktiven IP-Sperre"
+    info-banned: "&cSpieler &6%player% &7(IP-Adresse: %ip%) &cist gebannt! Grund: &6%reason%&c, Verbleibende Zeit: &6%time%"
+    not-banned: "&cDie IP-Adresse für Spieler &6%player% &cist nicht gebannt!"
+    unban-success: "&aIP-Adresse für Spieler &6%player% &7(%ip%) &aerfolgreich entbannt!"
+    bypass-enabled: "&aIP-Prüfungs-Bypass für Spieler &6%player% &aaktiviert"
+    bypass-active: "&cIP-Bypass für Spieler &6%player% &cist bereits aktiviert!"
+    bypass-disabled: "&cIP-Prüfungs-Bypass für Spieler &6%player% &cdeaktiviert"
+    bypass-not-active: "&cIP-Bypass für Spieler &6%player% &cist bereits deaktiviert!"
+
+
+  # --- Sessions ---
+  session:
+    timer: "&eBitte melde dich innerhalb von &6%time% &ean!"
+    restored: "&eSitzung aktiv. Automatisch angemeldet!"
+    twofactor-expired: "&cDeine 2FA-Sitzung ist abgelaufen! Bitte gib den Code ein"
+
+
+  # --- Titles ---
+  title:
+    login: "&a&lANGEMELDET"
+    login-subtitle: "&7Willkommen zurück!"
+    register: "&a&lREGISTRIERT"
+    register-subtitle: "&7Willkommen auf dem Server!"
+    twofactor: "&b&l2FA"
+
+
+  # --- Two-Factor Authentication (2FA) ---
+  twofactor:
+    usage: "&cRichtige Verwendung: &6/2fa <setup, unsetup, Code>"
+    already-enabled: "&cDu hast 2FA bereits aktiviert!"
+    not-enabled: "&cDu hast 2FA nicht aktiviert!"
+
+    setup-instructions:
+      - "&7&m-------------------------"
+      - "&6&l2FA - Einrichtung"
+      - "&eGeheimer Schlüssel: &f%secret%"
+      - "&eGib den Code in deiner App ein und tippe dann: &6/2fa <Code>"
+      - "&7&m-------------------------"
+
+    setup-backup-codes:
+      - "&eBackup-Codes:"
+      - "&7- &f%codes%"
+      - "&6Verwende einen dieser Codes, falls du den Zugriff auf deine Authentikator-App verlierst!"
+      - "&7&m-------------------------"
+
+    setup-timer: "&aVerbleibende Zeit für Einrichtung: &e%seconds%"
+    expired: "&cBestätigungszeit ist abgelaufen!"
+    setup-already-active: "&cDu richtest 2FA bereits ein!"
+    not-in-setup: "&cDu richtest derzeit kein 2FA ein oder entfernst es nicht"
+
+    success: "&a2FA-Schutz wurde erfolgreich aktiviert!"
+    removed-success: "&a2FA wurde erfolgreich entfernt!"
+
+    wrong-code: "&cFalscher 2FA-Code!"
+    required: "&eGib den Code aus deiner App ein: &6/2fa <Code>"
+    not-needed: "&cDu musst derzeit keinen 2FA-Code eingeben"
+
+    unsetup-instructions: "&cUm 2FA zu deaktivieren, gib den Code ein: /2fa unsetup <Code>"
+
+
+  # --- Account Info Command (/account) ---
+  account:
+    usage: "&cRichtige Verwendung: &e/account <Spieler>"
+    not-found: "&cSpieler &6%target% &chat sich noch nie auf diesem Server registriert"
+    no-data: "Keine Daten"
+    logout-success: "&aErfolgreich abgemeldet"
+
+    stats:
+      header: "&8--- &6Konto-Statistiken: &e%target% &8---"
+      uuid: "&7UUID: &f%uuid%"
+      ip: "&7Letzte IP-Adresse: &f%ip%"
+      register-date: "&7Registrierungsdatum: &f%register_date%"
+      login-date: "&7Letzte Anmeldung: &f%login_date%"
+      status-2fa: "&72FA-Status: %status%"
+      footer: "&8--------------------------------"
+
+    status:
+      not-registered: "&cNicht registriert"
+      active-2fa: "&aAktiviert"
+      not-active-2fa: "&cDeaktiviert"
+
+
+  # --- Accounts List Command (/accountslist) ---
+  accounts-list:
+    generating: "&7Lade Liste der registrierten Konten..."
+    empty: "&cDie Kontodatenbank ist leer"
+    header: "&7===== &6Registrierte Konten &7====="
+    format: "&7- &e%name% &7(&aUUID: &b%uuid%&7)"
+    footer: "&7======================================="
+
+
+  # --- IP List Command (/iplist) ---
+  ip-list:
+    generating: "&7Lade IP-Liste..."
+    empty: "&cDie IP-Adressendatenbank ist leer"
+    header: "&7===== &6Registrierte IPs &7====="
+    format: "&e%ip% &b(&6Konten: %count%&b) &7-> &a%players%"
+    footer: "&7==========================================="
+
+
+  # --- Move Account Command (/moveaccount) ---
+  account-move:
+    usage: "&cRichtige Verwendung: &e/moveaccount <alter Name, neuer Name>"
+    start: "&aStarte Überprüfungs- und Migrationsprozess für &e%old% &a--> &e%new%"
+
+    success: "&aDaten erfolgreich von &e%old% &azu &e%new% &aübertragen!"
+    error-migration: "&cBeim Speichern der migrierten Dateien ist ein Fehler aufgetreten!"
+
+    new-player-exists: "&cDie neue UUID &6(%uuid%) &cexistiert bereits in der Plugin-Datenbank!"
+    old-player-no-data: "&cSpieler &6%target% &chat keine gespeicherten Daten in diesem Plugin. Nichts zu übertragen!"
+
+    player-not-exists: "&cSpieler &6%target% &chat noch nie auf diesem Server gespielt!"
+    player-is-the-same: "&cDer alte und neue Spielername sind identisch!"
+
+    players-online: "&cSpieler &6%old% &coder &6%new% &cist online! &4Sie müssen während der Migration offline sein, um Datenverlust zu vermeiden!"
+
+    confirm: "&cDiese Aktion ist &4&nUNWIDERRUFLICH&c!"
+    button: "&6&l[ÜBERTRAGEN]"
+    hover: "&4Klicke hier, um das Konto zu übertragen"
+
+
+  # --- Reset Password (/resetpassword) ---
+  reset-password:
+    usage: "&cRichtige Verwendung: &e/resetpassword <Spieler>"
+    no-account: "&cDieser Spieler hat kein registriertes Passwort!"
+
+    admin-success: "&aPasswort für Spieler &6%player% &awurde erfolgreich zurückgesetzt"
+
+    player-kick: "&cDein Passwort wurde von einem Administrator zurückgesetzt!"
+
+
+  # --- PIN Reset /resetpin ---
+  reset-pin:
+    usage: "&cRichtige Verwendung: &e/resetpin <Spieler>"
+    no-has-pin: "&cDieser Spieler hat keinen registrierten PIN!"
+
+    admin-success: "&aPIN von Spieler &6%player% &awurde zurückgesetzt"
+
+    player-message: "&cDein PIN wurde vom Administrator zurückgesetzt!"
+
+
+  # --- Reset IP (/resetip) ---
+  reset-ip:
+    usage: "&cRichtige Verwendung: &e/resetip <Spieler>"
+    no-ip: "&cDieser Spieler hat keine gespeicherte IP-Adresse!"
+
+    admin-success: "&aIP-Adresse für Spieler &6%player% &awurde erfolgreich zurückgesetzt"
+
+    player-kick: "&cDeine IP-Adresse wurde von einem Administrator zurückgesetzt!"
+
+
+  # --- Purge Account (/resetaccount) ---
+  purge-account:
+    usage: "&cRichtige Verwendung: &e/purgeaccount <Spieler>"
+    not-found: "&cSpieler &6%target% &cnicht in der Server-Datenbank gefunden"
+    admin-success: "&aAlle Kontodaten für Spieler &e%player% &awurden erfolgreich gelöscht"
+
+    player-kick: "&cDein Konto wurde von einem Administrator vollständig aus der Server-Datenbank entfernt"
+
+    confirm: "&cDiese Aktion ist &4&nUNWIDERRUFLICH&c!"
+    button: "&6&l[LÖSCHEN]"
+    hover: "&4Klicke hier, um das Konto zu löschen"
+
+
+  # --- Reset 2FA (/reset2fa) ---
+  reset-twofactor:
+    usage: "&cRichtige Verwendung: &e/reset2fa <Spieler>"
+    admin-success: "&aZwei-Faktor-Authentifizierung für Kontos von &e%player% &aerfolgreich entfernt"
+
+    not-found: "&cSpieler &6%target% &chat keine Zwei-Faktor-Authentifizierung (2FA) aktiviert!"
+
+    player-waiting: "&cSpieler &6%target% &cwird derzeit überprüft!"
+    player-setting-up: "&cSpieler &6%target% &crichtet derzeit 2FA ein!"
+    player-kick: "&cDeine Zwei-Faktor-Authentifizierung wurde von einem Administrator entfernt"
+
+
+  # --- Login Spawn System ---
+  spawn:
+    set-success: "&aSpawn-Ort erfolgreich festgelegt für: &e%type%"
+    deleted-success: "&aSpawn-Ort erfolgreich entfernt für: &e%type%"
+
+    usage: "&cRichtige Verwendung: &e/loginspawn <setspawn, delspawn> <before_login, after_login>"
+    invalid-type: "&cUngültiger Typ! &eVerwende: before_login oder after_login"
+    exists: "&cSpawn für &6%type% &cexistiert bereits!"
+    does-not-exist: "&cSpawn für &6%type% &cexistiert nicht!"
+
+    overwrite-button: "&e&l[ÜBERSCHREIBEN]"
+    overwrite-hover: "&aKlicke hier, um den Ort für &e%type% &aerzwingend zu überschreiben"
+    delete-confirm: "&cBist du sicher, dass du den Spawn für &6%type% &clöschen möchtest?"
+    delete-button: "&4&l[LÖSCHEN BESTÄTIGEN]"
+    delete-hover: "&aKlicke, um den Spawn permanent zu löschen: &e%type%"

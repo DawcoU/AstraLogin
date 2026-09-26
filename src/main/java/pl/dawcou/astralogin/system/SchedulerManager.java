@@ -25,6 +25,11 @@ public class SchedulerManager {
         this.hasTeleportAsync = checkTeleportAsync();
     }
 
+    // Metoda sprawdzająca, czy serwer pozwala na mechanizmy Folii
+    public boolean isFolia() {
+        return isFolia;
+    }
+
     @FunctionalInterface
     public interface Task {
         void cancel();
@@ -71,11 +76,12 @@ public class SchedulerManager {
     /**
      * Executes a delayed task for a specific entity on its region thread (Folia compatible).
      */
-    public void runForEntityLater(Entity entity, Runnable runnable, long delayTicks) {
+    public Task runForEntityLater(Entity entity, Runnable runnable, long delayTicks) {
         if (isFolia) {
-            entity.getScheduler().runDelayed(plugin, task -> runnable.run(), null, delayTicks);
+            var foliaTask = entity.getScheduler().runDelayed(plugin, task -> runnable.run(), null, delayTicks);
+            return foliaTask != null ? foliaTask::cancel : () -> {};
         } else {
-            runSyncLater(runnable, delayTicks);
+            return runSyncLater(runnable, delayTicks);
         }
     }
 
@@ -83,9 +89,7 @@ public class SchedulerManager {
      * Safe teleportation logic for Spigot, Paper, and Folia.
      */
     public void teleport(Entity entity, Location location) {
-        if (isFolia) {
-            entity.getScheduler().run(plugin, task -> entity.teleportAsync(location), null);
-        } else if (hasTeleportAsync) {
+        if (isFolia || hasTeleportAsync) {
             entity.teleportAsync(location);
         } else {
             entity.teleport(location);

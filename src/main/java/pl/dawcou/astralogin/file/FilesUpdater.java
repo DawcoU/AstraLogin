@@ -21,7 +21,7 @@ public class FilesUpdater {
     public void check() {
         updateFile("config.yml");
 
-        List<String> supportedLangs = List.of("pl", "en");
+        List<String> supportedLangs = List.of("pl", "en", "de", "es");
 
         for (String lang : supportedLangs) {
             updateLanguageFile(lang);

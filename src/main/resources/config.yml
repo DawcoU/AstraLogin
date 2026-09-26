@@ -7,8 +7,10 @@
 #             General Settings
 # =========================================
 settings:
-  # Wybierz język pluginu (Dostępne: pl, en)
-  # Select the plugin language (Available: pl, en)
+  # Wybierz język pluginu (Dostępne: pl, en, de, es)
+  # Select the plugin language (Available: pl, en, de, es)
+  # Wählen Sie die Plugin-Sprache aus (Verfügbar: pl, en, de, es)
+  # Selecciona el idioma del plugin (Disponibles: pl, en, de, es)
   language: en
 
   # Should the plugin check for newer versions of the plugin?
@@ -261,5 +263,59 @@ visuals:
   # Apply blindness effect to not logged in players.
   use-blindness: true
 
+  # Sends security alerts to players with the appropriate permissions
+  suspicious-activity-alerts: true
+
   # Hides players who are not logged in
   hide-unlogged-players: true
+
+
+# =========================
+#          SOUNDS
+# =========================
+sounds:
+  login:
+    enabled: true
+    sound: "ENTITY_PLAYER_LEVELUP"
+    volume: 0.8
+    pitch: 1.0
+  register:
+    enabled: true
+    sound: "UI_TOAST_CHALLENGE_COMPLETE"
+    volume: 0.5
+    pitch: 1.0
+  auto-login:
+    enabled: true
+    sound: "BLOCK_NOTE_BLOCK_PLING"
+    volume: 0.8
+    pitch: 1.5
+  wrong-password:
+    enabled: true
+    sound: "ENTITY_VILLAGER_NO"
+    volume: 1.0
+    pitch: 1.0
+  invalid-password-format:
+    enabled: true
+    sound: "ENTITY_ITEM_BREAK"
+    volume: 1.0
+    pitch: 1.0
+  success:
+    enabled: true
+    sound: "ENTITY_EXPERIENCE_ORB_PICKUP"
+    volume: 1.0
+    pitch: 1.0
+  fail:
+    enabled: true
+    sound: "BLOCK_NOTE_BLOCK_BASS"
+    volume: 1.0
+    pitch: 1.0
+  rate-limited:
+    enabled: true
+    sound: "ENTITY_ENDER_DRAGON_GROWL"
+    volume: 1.0
+    pitch: 1.0
+  security-reminder:
+    enabled: true
+    sound: "ENTITY_VILLAGER_TRADE"
+    volume: 1.0
+    pitch: 1.0

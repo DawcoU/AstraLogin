@@ -12,6 +12,7 @@ import org.bukkit.potion.PotionEffectType;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.manage.spawn.SpawnType;
 import pl.dawcou.astralogin.auth.passwords.PasswordValidator;
+import pl.dawcou.astralogin.system.utils.SoundManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 
 import java.time.Duration;
@@ -23,8 +24,11 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
     private final AstraLogin plugin;
     private final Set<UUID> loggedIn = new HashSet<>();
     private final Map<UUID, String> waitingFor2FA = new HashMap<>();
+    private final Set<UUID> suspiciousPlayers = new HashSet<>();
 
     public Set<UUID> getLoggedIn() { return loggedIn; }
+    public Set<UUID> getSuspiciousPlayers() { return suspiciousPlayers; }
+
     public boolean isWaitingFor2FA(UUID uuid) { return waitingFor2FA.containsKey(uuid); }
     public void addWaitingFor2FA(UUID uuid, String uuidString) { waitingFor2FA.put(uuid, uuidString); }
     public void removeWaitingFor2FA(UUID uuid) { waitingFor2FA.remove(uuid); }
@@ -47,21 +51,25 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
 
             if (loggedIn.contains(p.getUniqueId())) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.already-logged"));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 return true;
             }
 
             if (plugin.getPasswordManager().getPassword(p.getUniqueId()) != null) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.has-account"));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 return true;
             }
 
             if (args.length != 2) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("register.usage"));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 return true;
             }
 
             if (!args[0].equals(args[1])) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.not-match"));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.INVALID_PASSWORD_FORMAT);
                 return true;
             }
 
@@ -69,15 +77,21 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
             for (String password : new String[]{args[0], args[1]}) {
                 PasswordValidator.ValidationResult result = PasswordValidator.validate(password, plugin.getConfig(), plugin.getLogger());
 
-                if (result == PasswordValidator.ValidationResult.INVALID_CHARACTERS) {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.invalid-characters"));
-                    return true;
-                } else if (result == PasswordValidator.ValidationResult.ONLY_LETTERS_FORBIDDEN) {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.only-letters-forbidden"));
-                    return true;
-                } else if (result == PasswordValidator.ValidationResult.ONLY_DIGITS_FORBIDDEN) {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.only-digits-forbidden"));
-                    return true;
+                switch (result) {
+                    case INVALID_CHARACTERS:
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.invalid-characters"));
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.INVALID_PASSWORD_FORMAT);
+                        return true;
+                    case ONLY_LETTERS_FORBIDDEN:
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.only-letters-forbidden"));
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.INVALID_PASSWORD_FORMAT);
+                        return true;
+                    case ONLY_DIGITS_FORBIDDEN:
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.validation.only-digits-forbidden"));
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.INVALID_PASSWORD_FORMAT);
+                        return true;
+                    default:
+                        break;
                 }
             }
 
@@ -97,10 +111,12 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
 
             if (args[0].length() < min) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.too-short").replace("%min%", String.valueOf(min)));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.INVALID_PASSWORD_FORMAT);
                 return true;
             }
             if (args[0].length() > max) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.too-long").replace("%max%", String.valueOf(max)));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.INVALID_PASSWORD_FORMAT);
                 return true;
             }
 
@@ -112,54 +128,79 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
             String passwordToHash = args[0]; // Surowe hasło do zahashowania (Argon2id / BCrypt)
 
             plugin.getSchedulerManager().runAsync(() -> {
-                // 1. Hashujemy (Argon2id z automatycznym fallbackiem na BCrypt)
-                String hashedPass = plugin.getPasswordManager().getPasswordHasher().hashPassword(passwordToHash);
+                // Rejestracja/hashowanie przez hasher z obsługą statusów (tak jak w loginie)
+                var result = plugin.getPasswordManager().getPasswordHasher().hashPassword(playerUUID, passwordToHash);
 
-                // Zabezpieczenie na wypadek błędu hashowania
-                if (hashedPass == null) {
-                    plugin.getSchedulerManager().runSync(() -> {
-                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.error"));
-                    });
-                    return;
+                switch (result.status()) {
+                    case SUCCESS:
+                        String hashedPass = result.hash();
+
+                        // 2. Zapisujemy dane
+                        plugin.getPasswordManager().savePassword(playerUUID, hashedPass);
+                        plugin.getIPManager().saveIP(uuidString, ip);
+
+                        // 3. Wracamy na główny wątek (Sync)
+                        plugin.getSchedulerManager().runSync(() -> {
+                            if (!p.isOnline()) return;
+
+                            plugin.getAccountManager().recordRegister(playerUUID, playerName);
+
+                            // SPRAWDZAMY CZY MA JUŻ AKTYWNE 2FA (np. po restarcie hasła przez admina)
+                            boolean is2FAEnabled = plugin.getTwoFactorManager().has2FA(playerUUID);
+
+                            if (is2FAEnabled) {
+                                // Wrzucamy go do poczekalni 2FA
+                                addWaitingFor2FA(playerUUID, uuidString);
+
+                                p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.required"));
+
+                                Title title2fa = Title.title(
+                                        Component.text(plugin.getLanguageManager().getMessage("title.twofactor")), // Główny tytuł
+                                        Component.text(plugin.getLanguageManager().getMessage("twofactor.required")), // Podtytuł
+                                        Title.Times.times(Duration.ofMillis(500), Duration.ofHours(1), Duration.ofMillis(500))
+                                );
+                                plugin.getAdventure().player(p).showTitle(title2fa);
+                                plugin.getLogManager().log("Player " + p.getName() + " registered, but has active 2FA. Waiting for code...");
+                                plugin.getSoundManager().playSound(p, SoundManager.SoundType.SECURITY_REMINDER);
+                            } else {
+                                finishLogin(p);
+                                p.sendTitle(
+                                        plugin.getLanguageManager().getMessage("title.register"),
+                                        plugin.getLanguageManager().getMessage("title.register-subtitle"),
+                                        10, 40, 10
+                                );
+                                p.sendMessage(plugin.getLanguageManager().getWithPrefix("register.success"));
+                                plugin.getLogManager().log("Player " + p.getName() + " registered");
+
+                                plugin.getSoundManager().playSound(p, SoundManager.SoundType.REGISTER);
+                            }
+                        });
+                        break;
+
+                    case RATE_LIMITED_SERVER:
+                        plugin.getSchedulerManager().runSync(() -> {
+                            p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.server-busy"));
+                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.RATE_LIMITED);
+                        });
+                        break;
+
+                    case RATE_LIMITED_PLAYER:
+                        long seconds = result.remainingSeconds();
+                        plugin.getSchedulerManager().runSync(() -> {
+                            p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.rate-limit")
+                                    .replace("%time%", TimeUtils.formatTime(seconds)));
+                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.RATE_LIMITED);
+                        });
+                        break;
+
+                    case ERROR:
+                    default:
+                        plugin.getSchedulerManager().runSync(() -> {
+                            p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.error"));
+                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                        });
+                        break;
                 }
-
-                // 2. Zapisujemy dane
-                plugin.getPasswordManager().savePassword(playerUUID, hashedPass);
-                plugin.getIPManager().saveIP(uuidString, ip);
-
-                // 3. Wracamy na główny wątek (Sync)
-                plugin.getSchedulerManager().runSync(() -> {
-                    if (!p.isOnline()) return;
-
-                    plugin.getAccountManager().recordRegister(playerUUID, playerName);
-
-                    // SPRAWDZAMY CZY MA JUŻ AKTYWNE 2FA (np. po restarcie hasła przez admina)
-                    boolean is2FAEnabled = plugin.getTwoFactorManager().has2FA(playerUUID);
-
-                    if (is2FAEnabled) {
-                        // Wrzucamy go do poczekalni 2FA!
-                        addWaitingFor2FA(playerUUID, uuidString);
-
-                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.required"));
-
-                        Title title2fa = Title.title(
-                                Component.text(plugin.getLanguageManager().getMessage("title.twofactor")), // Główny tytuł
-                                Component.text(plugin.getLanguageManager().getMessage("twofactor.required")), // Podtytuł
-                                Title.Times.times(Duration.ofMillis(500), Duration.ofHours(1), Duration.ofMillis(500))
-                        );
-                        plugin.getAdventure().player(p).showTitle(title2fa);
-                        plugin.getLogManager().log("Player " + p.getName() + " registered, but has active 2FA. Waiting for code...");
-                    } else {
-                        finishLogin(p);
-                        p.sendTitle(
-                                plugin.getLanguageManager().getMessage("title.register"),
-                                plugin.getLanguageManager().getMessage("title.register-subtitle"),
-                                10, 40, 10
-                        );
-                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("register.success"));
-                        plugin.getLogManager().log("Player " + p.getName() + " registered");
-                    }
-                });
             });
             return true;
         }
@@ -176,11 +217,13 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
 
             if (password == null) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.no-account"));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 return true;
             }
 
             if (loggedIn.contains(playerUUID)) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.already-logged"));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 return true;
             }
 
@@ -218,6 +261,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                                             Title.Times.times(Duration.ofMillis(500), Duration.ofHours(1), Duration.ofMillis(500))
                                     );
                                     plugin.getAdventure().player(p).showTitle(title2fa);
+                                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.SECURITY_REMINDER);
 
                                     // Zapisujemy zwykłą sesję hasła, skoro hasło było wpisane poprawnie!
                                     plugin.getSessionManager().saveSession(playerUUID, currentIP);
@@ -237,6 +281,8 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                                     p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.success"));
 
                                     plugin.getLogManager().log("Player " + p.getName() + " logged in");
+                                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.LOGIN);
+
                                     plugin.getIpTrustManager().addTrustScore(
                                             currentIP,
                                             plugin.getIpTrustManager().getLoginSuccessPoints()
@@ -258,6 +304,8 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                             plugin.getSchedulerManager().runSync(() -> {
                                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.wrong"));
                                 plugin.getLogManager().log("Player " + p.getName() + " entered the wrong password");
+                                plugin.getSoundManager().playSound(p, SoundManager.SoundType.WRONG_PASSWORD);
+
                                 plugin.getIpTrustManager().addTrustScore(
                                         currentIP,
                                         plugin.getIpTrustManager().getFailedPasswordPoints()
@@ -270,6 +318,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                         case RATE_LIMITED_SERVER:
                             plugin.getSchedulerManager().runSync(() -> {
                                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.server-busy"));
+                                plugin.getSoundManager().playSound(p, SoundManager.SoundType.RATE_LIMITED);
                             });
                             break;
 
@@ -278,6 +327,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                             plugin.getSchedulerManager().runSync(() -> {
                                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.rate-limit")
                                         .replace("%time%", TimeUtils.formatTime(seconds)));
+                                plugin.getSoundManager().playSound(p, SoundManager.SoundType.RATE_LIMITED);
                             });
                             break;
 
@@ -285,12 +335,14 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                         default:
                             plugin.getSchedulerManager().runSync(() -> {
                                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.error"));
+                                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                             });
                             break;
                     }
                 });
             } else {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.usage"));
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
             }
             return true;
         }
@@ -302,6 +354,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
         String ip = p.getAddress().getAddress().getHostAddress();
 
         loggedIn.add(uuid);
+        suspiciousPlayers.remove(uuid);
         plugin.getInventoryManager().restore(p);
         plugin.getSessionManager().deleteSession(uuid);
 
@@ -334,6 +387,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
         plugin.getSessionManager().deleteSession(uuid);
 
         p.removePotionEffect(PotionEffectType.BLINDNESS);
+        plugin.getSoundManager().playSound(p, SoundManager.SoundType.AUTO_LOGIN);
     }
 
     @Override

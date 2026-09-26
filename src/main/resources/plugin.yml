@@ -5,6 +5,7 @@ api-version: '1.18'
 load: STARTUP
 author: DawcoU
 softdepend: [ProtocolLib]
+folia-supported: true
 
 commands:
   astralogin:
@@ -99,4 +100,7 @@ permissions:
   astralogin.spawn.set:
     default: op
   astralogin.spawn.delete:
+    default: op
+
+  astralogin.alerts:
     default: op

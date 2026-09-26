@@ -61,12 +61,12 @@ public class SpawnManager {
         Location loc = spawnsCache.get(type);
 
         if (loc != null) {
-            p.teleport(loc);
+            plugin.getSchedulerManager().teleport(p, loc);
             return;
         }
 
         if (type == SpawnType.AFTER_LOGIN) {
-            p.teleport(p.getWorld().getSpawnLocation());
+            plugin.getSchedulerManager().teleport(p, p.getWorld().getSpawnLocation());
         }
     }
 
@@ -98,7 +98,7 @@ public class SpawnManager {
         }
 
         try {
-            p.teleport(loc);
+            plugin.getSchedulerManager().teleport(p, loc);
         } catch (Exception e) {
             plugin.getNoticeManager().sendPlayerLocationReadError(p.getName());
             teleport(p, SpawnType.AFTER_LOGIN);
