@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 //--------------------------------------------------
 // Centralny menedżer danych graczy w plikach JSON
@@ -26,6 +27,12 @@ public class PlayerDataManager {
     private final Gson gson;
 
     private final Map<UUID, JsonObject> cache = new ConcurrentHashMap<>();
+    private final Map<UUID, SaveState> saveStates = new ConcurrentHashMap<>();
+
+    private static class SaveState {
+        private final Object lock = new Object();
+        private final AtomicLong version = new AtomicLong();
+    }
 
     public PlayerDataManager(AstraLogin plugin) {
         this.plugin = plugin;
@@ -54,33 +61,40 @@ public class PlayerDataManager {
     public String getString(UUID uuid, String key) {
         JsonObject root = getOrLoad(uuid);
         JsonElement element = getElementByPath(root, key);
+
         if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
             return element.getAsString();
         }
+
         return null;
     }
 
     public boolean getBoolean(UUID uuid, String key, boolean defaultValue) {
         JsonObject root = getOrLoad(uuid);
         JsonElement element = getElementByPath(root, key);
+
         if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
             return element.getAsBoolean();
         }
+
         return defaultValue;
     }
 
     public long getLong(UUID uuid, String key, long defaultValue) {
         JsonObject root = getOrLoad(uuid);
         JsonElement element = getElementByPath(root, key);
+
         if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
             return element.getAsLong();
         }
+
         return defaultValue;
     }
 
     public boolean has(UUID uuid, String key) {
         JsonObject root = getOrLoad(uuid);
         JsonElement element = getElementByPath(root, key);
+
         return element != null && !element.isJsonNull();
     }
 
@@ -92,6 +106,7 @@ public class PlayerDataManager {
             remove(uuid, key);
             return;
         }
+
         set(uuid, key, new JsonPrimitive(value));
     }
 
@@ -100,6 +115,7 @@ public class PlayerDataManager {
             remove(uuid, key);
             return;
         }
+
         set(uuid, key, new JsonPrimitive(value));
     }
 
@@ -108,11 +124,13 @@ public class PlayerDataManager {
             remove(uuid, key);
             return;
         }
+
         set(uuid, key, new JsonPrimitive(value));
     }
 
     public void set(UUID uuid, String key, JsonElement value) {
         JsonObject root = getOrLoad(uuid);
+
         if (value == null) {
             remove(uuid, key);
             return;
@@ -139,6 +157,7 @@ public class PlayerDataManager {
             String parentPath = key.substring(0, key.lastIndexOf('.'));
             String finalKey = key.substring(key.lastIndexOf('.') + 1);
             JsonObject parent = JsonHelper.getTargetObject(root, parentPath, false);
+
             if (parent != null) {
                 parent.remove(finalKey);
             }
@@ -154,20 +173,27 @@ public class PlayerDataManager {
         return cache.computeIfAbsent(uuid, this::loadFromFile);
     }
 
+    private SaveState getSaveState(UUID uuid) {
+        return saveStates.computeIfAbsent(uuid, ignored -> new SaveState());
+    }
+
     private JsonObject loadFromFile(UUID uuid) {
         File file = new File(playersFolder, uuid.toString() + ".json");
+
         if (!file.exists()) {
             return new JsonObject();
         }
 
         try (FileReader reader = new FileReader(file)) {
             JsonElement element = JsonParser.parseReader(reader);
+
             if (element != null && element.isJsonObject()) {
                 return element.getAsJsonObject();
             }
         } catch (IOException e) {
             plugin.getLogger().severe("Could not load player data for " + uuid + ": " + e.getMessage());
         }
+
         return new JsonObject();
     }
 
@@ -183,24 +209,46 @@ public class PlayerDataManager {
 
     private void saveAsync(UUID uuid, JsonObject json) {
         JsonObject copy = json.deepCopy();
+        SaveState state = getSaveState(uuid);
+        long version = state.version.incrementAndGet();
 
         if (!plugin.isEnabled()) {
-            saveToFile(uuid, copy);
+            synchronized (state.lock) {
+                if (state.version.get() != version) {
+                    return;
+                }
+
+                saveToFile(uuid, copy);
+            }
             return;
         }
 
         plugin.getSchedulerManager().runAsync(() -> {
-            // Jeśli gracz został usunięty z cache w trakcie trwania zadania, anulujemy zapis!
-            if (!cache.containsKey(uuid)) {
-                return;
+            synchronized (state.lock) {
+                if (state.version.get() != version) {
+                    return;
+                }
+
+                if (!cache.containsKey(uuid)) {
+                    return;
+                }
+
+                saveToFile(uuid, copy);
             }
-            saveToFile(uuid, copy);
         });
     }
 
     public void saveAll() {
         for (Map.Entry<UUID, JsonObject> entry : cache.entrySet()) {
-            saveToFile(entry.getKey(), entry.getValue());
+            UUID uuid = entry.getKey();
+            SaveState state = getSaveState(uuid);
+
+            synchronized (state.lock) {
+                state.version.incrementAndGet();
+
+                JsonObject copy = entry.getValue().deepCopy();
+                saveToFile(uuid, copy);
+            }
         }
     }
 
@@ -209,7 +257,12 @@ public class PlayerDataManager {
     }
 
     public void unloadPlayer(UUID uuid) {
-        cache.remove(uuid);
+        SaveState state = getSaveState(uuid);
+
+        synchronized (state.lock) {
+            state.version.incrementAndGet();
+            cache.remove(uuid);
+        }
     }
 
     //--------------------------------------------------
@@ -228,9 +281,11 @@ public class PlayerDataManager {
         for (File file : files) {
             String fileName = file.getName();
             String uuidStr = fileName.substring(0, fileName.length() - 5);
+
             try {
                 uuids.add(UUID.fromString(uuidStr));
-            } catch (IllegalArgumentException ignored) {}
+            } catch (IllegalArgumentException ignored) {
+            }
         }
 
         return uuids;
@@ -245,6 +300,7 @@ public class PlayerDataManager {
 
         // 3. Fizycznie kasujemy plik
         File file = new File(playersFolder, uuid + ".json");
+
         if (file.exists()) {
             try {
                 java.nio.file.Files.delete(file.toPath());

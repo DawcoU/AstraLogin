@@ -35,7 +35,7 @@ commands:
   listakont:
     aliases: [accountslist]
   2fa:
-    aliases: [tfa, auth]
+    aliases: [tfa]
   przenieskonto:
     aliases: [moveaccount]
   spawnlogowania:
@@ -53,10 +53,6 @@ permissions:
   astralogin.reload:
     default: op
   astralogin.update:
-    default: op
-  astralogin.setspawn:
-    default: op
-  astralogin.delspawn:
     default: op
   astralogin.resetpassword:
     default: op

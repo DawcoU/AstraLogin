@@ -4,7 +4,6 @@ import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.mojang.authlib.GameProfile;
 import io.netty.channel.Channel;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.auth.security.premium.protocol.nms.NMSReflection;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;

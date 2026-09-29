@@ -76,8 +76,8 @@ public class NoticeManager {
 
     public void sendConfigErrorNotice(String error) {
         String msg = getLang().equalsIgnoreCase("pl")
-                ? "Błąd podczas zapisu pliku konfiguracyjnego:"
-                : "Error while saving config:";
+                ? "Błąd podczas zapisu pliku konfiguracyjnego. Błąd:"
+                : "Error while saving config. Error:";
         plugin.getLogger().severe(msg + " " + error);
     }
 
@@ -90,8 +90,8 @@ public class NoticeManager {
 
     public void sendLangUpdateError(String fileName, String error) {
         String msg = getLang().equalsIgnoreCase("pl")
-                ? "Nie udało się zaktualizować pliku językowego (" + fileName + "):"
-                : "Failed to update language file (" + fileName + "):";
+                ? "Nie udało się zaktualizować pliku językowego (" + fileName + "). Błąd:"
+                : "Failed to update language file (" + fileName + "). Error:";
         plugin.getLogger().severe(msg + " " + error);
     }
 
@@ -127,15 +127,22 @@ public class NoticeManager {
 
     public void sendBackupSaveError(String error) {
         String msg = getLang().equalsIgnoreCase("pl")
-                ? "Nie udało się wykonać automatycznej kopii zapasowej. Błąd:"
-                : "Automatic backup failed. Error:";
+                ? "Nie udało się utworzyć kopii zapasowej. Błąd:"
+                : "Backup failed. Error:";
         plugin.getLogger().severe(msg + " " + error);
     }
 
     public void sendBackupSave(String fileName) {
         String msg = getLang().equalsIgnoreCase("pl")
-                ? "§aPomyślnie wykonano automatyczną kopię zapasową w pliku: §e"
-                : "§aAutomatic backup to file successfully completed: §e";
+                ? "§aPomyślnie utworzono automatyczną kopię zapasową: §e"
+                : "§aAutomatic backup successfully created: §e";
+        Bukkit.getConsoleSender().sendMessage(getConsolePrefix() + " " + msg + fileName);
+    }
+
+    public void sendAutomaticBackupSave(String fileName) {
+        String msg = getLang().equalsIgnoreCase("pl")
+                ? "§aPomyślnie utworzono kopię zapasową danych przed migracją: §e"
+                : "§aBackup of data successfully created before migration: §e";
         Bukkit.getConsoleSender().sendMessage(getConsolePrefix() + " " + msg + fileName);
     }
 

@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.auth.security.premium.protocol.nms;
+package pl.dawcou.astralogin.auth.security.premium.protocol;
 
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.mojang.authlib.GameProfile;
@@ -143,6 +143,7 @@ public final class NMSReflection {
                 "Unknown"
         );
     }
+
 
     public static String getProfileName(GameProfile profile) {
         if (profile == null) {

@@ -106,7 +106,11 @@ public class BackupManager {
                     }
                 });
 
-                plugin.getNoticeManager().sendBackupSave(zipFileName);
+                if (ignoreInterval) {
+                    plugin.getNoticeManager().sendBackupSave(zipFileName);
+                } else {
+                    plugin.getNoticeManager().sendAutomaticBackupSave(zipFileName);
+                }
 
                 // Pobieranie limitu z configu i czyszczenie starych kopii
                 int finalLimit = Math.max(1, Math.min(50, limit));

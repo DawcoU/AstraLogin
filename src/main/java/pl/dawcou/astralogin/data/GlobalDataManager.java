@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
 
 //--------------------------------------------------
 // Centralny menedżer danych globalnych w pliku JSON
@@ -18,6 +19,9 @@ public class GlobalDataManager {
     private final Gson gson;
 
     private JsonObject globalCache;
+
+    private final Object saveLock = new Object();
+    private final AtomicLong saveVersion = new AtomicLong();
 
     public GlobalDataManager(AstraLogin plugin) {
         this.plugin = plugin;
@@ -230,21 +234,50 @@ public class GlobalDataManager {
 
     private void saveAsync(JsonObject json) {
         JsonObject copy = json.deepCopy();
+        long version = saveVersion.incrementAndGet();
 
         if (!plugin.isEnabled()) {
-            saveToFile(copy);
+            synchronized (saveLock) {
+                if (version != saveVersion.get()) {
+                    return;
+                }
+                saveToFile(copy);
+            }
             return;
         }
 
-        plugin.getSchedulerManager().runAsync(() -> saveToFile(copy));
+        plugin.getSchedulerManager().runAsync(() -> {
+            synchronized (saveLock) {
+                if (version != saveVersion.get()) {
+                    return;
+                }
+                saveToFile(copy);
+            }
+        });
     }
 
     public void save() {
-        if (globalCache == null) return;
-        saveToFile(globalCache);
+        JsonObject cache;
+
+        synchronized (saveLock) {
+            cache = globalCache;
+            if (cache == null) return;
+
+            long version = saveVersion.incrementAndGet();
+            JsonObject copy = cache.deepCopy();
+
+            if (version != saveVersion.get()) {
+                return;
+            }
+
+            saveToFile(copy);
+        }
     }
 
     public synchronized void reload() {
-        globalCache = loadFromFile();
+        synchronized (saveLock) {
+            saveVersion.incrementAndGet();
+            globalCache = loadFromFile();
+        }
     }
 }

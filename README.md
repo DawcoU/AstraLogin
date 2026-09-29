@@ -3,17 +3,17 @@
 
 Created and maintained with 💻 from Poland by DawcoU 🇵🇱
 
-AstraLogin is a modern, high-performance login plugin built specifically for newer Minecraft versions (1.18 - 26.2+).
+AstraLogin is a modern, high-performance login plugin built specifically for newer Minecraft versions (1.18 - 26.3+).
 Developed in Java 17 and leveraging the Paper API for maximum efficiency, it is the perfect choice for Survival, RPG, and SMP servers. 🚀🎮
 
 ⭐ AstraLogin supports:
-- Paper
-- Purpur
-- Folia
-- Arclight (supported, but not recommended)
-- Spigot (supported, but not recommended)
+- Paper 📄
+- Purpur 🟪
+- Folia 🍃
+- Arclight ⚡ (supported, but not recommended)
+- Spigot 🚰 (supported, but not recommended)
 
-🚰⚠️ Spigot is supported, but it is not the recommended platform.
+️️⚠️ Spigot is supported, but it is not the recommended platform.
 Some features may behave differently or cause compatibility issues.
 Paper or its forks are strongly recommended for the best experience.
 
@@ -21,14 +21,14 @@ Paper or its forks are strongly recommended for the best experience.
 
 ### 🚀 Key Features
 
-* **Advanced Security:** Password hashing using the **BCrypt** or **Argon2id** algorithm, ensuring no plain text is ever stored and protecting against dictionary attacks. 🛡️🔑🔐💻
+* **Advanced Security:** Password hashing using the **BCrypt** or **Argon2id** algorithm, ensuring no plain text is ever stored and protecting against dictionary attacks. Passwords are automatically re-hashed using the selected hashing algorithm after a successful login when necessary. 🛡️🔑🔐💻
 * **Suspicious Activity Alerts:** Sends real-time notifications to administrators with permissions when suspicious actions occur, such as a player logging in from an unknown IP address completely different from their saved profile IP. 🚨🌐⚠️🛡️
 * **Strict Input Validation:** Prevents players from registering with unauthorized characters, emojis, or special symbols. Includes a configurable regex pattern and pre-built rules to block weak passwords, such as those made entirely of letters or entirely of numbers. 🛑🔤🚫⚠️
 * **Detailed Event Logging:** All key server events, including player logins, suspicious access attempts, and administrative actions, are logged to dedicated files in the `logs` folder inside the plugin directory. 📁📝📜🔍
 * **Smart Brute-Force Protection:** 🚫🤖🔨
   * **Failed Attempts Limit:** Automatically kicks players after exceeding allowed login attempts. 🥾❌
   * **Margin of Error:** Configure extra "mercy" chances (margin) before a final action is taken. ⏳🛡️
-  * **IP Ban Protection:** If the limit is reached, the user's IP is banned to prevent further attacks without bloating your database. 🚫🛡️🌐🔒
+  * **Temporary IP Bans:** If the limit is reached, the user's IP is banned to prevent further attacks without bloating your database. 🚫🛡️🌐🔒
 
 * **Two-Factor Authentication (2FA):** Next-level account security! Players can link their accounts to authenticator apps to protect themselves from hackers. 📱🔐📲🛡️
 * **Account Management & Statistics:** Comprehensive tracking of player data, including registration/last login dates, 2FA status, UUIDs, and more! 📊🔍📈👤
@@ -51,8 +51,10 @@ Paper or its forks are strongly recommended for the best experience.
   * **Auto-Updater:** Configuration files automatically update when you install a newer plugin version. 🔄⚡
   * **Update Notifications:** Notifies administrators when a new version is available, with warnings about pre-release versions, newer versions, and available patches. 🛜🔔⚠️
 
+* **Smart Schedulers:** Automatically selects the most suitable scheduler based on the server engine and available scheduling APIs, ensuring compatibility across supported platforms such as Paper, Folia, and other supported server implementations. ⚙️🧠🔄
+
 * **AutoLogin Premium:** Automatic login system for premium accounts: 🌟👤💻
-  * **FULL Mode:** Secure, complete Mojang authentication handshake. 🔒✅
+  * **FULL Mode:** Secure, complete Minecraft/Mojang session authentication handshake. 🔒✅
   * **MINI Mode:** Prototype mode that checks nickname existence in Mojang database without full authentication, allowing cracked logins with that nickname without a password. 🧪🔓
 
 * **Password Recovery:** Using the PIN as a separate source of authentication confirmation, you can reset your password yourself. 🔑🔄📌🛡️
@@ -76,11 +78,13 @@ Paper or its forks are strongly recommended for the best experience.
 | `/resetpassword <player>`                                    | Deletes a player's password ❌                                                   | `astralogin.resetpassword`                                                                                                |
 | `/resetip <player>`                                          | Resets the player's IP address 🌐                                               | `astralogin.resetip`                                                                                                      |
 | `/resetpin <player>`                                         | Resets the player's PIN 🔑❌                                                     | `astralogin.resetpin`                                                                                                     |
+| `/reset2fa <player>`                                         | Resets a player's 2FA 🔐                                                        | `astralogin.reset2fa`                                                                                                     |
 | `/resetaccount <player>`                                     | **Wipes all player data** (password, IP, location, 2FA) ⚠️                      | `astralogin.resetaccount`                                                                                                 |
 | `/moveaccount <old player> <new player>`                     | Transfers all AstraLogin player data to another account ▶️                      | `astralogin.moveaccount`                                                                                                  |
-| `/loginspawn <setspawn/delspawn> <before_login/after_login>` | Sets and removes the selected login spawn 🗺️                                   | `astralogin.setspawn`, `astralogin.delspawn`                                                                              |
+| `/loginspawn <setspawn/delspawn> <before_login/after_login>` | Sets and removes the selected login spawn 🗺️                                   | `astralogin.spawn.setspawn`, `astralogin.spawn.delspawn`                                                                  |
 | `/astralogin reload`                                         | Reloads the plugin configuration ⚙️                                             | `astralogin.reload`                                                                                                       |
 | `/iptrust <info/set/reset> <IP> <score>`                     | Shows IP reputation, resets, and sets 📈📉                                      | `astralogin.iptrust.info`, `astralogin.iptrust.set`, `astralogin.iptrust.reset`                                           |
+| `/iplist`                                                    | Shows all IP bans 🌐🛡️                                                         | `astralogin.iplist`                                                                                                       |
 | `/ipmanager <info/unban/bypass/unbypass> <player>`           | Manage IP bans and bypass status for players 🌐🛡️                              | `astralogin.ipmanager.info`, `astralogin.ipmanager.unban`, `astralogin.ipmanager.bypass`, `astralogin.ipmanager.unbypass` |
 
 **Other Permissions:**

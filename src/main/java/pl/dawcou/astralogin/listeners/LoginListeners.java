@@ -22,7 +22,6 @@ import pl.dawcou.astralogin.auth.manage.spawn.SpawnManager;
 import pl.dawcou.astralogin.auth.manage.spawn.SpawnType;
 import pl.dawcou.astralogin.auth.security.ip.IPManager;
 import pl.dawcou.astralogin.auth.security.ip.IPTrustManager;
-import pl.dawcou.astralogin.system.utils.SoundManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 import pl.dawcou.astralogin.auth.security.TwoFactorManager;
 
@@ -64,7 +63,7 @@ public class LoginListeners implements Listener {
 
             plugin.getSchedulerManager().runForEntity(p, () -> {
                 IPTrustManager.TrustLevel level = plugin.getIpTrustManager().getTrustLevel(ip);
-                if (premium && (level != IPTrustManager.TrustLevel.FATAL)) {
+                if (premium && (level != IPTrustManager.TrustLevel.FATAL && !loginSystem.getSuspiciousPlayers().contains(uuid))) {
                     p.sendMessage(plugin.getLanguageManager().getWithPrefix("premium.success"));
                     plugin.getLogManager().log("Premium account detected for player " + p.getName());
 
@@ -212,7 +211,7 @@ public class LoginListeners implements Listener {
                     }
 
                     plugin.getSchedulerManager().runAsyncRepeating(task -> {
-                        if (!p.isOnline() || (loginSystem.getLoggedIn().contains(p.getUniqueId()) && !loginSystem.isWaitingFor2FA(p.getUniqueId()))) {
+                        if (!p.isOnline() || (loginSystem.getLoggedIn().contains(uuid) && !loginSystem.isWaitingFor2FA(uuid))) {
                             if (useBossBar) {
                                 plugin.getSchedulerManager().runForEntity(p, () -> plugin.getAdventure().player(p).hideBossBar(bossBar));
                             }
@@ -362,22 +361,20 @@ public class LoginListeners implements Listener {
         }
 
         // Sprawdzenie Multikonta
-        if (plugin.getConfig().getBoolean("security.anti-multiaccount.enabled", true)) {
-            if (savedIP == null) {
-                int limit = plugin.getConfig().getInt("security.anti-multiaccount.limit", 2);
-                int accountCount = ipManager.getNumberOfAccountsByIP(currentIP);
+        if (plugin.getConfig().getBoolean("security.anti-multiaccount.enabled", true) && savedIP == null) {
+            int limit = plugin.getConfig().getInt("security.anti-multiaccount.limit", 2);
+            int accountCount = ipManager.getNumberOfAccountsByIP(currentIP);
 
-                if (accountCount >= limit) {
-                    // Przekroczenie limitu kont na jednym IP
-                    plugin.getLogManager().log("Player " + playerName + " (" + currentIP + ") was blocked by Anti-MultiAccount. Limit: " + limit + ", Current: " + accountCount);
-                    plugin.getIpTrustManager().addTrustScore(
-                            currentIP,
-                            plugin.getIpTrustManager().getMultiIpPoints()
-                    );
+            if (accountCount >= limit) {
+                // Przekroczenie limitu kont na jednym IP
+                plugin.getLogManager().log("Player " + playerName + " (" + currentIP + ") was blocked by Anti-MultiAccount. Limit: " + limit + ", Current: " + accountCount);
+                plugin.getIpTrustManager().addTrustScore(
+                        currentIP,
+                        plugin.getIpTrustManager().getMultiIpPoints()
+                );
 
-                    e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, (plugin.getLanguageManager().getMessage("security.multiaccount")));
-                    return;
-                }
+                e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, (plugin.getLanguageManager().getMessage("security.multiaccount")));
+                return;
             }
         }
     }
@@ -393,7 +390,7 @@ public class LoginListeners implements Listener {
 
         if (loginSystem != null && loginSystem.getLoggedIn() != null) {
 
-            if (loginSystem.getLoggedIn().contains(p.getUniqueId())) {
+            if (loginSystem.getLoggedIn().contains(uuid)) {
 
                 // --- GRACZ BYŁ ZALOGOWANY ---
                 if (spawnManager != null) {
@@ -401,7 +398,7 @@ public class LoginListeners implements Listener {
                 }
 
                 if (plugin.getConfig().getBoolean("features.session.enabled") && sessionManager != null) {
-                    sessionManager.saveSession(p.getUniqueId(), p.getAddress().getAddress().getHostAddress());
+                    sessionManager.saveSession(uuid, p.getAddress().getAddress().getHostAddress());
                 }
 
             } else {
@@ -421,13 +418,7 @@ public class LoginListeners implements Listener {
 
         // Usuwamy z mapy zalogowanych
         if (loginSystem != null && loginSystem.getLoggedIn() != null) {
-            loginSystem.getLoggedIn().remove(p.getUniqueId());
-        }
-
-        // ZAPIS (sesji)
-        if (sessionManager != null) {
-            sessionManager.reload();
-            sessionManager.getTwoFactorSessionManager().reload();
+            loginSystem.getLoggedIn().remove(uuid);
         }
 
         // CZYSZCZENIE (zamrożonych setup'ów)

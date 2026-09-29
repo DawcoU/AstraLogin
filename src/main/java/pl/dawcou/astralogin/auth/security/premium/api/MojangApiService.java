@@ -34,7 +34,7 @@ public class MojangApiService {
             // Tworzymy prawdziwy obiekt NMS-owy z Mojang AuthLib
             GameProfile nmsProfile = new GameProfile(mockUuid, username);
 
-            // Opakowujemy go w WrappedGameProfile bezpieczną metodą fromHandle
+            // Opakowujemy go w WrappedGameProfile metodą fromHandle
             return WrappedGameProfile.fromHandle(nmsProfile);
         }
 

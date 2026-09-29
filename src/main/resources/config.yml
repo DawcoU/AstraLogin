@@ -78,7 +78,7 @@ security:
     enabled: true
 
     # Available modes:
-    # FULL - Uses new experimental full player authentication (requires ProtocolLib installed, 100% secure)
+    # FULL - Uses full player authentication (requires ProtocolLib installed)
     # MINI - Native AstraLogin system (Checks Mojang API for premium nick + verifies IP. NOTE: Prototype feature! Less secure because variable IPs allow cracked players to bypass password if they hit a matching IP).
     mode: FULL
 
@@ -170,12 +170,11 @@ security:
 
   hashing:
     # Selected hashing algorithm: ARGON2ID or BCRYPT
-    # Switching to ARGON2ID will automatically re-hash player passwords upon their next successful login!
     algorithm: "ARGON2ID"
 
     # Settings for BCrypt algorithm
     bcrypt:
-      # Work factor / cost (Range: 8 - 16). Higher values increase security but take more CPU time.
+      # Work factor / cost (Range: 10 - 16). Higher values increase security but take more CPU time.
       cost: 12
 
     # Settings for Argon2id algorithm

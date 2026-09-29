@@ -20,6 +20,8 @@ public class IPBanManager {
     private final GlobalDataManager globalDataManager;
 
     private final Map<String, Integer> ipAttempts = new ConcurrentHashMap<>();
+    private final Map<String, Long> ipAttemptWindows = new ConcurrentHashMap<>();
+
     private final Map<String, Long> ipBans = new ConcurrentHashMap<>();
     private final Map<String, String> banReasons = new ConcurrentHashMap<>();
     private final Map<String, String> ipBannedUuid = new ConcurrentHashMap<>();
@@ -56,6 +58,7 @@ public class IPBanManager {
 
     public void unbanIP(String ip) {
         ipAttempts.remove(ip);
+        ipAttemptWindows.remove(ip);
         ipBans.remove(ip);
         banReasons.remove(ip);
         ipBannedUuid.remove(ip);
@@ -65,16 +68,41 @@ public class IPBanManager {
     public void addIPAttempt(String ip, String uuid) {
         String path = "security.anti-spam.";
 
+        if (!plugin.getConfig().getBoolean(path + "enabled", true)) {
+            return;
+        }
+
         int max = plugin.getConfig().getInt(path + "max-attempts", 5);
+        int withinSeconds = plugin.getConfig().getInt(path + "within-seconds", 60);
         String timeStr = plugin.getConfig().getString(path + "tempban-time", "30 minutes");
+
+        if (max <= 0 || withinSeconds <= 0) {
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        long windowMillis = withinSeconds * 1000L;
+
+        Long windowStart = ipAttemptWindows.get(ip);
+
+        // Brak aktywnego okna albo poprzednie okno wygasło
+        if (windowStart == null || now - windowStart >= windowMillis) {
+            ipAttemptWindows.put(ip, now);
+            ipAttempts.put(ip, 1);
+            return;
+        }
 
         int current = ipAttempts.getOrDefault(ip, 0) + 1;
         ipAttempts.put(ip, current);
 
         if (current >= max) {
             long banMillis = TimeUtils.parseTime(timeStr, 600000L);
+
             banIPWithMillis(ip, banMillis, "SPAM", uuid);
+
             ipAttempts.remove(ip);
+            ipAttemptWindows.remove(ip);
+
             plugin.getIpTrustManager().addTrustScore(
                     ip,
                     plugin.getIpTrustManager().getIpSpamPoints()

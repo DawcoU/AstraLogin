@@ -76,6 +76,16 @@ public class LogFilter extends AbstractFilter {
             return 2;
         }
 
+        // /2fa unsetup <kod> / /tfa unsetup <kod>
+        if (message.matches("(?i).*\\/(2fa|tfa)\\s+unsetup\\s+\\d+.*")) {
+            return 2;
+        }
+
+        // /2fa <kod> / /tfa <kod> — maskujemy pierwszy argument tylko jeśli jest liczbą
+        if (message.matches("(?i).*\\/(2fa|tfa)\\s+\\d+.*")) {
+            return 1;
+        }
+
         // Komendy z hasłem/PIN-em jako pierwszym argumentem
         if (message.contains("/login ") ||
                 message.contains("/l ") ||
@@ -105,7 +115,7 @@ public class LogFilter extends AbstractFilter {
                 "/zaloguj", "/zarejestruj",
                 "/zmienhaslo", "/changepassword",
                 "/niepamietamhasla", "/forgotpassword", "/forgotpass",
-                "/pin"
+                "/pin", "/2fa", "/tfa"
         };
 
         String lowerMessage = message.toLowerCase();

@@ -140,7 +140,7 @@ public class PasswordHasher {
 
     private String hashBCrypt(String password) {
         int cost = plugin.getConfig().getInt("security.hashing.bcrypt.cost", 12);
-        cost = Math.max(8, Math.min(16, cost));
+        cost = Math.max(10, Math.min(16, cost));
 
         try {
             return BCrypt.hashpw(password, BCrypt.gensalt(cost));
