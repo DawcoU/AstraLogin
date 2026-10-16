@@ -11,9 +11,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-//--------------------------------------------------
-// Menedżer blokad IP oparty o GlobalDataManager
-//--------------------------------------------------
 public class IPBanManager {
 
     private final AstraLogin plugin;

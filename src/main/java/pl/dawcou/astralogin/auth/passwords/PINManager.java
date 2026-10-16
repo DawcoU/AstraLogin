@@ -6,9 +6,6 @@ import pl.dawcou.astralogin.data.PlayerDataManager;
 import java.security.SecureRandom;
 import java.util.UUID;
 
-//--------------------------------------------------
-// Menedżer kodów PIN z wykorzystaniem PlayerDataManager
-//--------------------------------------------------
 public class PINManager {
 
     private final AstraLogin plugin;

@@ -177,7 +177,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
                                 plugin.getIpTrustManager().getUnknownIpLoginPoints()
                         );
 
-                        plugin.getLoginSystem().getSuspiciousPlayers().add(targetUuid);
+                        plugin.getPlayerDataManager().set(targetUuid, "account.suspicious", true);
                     }
                 }
                 break;

@@ -24,10 +24,8 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
     private final AstraLogin plugin;
     private final Set<UUID> loggedIn = new HashSet<>();
     private final Map<UUID, String> waitingFor2FA = new HashMap<>();
-    private final Set<UUID> suspiciousPlayers = new HashSet<>();
 
     public Set<UUID> getLoggedIn() { return loggedIn; }
-    public Set<UUID> getSuspiciousPlayers() { return suspiciousPlayers; }
 
     public boolean isWaitingFor2FA(UUID uuid) { return waitingFor2FA.containsKey(uuid); }
     public void addWaitingFor2FA(UUID uuid, String uuidString) { waitingFor2FA.put(uuid, uuidString); }
@@ -354,7 +352,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
         String ip = p.getAddress().getAddress().getHostAddress();
 
         loggedIn.add(uuid);
-        suspiciousPlayers.remove(uuid);
+        plugin.getPlayerDataManager().remove(uuid, "account.suspicious");
         plugin.getInventoryManager().restore(p);
         plugin.getSessionManager().deleteSession(uuid);
 
@@ -378,6 +376,8 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
             // Jeśli opcja jest wyłączona, wtedy leci na after_login
             plugin.getSpawnManager().teleport(p, SpawnType.AFTER_LOGIN);
         }
+
+        plugin.getSeasonalEventManager().sendEventNotice(p);
     }
 
     public void finishSession(Player p) {
@@ -387,7 +387,9 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
         plugin.getSessionManager().deleteSession(uuid);
 
         p.removePotionEffect(PotionEffectType.BLINDNESS);
+
         plugin.getSoundManager().playSound(p, SoundManager.SoundType.AUTO_LOGIN);
+        plugin.getSeasonalEventManager().sendEventNotice(p);
     }
 
     @Override

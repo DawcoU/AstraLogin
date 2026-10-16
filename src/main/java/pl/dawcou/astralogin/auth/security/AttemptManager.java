@@ -4,12 +4,13 @@ import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 
-import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class AttemptManager {
 
-    private final HashMap<UUID, Integer> attempts = new HashMap<>();
+    private final Map<UUID, Integer> attempts = new ConcurrentHashMap<>();
     private final AstraLogin plugin;
 
     public AttemptManager(AstraLogin plugin) {
@@ -28,8 +29,7 @@ public class AttemptManager {
         int threshold = max + margin;
         String timeStr = plugin.getConfig().getString("security.attempts.tempban-time", "15 minutes");
 
-        int current = attempts.getOrDefault(p.getUniqueId(), 0) + 1;
-        attempts.put(p.getUniqueId(), current);
+        int current = attempts.merge(p.getUniqueId(), 1, Integer::sum);
 
         if (current >= threshold) {
             clearAttempts(p.getUniqueId());

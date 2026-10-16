@@ -20,7 +20,7 @@ public class PremiumManager {
     public enum BypassState {
         ALLOWED,       // Ustalono na START: Gracz zarejestrowany, czeka na weryfikację pakietową Mojang
         DENIED,        // Ustalono na START: Brak zarejestrowania lub wymuszone hasło (OSTATECZNE - NIE DO NADPISANIA)
-        AUTHENTICATED  // Ustalono na SUCCESS: Przedł pomyślnie szyfrowanie Mojang i ma pełny bypass
+        AUTHENTICATED  // Ustalono na SUCCESS: Przeszedł pomyślnie szyfrowanie Mojang i ma pełny bypass
     }
 
     private static class StateEntry {

@@ -326,3 +326,12 @@ messages:
     delete-confirm: "&cAre you sure you want to delete the &6%type% &cspawn?"
     delete-button: "&4&l[CONFIRM DELETE]"
     delete-hover: "&aClick to permanently delete the spawn: &e%type%"
+
+
+seasonal-events:
+  halloween:
+    - "&6[Halloween] &cShadows of the past are watching your every &4step..."
+    - "&6[Halloween] &cSomething terrifying lurks in the darkness... &4Run!"
+    - "&6[Halloween] &cTrick or treat? There is no &4escape &ctoday!"
+    - "&6[Halloween] &cDo you hear those quiet whispers behind your &4back?"
+    - "&6[Halloween] &cThe night has just begun, and your &4fate &cis already sealed..."

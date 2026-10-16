@@ -5,9 +5,6 @@ import pl.dawcou.astralogin.data.PlayerDataManager;
 
 import java.util.UUID;
 
-//--------------------------------------------------
-// Menedżer haseł graczy z wykorzystaniem PlayerDataManager
-//--------------------------------------------------
 public class PasswordManager {
 
     private final AstraLogin plugin;

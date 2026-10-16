@@ -4,6 +4,7 @@ import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.system.seasonal.SeasonalEvent;
 
 // ---------------------------------------------------------------- //
 // SoundManager - Handles reading and playing configured sound effects
@@ -57,13 +58,30 @@ public class SoundManager {
             return;
         }
 
-        String soundName = config.getString(path + ".sound", "");
-        if (soundName.isEmpty()) {
-            return;
+        String soundName;
+        double rawVolume;
+        double rawPitch;
+        String soundSource;
+
+        SeasonalEvent activeEvent = plugin.getSeasonalEventManager() != null
+                ? plugin.getSeasonalEventManager().getActiveEvent()
+                : null;
+
+        if (activeEvent != null && activeEvent.getRandomSound() != null) {
+            soundName = activeEvent.getRandomSound();
+            rawVolume = 1.0;
+            rawPitch = 1.0;
+            soundSource = "seasonal event";
+        } else {
+            soundName = config.getString(path + ".sound", "");
+            if (soundName.isEmpty()) {
+                return;
+            }
+            rawVolume = config.getDouble(path + ".volume", 1.0);
+            rawPitch = config.getDouble(path + ".pitch", 1.0);
+            soundSource = "config path '" + path + ".sound'";
         }
 
-        double rawVolume = config.getDouble(path + ".volume", 1.0);
-        double rawPitch = config.getDouble(path + ".pitch", 1.0);
 
         // Safe bounds enforcement
         float volume = (float) Math.max(0.0, Math.min(2.0, rawVolume));
@@ -75,8 +93,8 @@ public class SoundManager {
                 player.playSound(player.getLocation(), bukkitSound, volume, pitch);
             } catch (IllegalArgumentException e) {
                 // Log a warning about the invalid sound name from config
-                plugin.getLogger().warning("Sound '" + soundName + "' defined at path '" + path
-                        + "' is not a valid Bukkit sound! Attempting custom sound key playback...");
+                plugin.getLogger().warning("Sound '" + soundName + "' from " + soundSource
+                        + " is not a valid Bukkit sound! Attempting custom sound key playback...");
 
                 // Fallback for custom resource pack sound keys
                 player.playSound(player.getLocation(), soundName.toLowerCase(), volume, pitch);

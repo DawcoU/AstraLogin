@@ -326,3 +326,12 @@ messages:
     delete-confirm: "&cCzy na pewno chcesz usunąć spawn &6%type%&c?"
     delete-button: "&4&l[POTWIERDŹ USUNIĘCIE]"
     delete-hover: "&aKliknij, aby bezpowrotnie usunąć spawn: &e%type%"
+
+
+seasonal-events:
+  halloween:
+    - "&6[Halloween] &cCienie przeszłości obserwują każdy Twój &4krok..."
+    - "&6[Halloween] &cCoś strasznego czai się w ciemnościach... &4Uciekaj!"
+    - "&6[Halloween] &cCukierek albo psikus? Dzisiaj nie ma &4ucieczki!"
+    - "&6[Halloween] &cSłyszysz te ciche szepty za swoimi &4plecami?"
+    - "&6[Halloween] &cNoc dopiero się zaczęła, a Twój &4los &czostał już przypieczętowany..."

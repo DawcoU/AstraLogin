@@ -318,3 +318,42 @@ sounds:
     sound: "ENTITY_VILLAGER_TRADE"
     volume: 1.0
     pitch: 1.0
+
+
+# =========================================
+#             Seasonal Events
+# =========================================
+seasonal-events:
+  # Main toggle for seasonal event support
+  enabled: true
+
+  # Minimum time between seasonal messages per player
+  # Examples: "30 seconds", "10 minutes", "1 hour"
+  message-cooldown: "10 minutes"
+
+  events:
+    halloween:
+      enabled: true
+      # Date range format: DD.MM-DD.MM
+      date-range: "16.10-31.10"
+      # Spooky sound pool picked randomly on played actions
+      sounds:
+        - "ENTITY_GHAST_SCREAM"
+        - "ENTITY_GHAST_WARN"
+        - "ENTITY_GHAST_AMBIENT"
+        - "ENTITY_WITHER_SPAWN"
+        - "ENTITY_WITHER_AMBIENT"
+        - "AMBIENT_CAVE"
+        - "ENTITY_CREEPER_PRIMED"
+        - "ENTITY_ZOMBIE_VILLAGER_CONVERTED"
+        - "ENTITY_WARDEN_HEARTBEAT"
+        - "ENTITY_WARDEN_LISTENING_ANGRY"
+        - "ENTITY_WARDEN_AMBIENT"
+        - "BLOCK_SCULK_SHRIEKER_SHRIEK"
+
+    # Future events structure example:
+    # christmas:
+    #   enabled: true
+    #   date-range: "20.12-05.01"
+    #   sounds:
+    #     - "BLOCK_AMETHYST_BLOCK_CHIME"

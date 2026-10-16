@@ -40,6 +40,7 @@ import pl.dawcou.astralogin.system.NoticeManager;
 import pl.dawcou.astralogin.system.SchedulerManager;
 import pl.dawcou.astralogin.system.UpdateChecker;
 import pl.dawcou.astralogin.auth.security.TwoFactorManager;
+import pl.dawcou.astralogin.system.seasonal.SeasonalEventManager;
 import pl.dawcou.astralogin.system.tasks.SecurityReminderTask;
 import pl.dawcou.astralogin.system.utils.SoundManager;
 
@@ -105,6 +106,8 @@ public class AstraLogin extends JavaPlugin implements Listener {
     private NoticeManager noticeManager;
     private SecurityReminderTask securityReminderTask;
 
+    private SeasonalEventManager seasonalEventManager;
+
     // ----------------------------------------------------------------------------------------------------
     // PROTOKOLY, NASLUCHIWACZE I KOMENDY
     // ----------------------------------------------------------------------------------------------------
@@ -166,6 +169,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
     public SpawnManager getSpawnManager() { return spawnManager; }
     public InventoryManager getInventoryManager() { return inventoryManager; }
     public NoticeManager getNoticeManager() { return noticeManager; }
+    public SeasonalEventManager getSeasonalEventManager() { return seasonalEventManager; }
 
     // ----------------------------------------------------------------------------------------------------
     // GETTERY - PROTOKOLY I KOMENDY
@@ -213,6 +217,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
         languageManager = new LanguageManager(this);
         languageManager.bootstrap(); // Ładujemy wstępnie języki, aby komunikaty w NoticeManager działały bezpiecznie
         noticeManager = new NoticeManager(this);
+        seasonalEventManager = new SeasonalEventManager(this);
 
         // 3. Migracje danych
         new MigrationManager(this).migrate();
@@ -433,6 +438,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
         ipManager.reload();
 
         securityReminderTask.start();
+        seasonalEventManager.loadEvents();
 
         spawnManager.reload();
         sessionManager.reload();

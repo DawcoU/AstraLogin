@@ -45,6 +45,8 @@ Paper or its forks are strongly recommended for the best experience.
   * **HEX Colors:** Full support for modern HEX color codes in the prefix and all messages via MiniMessage/Legacy! 🌈🎨🖌️
   * **Interactive Sound Effects:** Plays custom, configurable sound effects during various player actions (e.g., successful login, wrong password entry, invalid password format) to enhance the user experience. 🔊🎶✨
 
+* **Seasonal Events:** 🎃🎄 Automatically activates themed events during configured dates, replacing standard sound effects with randomly selected seasonal sounds and displaying atmospheric messages.
+
 * **Localization & Multilingual Support:** Native built-in language files with full translation support for **English**, **Polish**, **Spanish**, and **German**. 🌐🇵🇱🇬🇧🇪🇸🇩🇪
 
 * **Admin Utilities:** 🛠️⚙️🧰
