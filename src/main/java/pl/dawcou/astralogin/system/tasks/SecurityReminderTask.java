@@ -3,7 +3,7 @@ package pl.dawcou.astralogin.system.tasks;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.system.utils.SoundManager;
+import pl.dawcou.astralogin.system.SoundManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 import pl.dawcou.astralogin.system.SchedulerManager;
 
@@ -72,7 +72,7 @@ public class SecurityReminderTask {
      */
     public synchronized void stop() {
         if (currentTask != null) {
-            currentTask.cancel(); // Twój interfejs Task udostępnia metodę cancel()
+            currentTask.cancel();
             currentTask = null;
         }
     }

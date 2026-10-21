@@ -12,7 +12,7 @@ import org.bukkit.potion.PotionEffectType;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.manage.spawn.SpawnType;
 import pl.dawcou.astralogin.auth.passwords.PasswordValidator;
-import pl.dawcou.astralogin.system.utils.SoundManager;
+import pl.dawcou.astralogin.system.SoundManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 
 import java.time.Duration;

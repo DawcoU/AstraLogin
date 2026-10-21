@@ -1,11 +1,10 @@
-package pl.dawcou.astralogin.auth.security.premium.protocol;
+package pl.dawcou.astralogin.auth.security.premium.protocol.listeners;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.mojang.authlib.GameProfile;
 import io.netty.channel.Channel;
 import org.bukkit.Bukkit;
@@ -14,6 +13,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.security.premium.api.MojangApiService;
+import pl.dawcou.astralogin.auth.security.premium.protocol.LoginCompleter;
+import pl.dawcou.astralogin.auth.security.premium.protocol.NMSReflection;
+import pl.dawcou.astralogin.auth.security.premium.protocol.NettyChannelExtractor;
 import pl.dawcou.astralogin.auth.security.premium.protocol.cipher.EncryptionUtils;
 import pl.dawcou.astralogin.auth.security.premium.session.PremiumSessionManager;
 
@@ -29,7 +31,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-public class PacketListener implements Listener {
+public class ProtocolLibListener implements Listener {
 
     private final AstraLogin plugin;
     private final ProtocolManager protocolManager;
@@ -39,7 +41,7 @@ public class PacketListener implements Listener {
     private final NettyChannelExtractor nettyExtractor;
     private final PremiumSessionManager sessionManager;
 
-    public PacketListener(AstraLogin plugin, ProtocolManager protocolManager) {
+    public ProtocolLibListener(AstraLogin plugin, ProtocolManager protocolManager) {
         this.plugin = plugin;
         this.protocolManager = protocolManager;
         this.keyPair = plugin.getKeyPair();
@@ -51,34 +53,16 @@ public class PacketListener implements Listener {
         registerListeners();
     }
 
-    public void debug(String message) {
-        if (plugin.isDebugEnabled()) {
-            plugin.getLogger().info(message);
-        }
-    }
-
-    public void debugWarning(String message) {
-        if (plugin.isDebugEnabled()) {
-            plugin.getLogger().warning(message);
-        }
-    }
-
-    public void debugSevere(String message) {
-        if (plugin.isDebugEnabled()) {
-            plugin.getLogger().severe(message);
-        }
-    }
-
     private void registerListeners() {
         // --- 1. ODBIERANIE PACKET START & WYSYŁANIE ENCRYPTION REQUEST ---
         protocolManager.addPacketListener(new PacketAdapter(plugin, PacketType.Login.Client.START) {
             @Override
             public void onPacketReceiving(PacketEvent event) {
-                debug("DEBUG [1.0] 📥 Received START packet.");
+                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [1.0] 📥 Received START packet.");
 
-                boolean premiumAllowed = PacketListener.this.plugin.getPremiumManager().premiumLoginRequirements("FULL");
+                boolean premiumAllowed = ProtocolLibListener.this.plugin.getPremiumManager().premiumLoginRequirements("FULL");
                 if (!premiumAllowed) {
-                    debug("DEBUG [1.1] ⏭️ Premium login is not allowed.");
+                    ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [1.1] ⏭️ Premium login is not allowed.");
                     return;
                 }
 
@@ -89,9 +73,12 @@ public class PacketListener implements Listener {
                     username = event.getPacket().getStrings().read(0);
                 } catch (Exception e) {
                     try {
-                        WrappedGameProfile profile = event.getPacket().getGameProfiles().readSafely(0);
-                        if (profile == null || profile.getName() == null) return;
-                        username = profile.getName();
+                        // 1. Odczytujemy obiekt jako WrappedGameProfile z ProtocolLiba
+                        com.comphenix.protocol.wrappers.WrappedGameProfile wrappedProfile = event.getPacket().getGameProfiles().readSafely(0);
+
+                        if (wrappedProfile == null || wrappedProfile.getName() == null) return;
+
+                        username = wrappedProfile.getName();
                     } catch (Exception ex) {
                         ex.printStackTrace();
                         return;
@@ -100,14 +87,14 @@ public class PacketListener implements Listener {
 
                 final String playerName = username;
 
-                debug("DEBUG [1.2] 👤 Username received: " + username);
+                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [1.2] 👤 Username received: " + username);
 
                 // Wyciągamy adres i Channel na głównym wątku
-                Channel channel = nettyExtractor.extractChannelFromEvent(event);
+                Channel channel = extractChannelFromEvent(event);
 
-                debug("DEBUG [1.3] 🔌 Netty channel extracted: " + channel);
+                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [1.3] 🔌 Netty channel extracted: " + channel);
 
-                UUID playerUuid = PacketListener.this.plugin.getAccountManager().getUuidByUsername(username);
+                UUID playerUuid = ProtocolLibListener.this.plugin.getAccountManager().getUuidByUsername(username);
 
                 // Jeśli gracz nie istnieje jeszcze w usermap, wyliczamy tymczasowe Offline UUID
                 if (playerUuid == null) {
@@ -117,25 +104,25 @@ public class PacketListener implements Listener {
                     );
                 }
 
-                boolean isRegistered = PacketListener.this.plugin.getPasswordManager().isRegistered(playerUuid);
+                boolean isRegistered = ProtocolLibListener.this.plugin.getPasswordManager().isRegistered(playerUuid);
 
                 if (isRegistered) {
                     // ZAREJESTROWANY: Ustawiamy flagę na true (aktywujemy bypass dla znanego gracza)
-                    debugWarning("DEBUG [1.4] 🔒 Player " + username + " is registered. Enabling premium bypass flag.");
-                    PacketListener.this.plugin.getPremiumManager().markPendingBypass(playerUuid, true);
+                    ProtocolLibListener.this.plugin.getPremiumManager().debugWarning("DEBUG [1.4] 🔒 Player " + username + " is registered. Enabling premium bypass flag.");
+                    ProtocolLibListener.this.plugin.getPremiumManager().markPendingBypass(playerUuid, true);
                 } else {
                     // NIEZAREJESTROWANY: Ustawiamy flagę na false (brak gotowej autoryzacji)
-                    debugWarning("DEBUG [1.4] ℹ️ Player " + username + " is not registered. Setting bypass flag to false.");
-                    PacketListener.this.plugin.getPremiumManager().markPendingBypass(playerUuid, false);
+                    ProtocolLibListener.this.plugin.getPremiumManager().debugWarning("DEBUG [1.4] ℹ️ Player " + username + " is not registered. Setting bypass flag to false.");
+                    ProtocolLibListener.this.plugin.getPremiumManager().markPendingBypass(playerUuid, false);
                 }
 
-                debug("DEBUG [1.5] 🛑 Cancelling original START packet for premium verification.");
+                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [1.5] 🛑 Cancelling original START packet for premium verification.");
 
                 event.setCancelled(true);
                 final PacketContainer startPacket = event.getPacket();
 
-                PacketListener.this.plugin.getSchedulerManager().runAsync(() -> {
-                    boolean isAccountPremium = PacketListener.this.plugin.getPremiumManager().isUsernamePremium(playerName);
+                ProtocolLibListener.this.plugin.getSchedulerManager().runAsync(() -> {
+                    boolean isAccountPremium = ProtocolLibListener.this.plugin.getPremiumManager().isUsernamePremium(playerName);
 
                     if (!isAccountPremium) {
                         try {
@@ -146,19 +133,19 @@ public class PacketListener implements Listener {
                         return;
                     }
 
-                    PacketListener.this.plugin.getSchedulerManager().runSync(() -> {
+                    ProtocolLibListener.this.plugin.getSchedulerManager().runSync(() -> {
                         if (channel != null) {
-                            debug("DEBUG [2.0] 🔌 BEFORE ENCRYPTION_BEGIN pipeline=" + channel.pipeline().names());
+                            ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [2.0] 🔌 BEFORE ENCRYPTION_BEGIN pipeline=" + channel.pipeline().names());
                         } else {
-                            debugSevere("DEBUG [2.0.ERR] ❌ Could not extract channel for " + playerName);
+                            ProtocolLibListener.this.plugin.getPremiumManager().debugSevere("DEBUG [2.0.ERR] ❌ Could not extract channel for " + playerName);
                             return;
                         }
 
                         sessionManager.createSession(channel, playerName);
-                        debug("DEBUG [2.1] 🔐 Premium session created for " + playerName);
+                        ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [2.1] 🔐 Premium session created for " + playerName);
 
                         byte[] verifyToken = sessionManager.getVerifyToken(channel);
-                        debug("DEBUG [2.2] 🎫 Verify token generated.");
+                        ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [2.2] 🎫 Verify token generated.");
 
                         PacketContainer encryptionRequest = protocolManager.createPacket(PacketType.Login.Server.ENCRYPTION_BEGIN);
 
@@ -176,28 +163,28 @@ public class PacketListener implements Listener {
                             // 4. ShouldAuthenticate
                             if (encryptionRequest.getBooleans().size() > 0) {
                                 encryptionRequest.getBooleans().write(0, true);
-                                debug("DEBUG [2.3] 🔒 Encryption Request shouldAuthenticate=true");
+                                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [2.3] 🔒 Encryption Request shouldAuthenticate=true");
                             }
 
                             // === WAŻNY DEBUG ===
                             try {
                                 MessageDigest md = MessageDigest.getInstance("SHA-1");
-                                debug("DEBUG [2.4] 🔑 Our public key length: " + pubKeyBytes.length);
-                                debug("DEBUG [2.5] 🔑 Our public key SHA1: " +
+                                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [2.4] 🔑 Our public key length: " + pubKeyBytes.length);
+                                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [2.5] 🔑 Our public key SHA1: " +
                                         String.format("%040x", new BigInteger(1, md.digest(pubKeyBytes))));
 
                                 byte[] packetKey = encryptionRequest.getByteArrays().read(0);
-                                debug("DEBUG [2.6] 🔑 Packet public key length: " + packetKey.length);
-                                debug("DEBUG [2.7] 🔑 Packet public key SHA1: " +
+                                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [2.6] 🔑 Packet public key length: " + packetKey.length);
+                                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [2.7] 🔑 Packet public key SHA1: " +
                                         String.format("%040x", new BigInteger(1, md.digest(packetKey))));
-                                debug("DEBUG [2.8] 🔑 Keys match: " + Arrays.equals(pubKeyBytes, packetKey));
+                                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [2.8] 🔑 Keys match: " + Arrays.equals(pubKeyBytes, packetKey));
                             } catch (Exception ex) {
-                                debugWarning("DEBUG [2.ERR] ⚠️ Failed to verify public key: " + ex.getMessage());
+                                ProtocolLibListener.this.plugin.getPremiumManager().debugWarning("DEBUG [2.ERR] ⚠️ Failed to verify public key: " + ex.getMessage());
                             }
                             // === KONIEC WAŻNEGO DEBUG ===
 
                             protocolManager.sendServerPacket(player, encryptionRequest);
-                            debug("DEBUG [2.9] 📤 Encryption Request sent to " + playerName);
+                            ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [2.9] 📤 Encryption Request sent to " + playerName);
 
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -215,20 +202,20 @@ public class PacketListener implements Listener {
         ) {
             @Override
             public void onPacketReceiving(PacketEvent event) {
-                debug("DEBUG [3.0] 📥 Received ENCRYPTION_BEGIN packet from client.");
+                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [3.0] 📥 Received ENCRYPTION_BEGIN packet from client.");
 
                 Player player = event.getPlayer();
 
                 if (player == null) {
-                    debugWarning("DEBUG [3.1] ❌ Player is null!");
+                    ProtocolLibListener.this.plugin.getPremiumManager().debugWarning("DEBUG [3.1] ❌ Player is null!");
                     return;
                 }
 
                 // Pobieramy Channel od razu
-                Channel channel = nettyExtractor.extractChannelFromEvent(event);
+                Channel channel = extractChannelFromEvent(event);
 
                 if (channel == null) {
-                    debugSevere("DEBUG [3.2] ❌ Could not extract Netty channel");
+                    ProtocolLibListener.this.plugin.getPremiumManager().debugSevere("DEBUG [3.2] ❌ Could not extract Netty channel");
                     return;
                 }
 
@@ -243,13 +230,13 @@ public class PacketListener implements Listener {
                 String username = sessionManager.getUsername(channel);
                 byte[] expectedToken = sessionManager.getVerifyToken(channel);
 
-                debug("DEBUG [3.3] 🔎 Session lookup: " +
+                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [3.3] 🔎 Session lookup: " +
                         "channel=" + channel +
                         ", pendingUsername=" + username +
                         ", tokenPresent=" + (expectedToken != null));
 
                 if (username == null || expectedToken == null) {
-                    debug("DEBUG [3.4] ⏭️ No premium session for channel - bypassing.");
+                    ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [3.4] ⏭️ No premium session for channel - bypassing.");
                     return;
                 }
 
@@ -259,23 +246,23 @@ public class PacketListener implements Listener {
                 // Pobieramy dane pakietu
                 PacketContainer packet = event.getPacket();
 
-                debug("DEBUG [4.0] 📦 ByteArrays size: " + packet.getByteArrays().getValues().size());
-                debug("DEBUG [4.1] 📦 Packet structure: " + packet.getModifier());
+                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [4.0] 📦 ByteArrays size: " + packet.getByteArrays().getValues().size());
+                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [4.1] 📦 Packet structure: " + packet.getModifier());
 
                 for (int i = 0; i < packet.getModifier().size(); i++) {
                     try {
                         Object value = packet.getModifier().read(i);
-                        debug("DEBUG [4.2] 📦 Field " + i + ": "
+                        ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [4.2] 📦 Field " + i + ": "
                                 + (value != null ? value.getClass().getName() : "null"));
                     } catch (Exception e) {
-                        debugWarning("DEBUG [4.2] ⚠️ Field " + i + ": <read failed: "
+                        ProtocolLibListener.this.plugin.getPremiumManager().debugWarning("DEBUG [4.2] ⚠️ Field " + i + ": <read failed: "
                                 + e.getClass().getSimpleName() + ">");
                     }
                 }
 
                 Object secondField = packet.getModifier().read(1);
-                debug("DEBUG [4.3] 📦 Field 1 class: " + secondField.getClass().getName());
-                debug("DEBUG [4.4] 📦 Field 1 toString: " + secondField);
+                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [4.3] 📦 Field 1 class: " + secondField.getClass().getName());
+                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [4.4] 📦 Field 1 toString: " + secondField);
 
                 byte[] encryptedSecret;
                 byte[] encryptedToken;
@@ -321,7 +308,7 @@ public class PacketListener implements Listener {
                 } catch (Exception e) {
                     sessionManager.removeSession(channel);
 
-                    debugSevere(
+                    ProtocolLibListener.this.plugin.getPremiumManager().debugSevere(
                             "DEBUG [4.ERR] ❌ Failed to read byte arrays from packet: "
                                     + e.getClass().getName()
                                     + ": "
@@ -332,11 +319,11 @@ public class PacketListener implements Listener {
                     return;
                 }
 
-                debug("DEBUG [4.5] 🔐 Encrypted secret/token successfully extracted.");
+                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [4.5] 🔐 Encrypted secret/token successfully extracted.");
 
                 if (encryptedSecret == null || encryptedToken == null) {
                     sessionManager.removeSession(channel);
-                    debugWarning("DEBUG [4.ERR] ❌ Null encryption data received from " + clientAddress);
+                    ProtocolLibListener.this.plugin.getPremiumManager().debugWarning("DEBUG [4.ERR] ❌ Null encryption data received from " + clientAddress);
                     return;
                 }
 
@@ -344,8 +331,8 @@ public class PacketListener implements Listener {
                 final byte[] finalEncryptedToken = encryptedToken;
 
                 // Przechodzimy do wykonywania zadań asynchronicznych z pobranymi danymi
-                PacketListener.this.plugin.getSchedulerManager().runAsync(() -> {
-                    debug("DEBUG [5.0] 🔓 Starting RSA decryption for " + username);
+                ProtocolLibListener.this.plugin.getSchedulerManager().runAsync(() -> {
+                    ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [5.0] 🔓 Starting RSA decryption for " + username);
 
                     SecretKey sharedSecret;
                     byte[] decryptedToken;
@@ -362,52 +349,52 @@ public class PacketListener implements Listener {
                         return;
                     }
 
-                    debug("DEBUG [5.1] 🔓 RSA decryption completed.");
+                    ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [5.1] 🔓 RSA decryption completed.");
 
                     if (sharedSecret == null || decryptedToken == null) {
                         sessionManager.removeSession(channel);
-                        debugWarning("DEBUG [5.ERR] ❌ Failed to decrypt shared secret or verify token.");
+                        ProtocolLibListener.this.plugin.getPremiumManager().debugWarning("DEBUG [5.ERR] ❌ Failed to decrypt shared secret or verify token.");
                         channel.close();
                         return;
                     }
 
                     boolean tokenMatches = Arrays.equals(expectedToken, decryptedToken);
 
-                    debug("DEBUG [5.2] 🎫 Verify token match: " + tokenMatches);
+                    ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [5.2] 🎫 Verify token match: " + tokenMatches);
 
                     if (!tokenMatches) {
                         sessionManager.removeSession(channel);
-                        debugWarning("DEBUG [5.ERR] ❌ Verify token mismatch for " + clientAddress + "!");
+                        ProtocolLibListener.this.plugin.getPremiumManager().debugWarning("DEBUG [5.ERR] ❌ Verify token mismatch for " + clientAddress + "!");
                         channel.close();
                         return;
                     }
 
                     sessionManager.removeSession(channel);
 
-                    debug("DEBUG [5.3] 🧹 Premium session removed.");
+                    ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [5.3] 🧹 Premium session removed.");
 
-                    debug("DEBUG [5.4] 🔑 SharedSecret raw bytes length: " + sharedSecret.getEncoded().length);
-                    debug("DEBUG [5.5] 🔑 PublicKey raw bytes length: " +
+                    ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [5.4] 🔑 SharedSecret raw bytes length: " + sharedSecret.getEncoded().length);
+                    ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [5.5] 🔑 PublicKey raw bytes length: " +
                             (keyPair.getPublic() != null ? keyPair.getPublic().getEncoded().length : "null"));
 
                     try {
                         String serverId = "";
                         String serverHash = EncryptionUtils.generateServerHash(serverId, keyPair.getPublic(), sharedSecret);
 
-                        debug("DEBUG [6.0] 🔢 serverId='" + serverId + "'");
-                        debug("DEBUG [6.1] 🔢 sharedSecretLength=" + sharedSecret.getEncoded().length);
-                        debug("DEBUG [6.2] 🔢 publicKeyLength=" + keyPair.getPublic().getEncoded().length);
-                        debug("DEBUG [6.3] 🔢 serverHash=" + serverHash);
+                        ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [6.0] 🔢 serverId='" + serverId + "'");
+                        ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [6.1] 🔢 sharedSecretLength=" + sharedSecret.getEncoded().length);
+                        ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [6.2] 🔢 publicKeyLength=" + keyPair.getPublic().getEncoded().length);
+                        ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [6.3] 🔢 serverHash=" + serverHash);
 
-                        debug("DEBUG [6.4] 🌐 Querying Mojang hasJoined API for " + username);
+                        ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [6.4] 🌐 Querying Mojang hasJoined API for " + username);
 
-                        WrappedGameProfile mojangProfile = mojangApi.fetchMojangProfile(username, serverHash);
+                        GameProfile mojangProfile = mojangApi.fetchMojangProfile(username, serverHash);
 
-                        debug("DEBUG [6.5] 🌐 Mojang response: " +
+                        ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [6.5] 🌐 Mojang response: " +
                                 (mojangProfile != null ? "PREMIUM PROFILE FOUND" : "NO PREMIUM SESSION"));
 
                         if (mojangProfile == null) {
-                            debugWarning("DEBUG [7.2] ⚠️ No Mojang session found for " + username +
+                            ProtocolLibListener.this.plugin.getPremiumManager().debugWarning("DEBUG [7.2] ⚠️ No Mojang session found for " + username +
                                     ". Falling back to offline login.");
 
                             sessionManager.removeSession(channel);
@@ -415,12 +402,11 @@ public class PacketListener implements Listener {
                             // Generate standard offline profile (v3 UUID)
                             UUID offlineUuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(StandardCharsets.UTF_8));
                             GameProfile offlineNmsProfile = new GameProfile(offlineUuid, username);
-                            WrappedGameProfile offlineWrappedProfile = WrappedGameProfile.fromHandle(offlineNmsProfile);
 
                             // Mark as non-premium so AstraLogin forces password check
-                            PacketListener.this.plugin.getPremiumManager().setAuthenticated(offlineUuid, false);
+                            ProtocolLibListener.this.plugin.getPremiumManager().setAuthenticated(offlineUuid, false);
 
-                            debug("DEBUG [7.3] 🔐 Enabling AES encryption on offline channel.");
+                            ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [7.3] 🔐 Enabling AES encryption on offline channel.");
 
                             // CRITICAL: We MUST enable AES encryption on Netty pipeline, because client already enabled it!
                             nettyExtractor.enableEncryptionOnChannel(channel, sharedSecret, () -> {
@@ -437,7 +423,7 @@ public class PacketListener implements Listener {
                                     Bukkit.getPluginManager().callEvent(preLoginEvent);
 
                                     if (preLoginEvent.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED) {
-                                        debug("DEBUG [7.3b] ❌ Pre-login event denied offline connection: " + preLoginEvent.getKickMessage());
+                                        ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [7.3b] ❌ Pre-login event denied offline connection: " + preLoginEvent.getKickMessage());
                                         if (channel.isOpen()) {
                                             channel.close();
                                         }
@@ -445,12 +431,12 @@ public class PacketListener implements Listener {
                                     }
 
                                     // Dokończenie logowania synchronicznie
-                                    PacketListener.this.plugin.getSchedulerManager().runSync(() -> {
-                                        new LoginCompleter(PacketListener.this.plugin)
-                                                .complete(channel, offlineUuid, offlineWrappedProfile);
+                                    ProtocolLibListener.this.plugin.getSchedulerManager().runSync(() -> {
+                                        new LoginCompleter(ProtocolLibListener.this.plugin)
+                                                .complete(channel, offlineUuid, offlineNmsProfile);
                                     });
 
-                                    debug("DEBUG [7.4] 🔓 Encryption injected and offline login completed for " + username);
+                                    ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [7.4] 🔓 Encryption injected and offline login completed for " + username);
 
                                 } catch (Exception e) {
                                     plugin.getLogger().severe("[7.ERR] ❌ Error during offline AsyncPlayerPreLoginEvent execution: "
@@ -464,44 +450,25 @@ public class PacketListener implements Listener {
                             return;
                         }
 
-                        //------------------------------------------------------------------------------
-                        // Pobieranie UUID oraz pola 'name' z nmsHandle
-                        //------------------------------------------------------------------------------
-                        GameProfile nmsHandle = (GameProfile) mojangProfile.getHandle();
-                        UUID uuid = null;
-                        String name = null;
-
-                        try {
-                            java.lang.reflect.Field idField = GameProfile.class.getDeclaredField("id");
-                            idField.setAccessible(true);
-                            uuid = (UUID) idField.get(nmsHandle);
-
-                            java.lang.reflect.Field nameField = GameProfile.class.getDeclaredField("name");
-                            nameField.setAccessible(true);
-                            name = (String) nameField.get(nmsHandle);
-                        } catch (Exception e) {
-                            plugin.getLogger().severe("Could not extract data from GameProfile: " + e.getMessage());
-                        }
-
-                        if (name == null) {
-                            name = username;
+                        UUID finalUUID = NMSReflection.getProfileId(mojangProfile);
+                        String finalName = NMSReflection.getProfileName(mojangProfile);
+                        if (finalName.equals("Unknown")) {
+                            finalName = username;
                         }
 
                         // Wstrzykujemy szyfrowanie bezpośrednio do obiektu Channel
-                        debug("DEBUG [7.0] 🔐 Enabling AES encryption on premium channel.");
+                        ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [7.0] 🔐 Enabling AES encryption on premium channel.");
 
-                        UUID finalUUID = uuid;
-                        String finalName = name;
-
+                        String finalUsername = finalName;
                         nettyExtractor.enableEncryptionOnChannel(channel, sharedSecret, () -> {
-                            debug("DEBUG [7.1] 🚀 Passing premium profile to LoginCompleter.");
+                            ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [7.1] 🚀 Passing premium profile to LoginCompleter.");
 
                             try {
                                 InetAddress address = ((java.net.InetSocketAddress) channel.remoteAddress()).getAddress();
 
                                 AsyncPlayerPreLoginEvent preLoginEvent =
                                         new AsyncPlayerPreLoginEvent(
-                                                finalName,
+                                                finalUsername,
                                                 address,
                                                 finalUUID
                                         );
@@ -509,7 +476,7 @@ public class PacketListener implements Listener {
                                 Bukkit.getPluginManager().callEvent(preLoginEvent);
 
                                 if (preLoginEvent.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED) {
-                                    debug("DEBUG [7.2] ❌ Pre-login event denied connection: " + preLoginEvent.getKickMessage());
+                                    ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [7.2] ❌ Pre-login event denied connection: " + preLoginEvent.getKickMessage());
                                     if (channel.isOpen()) {
                                         channel.close();
                                     }
@@ -517,8 +484,8 @@ public class PacketListener implements Listener {
                                 }
 
                                 // Sync completion
-                                PacketListener.this.plugin.getSchedulerManager().runSync(() -> {
-                                    new LoginCompleter(PacketListener.this.plugin)
+                                ProtocolLibListener.this.plugin.getSchedulerManager().runSync(() -> {
+                                    new LoginCompleter(ProtocolLibListener.this.plugin)
                                             .complete(channel, finalUUID, mojangProfile);
                                 });
 
@@ -543,5 +510,26 @@ public class PacketListener implements Listener {
                 });
             }
         });
+    }
+
+    private Channel extractChannelFromEvent(com.comphenix.protocol.events.PacketEvent event) {
+        try {
+            org.bukkit.entity.Player player = event.getPlayer();
+            if (player == null) return null;
+
+            com.comphenix.protocol.injector.netty.Injector injector =
+                    com.comphenix.protocol.injector.temporary.TemporaryPlayerFactory.getInjectorFromPlayer(player);
+            if (injector == null) return null;
+
+            com.comphenix.protocol.reflect.accessors.FieldAccessor channelAccessor =
+                    com.comphenix.protocol.reflect.accessors.Accessors.getFieldAccessor(injector.getClass(), Channel.class, true);
+
+            return (Channel) channelAccessor.get(injector);
+        } catch (Exception e) {
+            if (plugin.isDebugEnabled()) {
+                e.printStackTrace();
+            }
+            return null;
+        }
     }
 }

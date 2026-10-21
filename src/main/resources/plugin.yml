@@ -4,7 +4,10 @@ main: pl.dawcou.astralogin.AstraLogin
 api-version: '1.18'
 load: STARTUP
 author: DawcoU
-softdepend: [ProtocolLib]
+softdepend:
+  - ProtocolLib
+  - PacketEvents
+
 folia-supported: true
 
 commands:

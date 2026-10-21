@@ -117,7 +117,7 @@ public class LanguageManager {
             String fullPath = path.isEmpty() ? key : path + "." + key;
 
             if (section.isConfigurationSection(key)) {
-                loadMessages(section.getConfigurationSection(key), fullPath);
+                loadMessages(Objects.requireNonNull(section.getConfigurationSection(key)), fullPath);
             } else if (section.isList(key)) {
                 // Zapisujemy surową listę bez ponownego parsowania na tym etapie
                 rawLists.put(fullPath, section.getStringList(key));

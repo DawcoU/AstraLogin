@@ -1,8 +1,7 @@
 package pl.dawcou.astralogin.auth.security.premium.api;
 
-import com.comphenix.protocol.wrappers.WrappedGameProfile;
-import com.comphenix.protocol.wrappers.WrappedSignedProperty;
 import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -25,17 +24,16 @@ public class MojangApiService {
         this.plugin = plugin;
     }
 
-    public WrappedGameProfile fetchMojangProfile(String username, String serverHash) {
+    /**
+     * Uniwersalna metoda pobierająca profil gracza z Mojang API (lub mocka dev),
+     * zwracająca czysty obiekt GameProfile (w pełni niezależny od ProtocolLib).
+     */
+    public GameProfile fetchMojangProfile(String username, String serverHash) {
         if (plugin.isDevMockMode()) {
             plugin.getLogger().warning("[DEV-MOCK] Bypassing HTTP request to Mojang for testing!");
 
             UUID mockUuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(StandardCharsets.UTF_8));
-
-            // Tworzymy prawdziwy obiekt NMS-owy z Mojang AuthLib
-            GameProfile nmsProfile = new GameProfile(mockUuid, username);
-
-            // Opakowujemy go w WrappedGameProfile metodą fromHandle
-            return WrappedGameProfile.fromHandle(nmsProfile);
+            return new GameProfile(mockUuid, username);
         }
 
         try {
@@ -44,8 +42,8 @@ public class MojangApiService {
                     + "&serverId="
                     + URLEncoder.encode(serverHash, StandardCharsets.UTF_8);
 
-            plugin.getPacketListener().debug("DEBUG [Mojang API] 🌐 Requesting hasJoined: username=" + username + ", serverHash=" + serverHash);
-            plugin.getPacketListener().debug("DEBUG [Mojang API] 🔗 Full URL: " + urlString);
+            plugin.getLogger().info("DEBUG [Mojang API] 🌐 Requesting hasJoined: username=" + username + ", serverHash=" + serverHash);
+            plugin.getLogger().info("DEBUG [Mojang API] 🔗 Full URL: " + urlString);
 
             URL url = URI.create(urlString).toURL();
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -75,7 +73,7 @@ public class MojangApiService {
                         "$1-$2-$3-$4-$5"
                 ));
 
-                WrappedGameProfile profile = new WrappedGameProfile(uuid, name);
+                GameProfile profile = new GameProfile(uuid, name);
                 JSONArray properties = (JSONArray) response.get("properties");
 
                 if (properties != null) {
@@ -86,16 +84,17 @@ public class MojangApiService {
                         String signature = (String) prop.get("signature");
 
                         if (propName != null && value != null) {
-                            profile.getProperties().put(propName, new WrappedSignedProperty(propName, value, signature));
+                            // Dodajemy właściwości (np. textures) bezpośrednio do czystego GameProfile
+                            profile.getProperties().put(propName, new Property(propName, value, signature));
                         }
                     }
                 }
 
-                plugin.getPacketListener().debug("DEBUG [MOJANG-API] 🔓 Player " + name + " successfully verified by Mojang!");
+                plugin.getLogger().info("DEBUG [MOJANG-API] 🔓 Player " + name + " successfully verified by Mojang!");
 
                 return profile;
             } else {
-                plugin.getPacketListener().debugSevere("DEBUG [Mojang API] ❌ Unexpected HTTP response=" + responseCode + " for " + username);
+                plugin.getLogger().severe("DEBUG [Mojang API] ❌ Unexpected HTTP response=" + responseCode + " for " + username);
             }
 
             return null;

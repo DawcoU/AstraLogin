@@ -226,4 +226,24 @@ public class SchedulerManager {
             Bukkit.getScheduler().runTask(plugin, runnable);
         }
     }
+
+    /**
+     * Executes a task synchronously on the specific region thread for a location on Folia,
+     * or on the main server thread on Paper.
+     */
+    public void executeAt(Location location, Runnable runnable) {
+        if (location == null || location.getWorld() == null) {
+            return;
+        }
+
+        if (hasPaperAsyncApi && isFolia) {
+            plugin.getServer().getRegionScheduler().execute(plugin, location, runnable);
+        } else {
+            if (Bukkit.isPrimaryThread()) {
+                runnable.run();
+            } else {
+                Bukkit.getScheduler().runTask(plugin, runnable);
+            }
+        }
+    }
 }

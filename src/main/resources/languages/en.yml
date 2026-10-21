@@ -1,6 +1,6 @@
 # #############################################################
 # #                                                           #
-# #                AstraLogin - Language File                 #
+# #                 AstraLogin - Language File                #
 # #                   Language: English (EN)                  #
 # #                                                           #
 # #############################################################
@@ -271,7 +271,7 @@ messages:
     usage: "&cCorrect usage: &e/resetpin <player>"
     no-has-pin: "&cThis player does not have a registered PIN!"
 
-    admin-success: "&aPlayer &6%player%'s PIN has been reset"
+    admin-success: "&aPlayer &6%player%['s] PIN has been reset"
 
     player-message: "&cYour PIN has been reset by the administrator!"
 
@@ -302,7 +302,7 @@ messages:
   # --- Reset 2FA (/reset2fa) ---
   reset-twofactor:
     usage: "&cCorrect usage: &e/reset2fa <player>"
-    admin-success: "&aSuccessfully removed two-factor authentication from &e%player%'s account"
+    admin-success: "&aSuccessfully removed two-factor authentication from &e%player%['s] account"
 
     not-found: "&cPlayer &6%target% &cdoes not have two-factor authentication (2FA) enabled!"
 
@@ -328,6 +328,7 @@ messages:
     delete-hover: "&aClick to permanently delete the spawn: &e%type%"
 
 
+# --- Seasonal Events ---
 seasonal-events:
   halloween:
     - "&6[Halloween] &cShadows of the past are watching your every &4step..."
@@ -335,3 +336,17 @@ seasonal-events:
     - "&6[Halloween] &cTrick or treat? There is no &4escape &ctoday!"
     - "&6[Halloween] &cDo you hear those quiet whispers behind your &4back?"
     - "&6[Halloween] &cThe night has just begun, and your &4fate &cis already sealed..."
+
+
+# --- Update System ---
+update:
+  api-error: "&cFailed to connect to the Modrinth API"
+  no-versions: "&cNo published versions were found"
+  up-to-date: "&aAstraLogin is already up to date"
+  local-newer: "&eThe installed version is newer than the latest version published on Modrinth. Update skipped"
+  no-files: "&cNo downloadable file was found for the latest version"
+  directory-error: "&cFailed to create the update directory"
+  download-error: "&cFailed to download the update"
+  downloaded: "&aAstraLogin update downloaded successfully"
+  restart-required: "&eRestart the server to apply the update"
+  failed: "&cAn error occurred while checking for or downloading the update"

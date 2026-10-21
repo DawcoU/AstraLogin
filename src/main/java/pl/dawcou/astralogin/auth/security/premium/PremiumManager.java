@@ -50,6 +50,24 @@ public class PremiumManager {
         this.plugin = plugin;
     }
 
+    public void debug(String message) {
+        if (plugin.isDebugEnabled()) {
+            plugin.getLogger().info(message);
+        }
+    }
+
+    public void debugWarning(String message) {
+        if (plugin.isDebugEnabled()) {
+            plugin.getLogger().warning(message);
+        }
+    }
+
+    public void debugSevere(String message) {
+        if (plugin.isDebugEnabled()) {
+            plugin.getLogger().severe(message);
+        }
+    }
+
     public boolean isPremium(Player p) {
         UUID uuid = p.getUniqueId();
 
@@ -164,7 +182,12 @@ public class PremiumManager {
         }
 
         if (mode.equalsIgnoreCase("FULL")) {
-            return plugin.getServer().getPluginManager().getPlugin("ProtocolLib") != null;
+            // Sprawdzamy faktycznie aktywny backend na serwerze (uwzględniający fallback)
+            if ("PACKETEVENTS".equalsIgnoreCase(plugin.getBackendManager().getActiveBackend())) {
+                return plugin.getServer().getPluginManager().getPlugin("packetevents") != null;
+            } else {
+                return plugin.getServer().getPluginManager().getPlugin("ProtocolLib") != null;
+            }
         }
 
         if (mode.equalsIgnoreCase("MINI")) {

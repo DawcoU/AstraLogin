@@ -72,13 +72,15 @@ security:
       # How long should a 2FA session last?
       session-time: "2 days"
 
-  # Premium Login
   auto-login:
     # Should premium login be enabled?
     enabled: true
 
+    # Backend selection: ProtocolLib or PacketEvents
+    backend: ProtocolLib
+
     # Available modes:
-    # FULL - Uses full player authentication (requires ProtocolLib installed)
+    # FULL - Uses full player authentication (requires ProtocolLib or PacketEvents installed, depending on the chosen packet backend)
     # MINI - Native AstraLogin system (Checks Mojang API for premium nick + verifies IP. NOTE: Prototype feature! Less secure because variable IPs allow cracked players to bypass password if they hit a matching IP).
     mode: FULL
 

@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.system.utils;
+package pl.dawcou.astralogin.system;
 
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.FileConfiguration;

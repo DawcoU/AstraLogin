@@ -1,12 +1,10 @@
 package pl.dawcou.astralogin.auth.security.premium.protocol;
 
-import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.mojang.authlib.GameProfile;
 import pl.dawcou.astralogin.AstraLogin;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 public final class NMSReflection {
@@ -18,39 +16,32 @@ public final class NMSReflection {
      *--------------------------------------------------------------------------------*/
     public static Object findPacketListener(AstraLogin plugin, Object packetHandler) throws Exception {
         if (packetHandler == null) {
-            plugin.getPacketListener().debug("DEBUG [NMS] Scanning PacketHandler: "
-                    + packetHandler.getClass().getName());
+            plugin.getPremiumManager().debug("DEBUG [NMS 1] PacketHandler is null!");
             return null;
         }
 
-        plugin.getPacketListener().debug("DEBUG [NMS] PacketHandler class: "
-                + packetHandler.getClass().getName());
+        plugin.getPremiumManager().debug("DEBUG [NMS 2] Scanning PacketHandler class: " + packetHandler.getClass().getName());
 
-        // 1. First attempt: Method invocation (Mojang mapped / 1.21+)
+        // 1. First attempt: Method invocation returning a packet listener
         for (Method method : packetHandler.getClass().getDeclaredMethods()) {
-            if (method.getParameterCount() == 0
-                    && "net.minecraft.network.PacketListener".equals(method.getReturnType().getName())) {
+            if (method.getParameterCount() == 0 && method.getReturnType().getName().contains("PacketListener")) {
                 method.setAccessible(true);
                 Object listener = method.invoke(packetHandler);
                 if (listener != null) {
-                    plugin.getPacketListener().debug("DEBUG [NMS] Found PacketListener via method: "
-                            + method.getName());
+                    plugin.getPremiumManager().debug("DEBUG [NMS 3] Found PacketListener via method: " + method.getName());
                     return listener;
                 }
             }
         }
 
-        // 2. Second attempt: Direct non-null field scan (Fallback for 1.18 - 1.20.4)
+        // 2. Second attempt: Direct field scan for PacketListener
         for (Class<?> clazz = packetHandler.getClass(); clazz != null; clazz = clazz.getSuperclass()) {
             for (Field field : clazz.getDeclaredFields()) {
-                if (field.getType().getName().equals("net.minecraft.network.PacketListener")) {
+                if (field.getType().getName().contains("PacketListener")) {
                     field.setAccessible(true);
                     Object listener = field.get(packetHandler);
-
-                    // Skip internal unassigned/null fields (e.g. field 'p' in 1.20.4)
                     if (listener != null) {
-                        plugin.getPacketListener().debug("DEBUG [NMS] Found active PacketListener in field: "
-                                + field.getName());
+                        plugin.getPremiumManager().debug("DEBUG [NMS 4] Found active PacketListener in field: " + field.getName());
                         return listener;
                     }
                 }
@@ -69,7 +60,6 @@ public final class NMSReflection {
                 }
             }
         }
-
         return null;
     }
 
@@ -81,41 +71,28 @@ public final class NMSReflection {
                 }
             }
         }
-
         return null;
     }
 
     public static Object findReadyState(AstraLogin plugin, Class<?> enumClass) {
         if (!enumClass.isEnum()) {
-            plugin.getPacketListener().debug("DEBUG [NMS-ERR] Provided class is not an enum: "
-                    + enumClass.getName());
+            plugin.getPremiumManager().debug("DEBUG [NMS-ERR 1] Provided class is not an enum: " + enumClass.getName());
             plugin.getLogger().severe("[NMS-ERR] Failed to resolve ready state: Target class is not an enum.");
             return null;
         }
 
-        plugin.getPacketListener().debug("DEBUG [NMS] Scanning login state enum: "
-                + enumClass.getName());
+        plugin.getPremiumManager().debug("DEBUG [NMS 5] Scanning login state enum: " + enumClass.getName());
 
         Object[] constants = enumClass.getEnumConstants();
-
-        for (Object constant : constants) {
-            plugin.getPacketListener().debug("DEBUG [NMS] Evaluated state constant: "
-                    + ((Enum<?>) constant).name());
-        }
-
         for (Object constant : constants) {
             String name = ((Enum<?>) constant).name();
-
             if ("READY_TO_ACCEPT".equals(name) || "ACCEPTED".equals(name)) {
-                plugin.getPacketListener().debug("DEBUG [NMS] Compatible ready state resolved: "
-                        + name);
+                plugin.getPremiumManager().debug("DEBUG [NMS 6] Compatible ready state resolved: " + name);
                 return constant;
             }
         }
 
-        plugin.getPacketListener().debug("DEBUG [NMS-ERR] No compatible enum state found in "
-                + enumClass.getName());
-
+        plugin.getPremiumManager().debug("DEBUG [NMS-ERR 2] No compatible enum state found in " + enumClass.getName());
         plugin.getLogger().severe("Could not find READY_TO_ACCEPT or ACCEPTED state constant!");
         return null;
     }
@@ -127,35 +104,53 @@ public final class NMSReflection {
             } catch (NoSuchMethodException ignored) {
             }
         }
-
         return null;
     }
 
-    public static GameProfile toNmsProfile(WrappedGameProfile wrapped) {
-        if (wrapped != null && wrapped.getHandle() instanceof GameProfile directProfile) {
-            return directProfile;
+    public static UUID getProfileId(GameProfile profile) {
+        if (profile == null) return null;
+        try {
+            Method method = profile.getClass().getMethod("id");
+            return (UUID) method.invoke(profile);
+        } catch (Exception e1) {
+            try {
+                Method method = profile.getClass().getMethod("getId");
+                return (UUID) method.invoke(profile);
+            } catch (Exception e2) {
+                try {
+                    Field field = profile.getClass().getDeclaredField("id");
+                    field.setAccessible(true);
+                    return (UUID) field.get(profile);
+                } catch (Exception e3) {
+                    return null;
+                }
+            }
         }
-
-        return new GameProfile(
-                UUID.nameUUIDFromBytes(
-                        "OfflinePlayer:Unknown".getBytes(StandardCharsets.UTF_8)
-                ),
-                "Unknown"
-        );
     }
-
 
     public static String getProfileName(GameProfile profile) {
         if (profile == null) {
             return "Unknown";
         }
-
         try {
-            Field nameField = GameProfile.class.getDeclaredField("name");
-            nameField.setAccessible(true);
-            return (String) nameField.get(profile);
-        } catch (Exception e) {
-            return "Unknown";
+            Method method = profile.getClass().getMethod("name");
+            String name = (String) method.invoke(profile);
+            return name != null ? name : "Unknown";
+        } catch (Exception e1) {
+            try {
+                Method method = profile.getClass().getMethod("getName");
+                String name = (String) method.invoke(profile);
+                return name != null ? name : "Unknown";
+            } catch (Exception e2) {
+                try {
+                    Field field = profile.getClass().getDeclaredField("name");
+                    field.setAccessible(true);
+                    String name = (String) field.get(profile);
+                    return name != null ? name : "Unknown";
+                } catch (Exception e3) {
+                    return "Unknown";
+                }
+            }
         }
     }
 }

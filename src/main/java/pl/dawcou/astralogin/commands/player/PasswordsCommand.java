@@ -9,7 +9,7 @@ import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.passwords.PasswordHasher;
 import pl.dawcou.astralogin.auth.passwords.PasswordValidator;
-import pl.dawcou.astralogin.system.utils.SoundManager;
+import pl.dawcou.astralogin.system.SoundManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 
 import java.util.ArrayList;

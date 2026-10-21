@@ -53,7 +53,6 @@ public class JoinHandler {
                     return;
                 }
 
-                // Obsługa sesji wyekstrahowana do osobnej klasy
                 boolean passwordBypassedBySession = sessionHandler.handleSession(p, uuid, level, loginSystem);
 
                 // Jeśli sesja przywróciła gracza całkowicie (hasło + 2FA lub samo hasło bez 2FA), przerwij

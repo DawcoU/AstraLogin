@@ -1,6 +1,5 @@
 package pl.dawcou.astralogin.auth.security.premium.protocol;
 
-import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.mojang.authlib.GameProfile;
 import io.netty.channel.Channel;
 import pl.dawcou.astralogin.AstraLogin;
@@ -17,14 +16,14 @@ public class LoginCompleter {
         this.plugin = plugin;
     }
 
-    public void complete(Channel channel, UUID uuid, WrappedGameProfile mojangProfile) {
-        plugin.getPacketListener().debug(
+    public void complete(Channel channel, UUID uuid, GameProfile profile) {
+        plugin.getPremiumManager().debug(
                 "DEBUG [8.0] 🚀 LoginCompleter started."
         );
 
         try {
             if (channel == null || !channel.isOpen()) {
-                plugin.getPacketListener().debugSevere("[LoginCompleter] Provided Netty channel is null or closed!");
+                plugin.getPremiumManager().debugSevere("[LoginCompleter] Provided Netty channel is null or closed!");
                 return;
             }
 
@@ -35,26 +34,25 @@ public class LoginCompleter {
                 return;
             }
 
-            plugin.getPacketListener().debug(
+            plugin.getPremiumManager().debug(
                     "DEBUG [8.1] 📦 Found Netty 'packet_handler'."
             );
 
             Object loginListener = NMSReflection.findPacketListener(plugin, packetHandler);
 
             if (loginListener == null) {
-                killConnection(channel, "Could not find PacketListener in NetworkManager");
+                killConnection(channel, "Could not find ProtocolLibListener in NetworkManager");
                 return;
             }
 
-            plugin.getPacketListener().debug(
-                    "DEBUG [8.2] 🎯 PacketListener resolved: "
+            plugin.getPremiumManager().debug(
+                    "DEBUG [8.2] 🎯 ProtocolLibListener resolved: "
                             + loginListener.getClass().getName()
             );
 
-            GameProfile profile = NMSReflection.toNmsProfile(mojangProfile);
             Class<?> listenerClass = loginListener.getClass();
 
-            plugin.getPacketListener().debug(
+            plugin.getPremiumManager().debug(
                     "DEBUG [8.3] 🔍 Detecting compatible login completion method."
             );
 
@@ -75,7 +73,7 @@ public class LoginCompleter {
             // Search dynamically for completion method (e.g. finishLoginAndWaitForClient)
             Method profileCompletionMethod = findProfileCompletionMethod(listenerClass, profile.getClass());
             if (profileCompletionMethod != null) {
-                plugin.getPacketListener().debug(
+                plugin.getPremiumManager().debug(
                         "DEBUG [8.4] ▶️ Invoking profile completion method: " + profileCompletionMethod.getName()
                 );
 
@@ -94,7 +92,7 @@ public class LoginCompleter {
                     stateField.setAccessible(true);
                     stateField.set(loginListener, readyState);
 
-                    plugin.getPacketListener().debug(
+                    plugin.getPremiumManager().debug(
                             "DEBUG [8.4b] 🔄 Fallback: Updated LoginListener state to READY_TO_ACCEPT."
                     );
                     success(uuid, profile);
@@ -108,7 +106,7 @@ public class LoginCompleter {
              */
             Method parameterlessMethod = NMSReflection.findMethod(listenerClass, "handleAcceptedLogin");
             if (parameterlessMethod != null) {
-                plugin.getPacketListener().debug(
+                plugin.getPremiumManager().debug(
                         "DEBUG [8.5] ▶️ Using handleAcceptedLogin()."
                 );
 
@@ -122,7 +120,7 @@ public class LoginCompleter {
             /*
              * 3. Legacy fallback
              */
-            plugin.getPacketListener().debug(
+            plugin.getPremiumManager().debug(
                     "DEBUG [8.6] ▶️ Using legacy LoginListener state transition."
             );
 
@@ -179,7 +177,7 @@ public class LoginCompleter {
             plugin.getPremiumManager().setAuthenticated(uuid, true);
         }
 
-        plugin.getPacketListener().debug(
+        plugin.getPremiumManager().debug(
                 "DEBUG [8.7] ✅ Successfully completed Premium authorization for "
                         + NMSReflection.getProfileName(profile)
         );
@@ -210,7 +208,7 @@ public class LoginCompleter {
     }
 
     private void killConnection(Channel channel, String reason) {
-        plugin.getPacketListener().debugSevere(
+        plugin.getPremiumManager().debugSevere(
                 "[LoginCompleter] Kicking connection for channel "
                         + (channel != null ? channel.remoteAddress() : "null")
                         + " -> Reason: " + reason

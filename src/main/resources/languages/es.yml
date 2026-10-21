@@ -1,47 +1,47 @@
 # #############################################################
 # #                                                           #
-# #             AstraLogin - Archivo de Idioma                #
-# #                   Idioma: Español (ES)                    #
+# #              AstraLogin - Archivo de Idioma               #
+# #                     Idioma: Español (ES)                  #
 # #                                                           #
 # #############################################################
 
-# Puedes usar códigos de color (ej. &a, &c, &l), códigos HEX, degradados y variables como %time%, %player%, %min%.
+# Puedes usar códigos de color (ej. &a, &c, &l), códigos HEX, degradados y marcadores de posición como %time%, %player%, %min%.
 
 messages:
 
-  # --- General / System ---
+  # --- General / Sistema ---
   general:
     only-players: "&c¡Este comando solo puede ser ejecutado por jugadores!"
-    no-permission: "&c¡No tienes permiso!"
+    no-permission: "&c¡No tienes permisos!"
     reload-success: "&a¡Configuración recargada con éxito!"
     blocked-action: "&c¡No puedes realizar esta acción hasta que inicies sesión!"
 
 
-  # --- Login ---
+  # --- Inicio de sesión ---
   login:
-    server-busy: "&cEl servidor está procesando un alto tráfico de inicios de sesión. Inténtalo de nuevo"
-    rate-limit: "&c¡Demasiados intentos de inicio de sesión! Por favor espera &6%time% &cantes de intentar de nuevo"
+    server-busy: "&cEl servidor está experimentando un alto tráfico de inicios de sesión. Inténtalo de nuevo"
+    rate-limit: "&c¡Demasiados intentos de inicio de sesión! Por favor espera &6%time% &cantes de intentarlo de nuevo"
 
-    already-logged: "&c¡Ya has iniciado sesión/estás registrado!"
+    already-logged: "&c¡Ya has iniciado sesión o te has registrado!"
     already-online: "&c¡Un jugador con este nombre ya está en el servidor!"
-    wrong-casing: "&c¡Entra al servidor usando las mayúsculas/minúsculas correctas!\n&7Nombre correcto: &6%registered%"
+    wrong-casing: "&c¡Entra al servidor usando las mayúsculas y minúsculas correctas!\n&7Nombre correcto: &6%registered%"
     no-account: "&c¡No tienes una cuenta! Escribe &e/register <contraseña, repetir>"
-    success: "&a¡Sesión iniciada con éxito!"
+    success: "&a¡Has iniciado sesión con éxito!"
     reminder: "&ePor favor inicia sesión: &f/login <contraseña>"
     usage: "&cUso correcto: &e/login <contraseña>"
     has-account: "&c¡Ya tienes una cuenta! Escribe &e/login <contraseña>"
 
 
-  # --- Register ---
+  # --- Registro ---
   register:
-    success: "&a¡Registrado con éxito!"
+    success: "&a¡Te has registrado con éxito!"
     reminder: "&ePor favor regístrate: &f/register <contraseña, repetir>"
     usage: "&cUso correcto: &e/register <contraseña, repetir>"
 
 
-  # --- Premium Login ---
+  # --- Inicio de sesión Premium ---
   premium:
-    success: "&e¡Cuenta Premium &adetectada, sesión iniciada automáticamente!"
+    success: "&e¡Cuenta &aPremium &adetectada, sesión iniciada automáticamente!"
 
 
   # --- /forgotpassword ---
@@ -53,7 +53,7 @@ messages:
     player-kick: "&a¡Tu contraseña se ha restablecido con éxito!"
 
 
-  # --- Passwords ---
+  # --- Contraseñas ---
   password:
     wrong: "&c¡Contraseña incorrecta!"
     not-match: "&c¡Las contraseñas no coinciden!"
@@ -62,13 +62,13 @@ messages:
     change-usage: "&cUso correcto: &e/changepassword <antigua, nueva, repetir>"
     wrong-old: "&c¡La contraseña antigua es incorrecta!"
     changed-kick: "&a¡Tu contraseña ha sido cambiada! &ePor favor inicia sesión de nuevo"
-    changed: "&a¡Tu contraseña ha sido cambiada con éxito!"
+    changed: "&a¡Tu contraseña se ha cambiado con éxito!"
     identical: "&c¡La nueva contraseña no puede ser igual a la antigua!"
     error: "&cOcurrió un error crítico al verificar tu contraseña. Contacta con la administración"
     validation:
       invalid-characters: "&c¡Tu contraseña contiene caracteres no válidos! Usa solo letras, números y símbolos básicos"
-      only-letters-forbidden: "&c¡Tu contraseña no puede contener solo letras! Incluye al menos un número o carácter especial"
-      only-digits-forbidden: "&c¡Tu contraseña no puede contener solo números! Incluye al menos una letra o carácter especial"
+      only-letters-forbidden: "&c¡Tu contraseña no puede consistir solo en letras! Incluye al menos un número o un carácter especial"
+      only-digits-forbidden: "&c¡Tu contraseña no puede consistir solo en números! Incluye al menos una letra o un carácter especial"
 
 
   # --- PINs ---
@@ -79,80 +79,80 @@ messages:
     contains-letters: "&c¡El PIN solo puede contener números!"
     already-set: "&c¡Ya tienes un PIN configurado!"
     set-success: "&aCódigo PIN generado con éxito, &eGuárdalo: &6%pin%"
-    typed-success: "&a¡Tu código PIN ha sido configurado con éxito!"
+    typed-success: "&a¡Tu código PIN se ha configurado con éxito!"
 
 
-  # --- Security and Bans ---
+  # --- Seguridad y baneos ---
   security:
-    timeout: "&c¡El tiempo de inicio de sesión ha expirado!"
-    max-attempts: "&c¡Demasiados intentos fallidos de inicio de sesión! Intentos restantes: &6%remaining%"
+    timeout: "&c¡El tiempo para iniciar sesión ha expirado!"
+    max-attempts: "&c¡Demasiados intentos fallidos! Intentos restantes: &6%remaining%"
     max-attempts-ban: "&c¡Demasiados intentos fallidos! Has sido baneado por &6%time%"
     multiaccount: "&c¡Se ha alcanzado el límite de cuentas para esta dirección IP!"
-    ip-spam: "&c¡Demasiados intentos de conexión desde tu IP! Estás bloqueado por &6%time%"
-    suspicious-ip-alert: "&c¡Actividad sospechosa detectada! El jugador &4%target% &cse unió desde una IP desconocida: &6%ip%"
+    ip-spam: "&c¡Demasiados intentos de conexión desde tu dirección IP! Estás bloqueado por &6%time%"
+    suspicious-ip-alert: "&c¡Actividad sospechosa detectada! El jugador &4%target% &centró desde una dirección IP desconocida: &6%ip%"
 
     security-reminder:
       no-2fa-no-pin:
         - "&c----------------------------------------"
-        - "&e¡Tu cuenta no está totalmente protegida!"
-        - "&f1. Activa el 2FA usando &a/2fa <setup>&f para evitar el robo de tu cuenta"
-        - "&f2. Configura un PIN usando &a/pin <setup>&f para recuperar tu cuenta si olvidas tu contraseña"
+        - "&e¡Tu cuenta no está completamente protegida!"
+        - "&f1. Activa 2FA usando &a/2fa <setup>&f para evitar el robo de cuentas"
+        - "&f2. Establece un PIN usando &a/pin <setup>&f para recuperar tu cuenta si olvidas tu contraseña"
         - "&c----------------------------------------"
       no-2fa-has-pin:
         - "&c----------------------------------------"
-        - "&e¡Tu cuenta aún no tiene activado el 2FA!"
+        - "&e¡Tu cuenta aún no tiene 2FA activado!"
         - "&fAumenta la seguridad de tu cuenta usando &a/2fa <setup>"
         - "&c----------------------------------------"
       has-2fa-no-pin:
         - "&e----------------------------------------"
-        - "&a¡Casi terminado!"
-        - "&fTienes activado el 2FA, pero no has configurado un PIN de recuperación"
-        - "&fConfigúralo usando &a/pin <setup>&f para poder recuperar el acceso a tu cuenta"
+        - "&a¡Casi listo!"
+        - "&fTienes 2FA activado, pero no has establecido un PIN de recuperación"
+        - "&fEstablécelo usando &a/pin <setup>&f para poder recuperar el acceso a tu cuenta"
         - "&e----------------------------------------"
 
 
-  # --- IP Trust ---
+  # --- Confianza de IP ---
   ip-trust:
-    usage: "&cUso correcto: &6/iptrust <reset, info, set, dirección IP, puntos>"
+    usage: "&cUso correcto: &6/iptrust <reset, info, set, dirección IP, puntuación>"
     ip-not-found: "&cDirección IP no encontrada: &6(%ip%)"
     invalid-number: "&c¡La cantidad de puntos solo puede contener números!"
     reset-success: "&aReputación restablecida con éxito para la IP: &e(%ip%)"
-    set-success: "&aReputación configurada con éxito: &6(%score%) &apara la IP: &e(%ip%)"
+    set-success: "&aReputación establecida con éxito: &6(%score%) &apara la IP: &e(%ip%)"
     ip-info:
       - "&7&m-------------------------"
       - "&6&lReputación de la dirección IP (%ip%):"
-      - "&ePuntuación de confianza: &f%score%"
-      - "&6Clasificación: %rate%"
+      - "&ePuntuación de Confianza: &f%score%"
+      - "&6Calificación: %rate%"
       - "&7&m-------------------------"
     rate-fatal: "&0Fatal"
-    rate-bad: "&cMala"
+    rate-bad: "&cMalo"
     rate-neutral: "&7Neutral"
-    rate-good: "&aBuena"
+    rate-good: "&aBueno"
     rate-ideal: "&bIdeal"
 
 
-  # --- IP Management and Bans /ipmanager ---
+  # --- Gestión de IP y baneos /ipmanager ---
   ip-manager:
     usage: "&cUso: /ipmanager <info, unban, bypass, unbypass, jugador>"
     no-ip: "&c¡No se encontró ninguna dirección IP registrada para el jugador &6%player%&c!"
     info-not-banned: "&aEl jugador &6%player% &7(Dirección IP: %ip%) &ano tiene un baneo de IP activo"
     info-banned: "&c¡El jugador &6%player% &7(Dirección IP: %ip%) &cestá baneado! Razón: &6%reason%&c, Tiempo restante: &6%time%"
     not-banned: "&c¡La dirección IP del jugador &6%player% &cno está baneada!"
-    unban-success: "&a¡Dirección IP desbaneada con éxito para el jugador &6%player% &7(%ip%)&a!"
-    bypass-enabled: "&aBypass de verificación de IP activado para el jugador &6%player%"
-    bypass-active: "&c¡El Bypass de IP para el jugador &6%player% &cya está activado!"
-    bypass-disabled: "&cBypass de verificación de IP desactivado para el jugador &6%player%"
-    bypass-not-active: "&c¡El Bypass de IP para el jugador &6%player% &cya está desactivado!"
+    unban-success: "&a¡Se desbaneó con éxito la dirección IP del jugador &6%player% &7(%ip%)&a!"
+    bypass-enabled: "&aSe activó el bypass de verificación de IP para el jugador &6%player%"
+    bypass-active: "&c¡El bypass de IP para el jugador &6%player% &cya está activado!"
+    bypass-disabled: "&aSe desactivó el bypass de verificación de IP para el jugador &6%player%"
+    bypass-not-active: "&c¡El bypass de IP para el jugador &6%player% &cya está desactivado!"
 
 
-  # --- Sessions ---
+  # --- Sesiones ---
   session:
-    timer: "&e¡Por favor inicia sesión en &6%time%&e!"
+    timer: "&e¡Por favor inicia sesión en un plazo de &6%time%&e!"
     restored: "&eSesión activa. ¡Iniciado sesión automáticamente!"
-    twofactor-expired: "&c¡Tu sesión de 2FA ha expirado! Por favor introduce el código"
+    twofactor-expired: "&c¡Tu sesión de 2FA ha expirado! Por favor ingresa el código"
 
 
-  # --- Titles ---
+  # --- Títulos ---
   title:
     login: "&a&lSESIÓN INICIADA"
     login-subtitle: "&7¡Bienvenido de nuevo!"
@@ -161,17 +161,17 @@ messages:
     twofactor: "&b&l2FA"
 
 
-  # --- Two-Factor Authentication (2FA) ---
+  # --- Autenticación de dos factores (2FA) ---
   twofactor:
     usage: "&cUso correcto: &6/2fa <setup, unsetup, código>"
-    already-enabled: "&c¡Ya tienes el 2FA activado!"
-    not-enabled: "&c¡No tienes el 2FA activado!"
+    already-enabled: "&c¡Ya tienes 2FA activado!"
+    not-enabled: "&c¡No tienes 2FA activado!"
 
     setup-instructions:
       - "&7&m-------------------------"
       - "&6&l2FA - Configuración"
       - "&eClave secreta: &f%secret%"
-      - "&eIntroduce el código en tu aplicación, luego escribe: &6/2fa <código>"
+      - "&eIngresa el código en tu aplicación y luego escribe: &6/2fa <código>"
       - "&7&m-------------------------"
 
     setup-backup-codes:
@@ -182,20 +182,20 @@ messages:
 
     setup-timer: "&aTiempo restante para la configuración: &e%seconds%"
     expired: "&c¡El tiempo de verificación ha expirado!"
-    setup-already-active: "&c¡Ya estás configurando el 2FA!"
-    not-in-setup: "&cActualmente no estás configurando ni eliminando el 2FA"
+    setup-already-active: "&c¡Ya estás configurando 2FA!"
+    not-in-setup: "&cNo estás configurando ni eliminando 2FA actualmente"
 
     success: "&a¡La protección 2FA se ha activado con éxito!"
-    removed-success: "&a¡El 2FA se ha eliminado con éxito!"
+    removed-success: "&a¡Se ha eliminado 2FA con éxito!"
 
     wrong-code: "&c¡Código 2FA incorrecto!"
-    required: "&eIntroduce el código de tu aplicación: &6/2fa <código>"
-    not-needed: "&cNo necesitas introducir un código 2FA en este momento"
+    required: "&eIngresa el código de tu aplicación: &6/2fa <código>"
+    not-needed: "&cNo necesitas ingresar un código 2FA en este momento"
 
-    unsetup-instructions: "&cPara desactivar el 2FA, escribe el código: /2fa unsetup <código>"
+    unsetup-instructions: "&cPara desactivar 2FA, ingresa el código: /2fa unsetup <código>"
 
 
-  # --- Account Info Command (/account) ---
+  # --- Comando de información de cuenta (/account) ---
   account:
     usage: "&cUso correcto: &e/account <jugador>"
     not-found: "&cEl jugador &6%target% &cnunca se ha registrado en este servidor"
@@ -208,7 +208,7 @@ messages:
       ip: "&7Última dirección IP: &f%ip%"
       register-date: "&7Fecha de registro: &f%register_date%"
       login-date: "&7Último inicio de sesión: &f%login_date%"
-      status-2fa: "&7Estado del 2FA: %status%"
+      status-2fa: "&7Estado de 2FA: %status%"
       footer: "&8--------------------------------"
 
     status:
@@ -217,80 +217,80 @@ messages:
       not-active-2fa: "&cDesactivado"
 
 
-  # --- Accounts List Command (/accountslist) ---
+  # --- Comando de lista de cuentas (/accountslist) ---
   accounts-list:
-    generating: "&7Cargando la lista de cuentas registradas..."
+    generating: "&7Cargando lista de cuentas registradas..."
     empty: "&cLa base de datos de cuentas está vacía"
     header: "&7===== &6Cuentas Registradas &7====="
     format: "&7- &e%name% &7(&aUUID: &b%uuid%&7)"
     footer: "&7======================================="
 
 
-  # --- IP List Command (/iplist) ---
+  # --- Comando de lista de IP (/iplist) ---
   ip-list:
-    generating: "&7Cargando lista de IPs..."
+    generating: "&7Cargando lista de IP..."
     empty: "&cLa base de datos de direcciones IP está vacía"
     header: "&7===== &6IPs Registradas &7====="
     format: "&e%ip% &b(&6Cuentas: %count%&b) &7-> &a%players%"
     footer: "&7==========================================="
 
 
-  # --- Move Account Command (/moveaccount) ---
+  # --- Comando para mover cuenta (/moveaccount) ---
   account-move:
-    usage: "&cUso correcto: &e/moveaccount <nombre antiguo, nombre nuevo>"
+    usage: "&cUso correcto: &e/moveaccount <antiguo nick, nuevo nick>"
     start: "&aIniciando proceso de verificación y migración para &e%old% &a--> &e%new%"
 
     success: "&a¡Datos transferidos con éxito de &e%old% &aa &e%new%&a!"
     error-migration: "&c¡Ocurrió un error al guardar los archivos migrados!"
 
     new-player-exists: "&c¡El nuevo UUID &6(%uuid%) &cya existe en la base de datos del plugin!"
-    old-player-no-data: "&cEl jugador &6%target% &cno tiene datos guardados en este plugin. ¡Nada que transferir!"
+    old-player-no-data: "&cEl jugador &6%target% &cno tiene datos guardados en este plugin. ¡No hay nada que transferir!"
 
     player-not-exists: "&c¡El jugador &6%target% &cnunca ha jugado en este servidor!"
-    player-is-the-same: "&c¡El nombre de jugador antiguo y nuevo son idénticos!"
+    player-is-the-same: "&c¡Los nombres del jugador antiguo y nuevo son idénticos!"
 
-    players-online: "&c¡El jugador &6%old% &co &6%new% &cestá en línea! &4¡Deben estar desconectados durante la migración para evitar corrupción de datos!"
+    players-online: "&c¡El jugador &6%old% &co &6%new% &cestá en línea! &4¡Deben estar desconectados durante la migración para evitar la corrupción de datos!"
 
     confirm: "&c¡Esta acción es &4&nIRREVERSIBLE&c!"
     button: "&6&l[TRANSFERIR]"
     hover: "&4Haz clic aquí para transferir la cuenta"
 
 
-  # --- Reset Password (/resetpassword) ---
+  # --- Restablecer contraseña (/resetpassword) ---
   reset-password:
     usage: "&cUso correcto: &e/resetpassword <jugador>"
     no-account: "&c¡Este jugador no tiene una contraseña registrada!"
 
-    admin-success: "&aLa contraseña del jugador &6%player% &aha sido restablecida con éxito"
+    admin-success: "&aLa contraseña del jugador &6%player% &ase ha restablecido con éxito"
 
     player-kick: "&c¡Tu contraseña ha sido restablecida por un administrador!"
 
 
-  # --- PIN Reset /resetpin ---
+  # --- Restablecer PIN (/resetpin) ---
   reset-pin:
     usage: "&cUso correcto: &e/resetpin <jugador>"
     no-has-pin: "&c¡Este jugador no tiene un PIN registrado!"
 
-    admin-success: "&aEl PIN del jugador &6%player% &aha sido restablecido"
+    admin-success: "&aEl PIN del jugador &6%player% &ase ha restablecido"
 
     player-message: "&c¡Tu PIN ha sido restablecido por el administrador!"
 
 
-  # --- Reset IP (/resetip) ---
+  # --- Restablecer IP (/resetip) ---
   reset-ip:
     usage: "&cUso correcto: &e/resetip <jugador>"
     no-ip: "&c¡Este jugador no tiene una dirección IP guardada!"
 
-    admin-success: "&aLa dirección IP del jugador &6%player% &aha sido restablecida con éxito"
+    admin-success: "&aLa dirección IP del jugador &6%player% &ase ha restablecido con éxito"
 
     player-kick: "&c¡Tu dirección IP ha sido restablecida por un administrador!"
 
 
-  # --- Purge Account (/resetaccount) ---
+  # --- Purgar cuenta (/resetaccount) ---
   purge-account:
     usage: "&cUso correcto: &e/purgeaccount <jugador>"
     not-found: "&cJugador &6%target% &cno encontrado en la base de datos del servidor"
-    admin-success: "&aSe han eliminado con éxito TODOS los datos de la cuenta del jugador &e%player%"
+    admin-success: "&aSe han purgado con éxito TODOS los datos de la cuenta del jugador &e%player%"
 
     player-kick: "&cTu cuenta ha sido eliminada por completo de la base de datos del servidor por un administrador"
 
@@ -299,39 +299,54 @@ messages:
     hover: "&4Haz clic aquí para eliminar la cuenta"
 
 
-  # --- Reset 2FA (/reset2fa) ---
+  # --- Restablecer 2FA (/reset2fa) ---
   reset-twofactor:
     usage: "&cUso correcto: &e/reset2fa <jugador>"
     admin-success: "&aSe ha eliminado con éxito la autenticación de dos factores de la cuenta de &e%player%"
 
     not-found: "&c¡El jugador &6%target% &cno tiene activada la autenticación de dos factores (2FA)!"
 
-    player-waiting: "&c¡El jugador &6%target% &cestá pasando actualmente por una verificación!"
-    player-setting-up: "&c¡El jugador &6%target% &cestá configurando el 2FA actualmente!"
+    player-waiting: "&c¡El jugador &6%target% &cestá en proceso de verificación!"
+    player-setting-up: "&c¡El jugador &6%target% &cestá configurando 2FA!"
     player-kick: "&cTu autenticación de dos factores ha sido eliminada por un administrador"
 
 
-  # --- Login Spawn System ---
+  # --- Sistema de spawns de inicio de sesión ---
   spawn:
-    set-success: "&aUbicación de spawn configurada con éxito para: &e%type%"
+    set-success: "&aUbicación de spawn establecida con éxito para: &e%type%"
     deleted-success: "&aUbicación de spawn eliminada con éxito para: &e%type%"
 
     usage: "&cUso correcto: &e/loginspawn <setspawn, delspawn> <before_login, after_login>"
-    invalid-type: "&c¡Tipo no válido! &eUsa: before_login o after_login"
+    invalid-type: "&c¡Tipo inválido! &eUsa: before_login o after_login"
     exists: "&c¡El spawn para &6%type% &cya existe!"
     does-not-exist: "&c¡El spawn para &6%type% &cno existe!"
 
-    overwrite-button: "&e&l[SOBREESCRIBIR]"
-    overwrite-hover: "&aHaz clic aquí para forzar la sobreescritura de la ubicación para: &e%type%"
-    delete-confirm: "&c¿Estás seguro de que deseas eliminar el spawn de &6%type%&c?"
+    overwrite-button: "&e&l[SOBRESCRIBIR]"
+    overwrite-hover: "&aHaz clic aquí para forzar la sobrescritura de la ubicación para: &e%type%"
+    delete-confirm: "&c¿Estás seguro de que deseas eliminar el spawn &6%type%&c?"
     delete-button: "&4&l[CONFIRMAR ELIMINACIÓN]"
     delete-hover: "&aHaz clic para eliminar permanentemente el spawn: &e%type%"
 
 
+# --- Eventos Estacionales ---
 seasonal-events:
   halloween:
     - "&6[Halloween] &cLas sombras del pasado observan cada uno de tus &4pasos..."
-    - "&6[Halloween] &cAlo terrible acecha en las sombras... ¡&4Corre!"
-    - "&6[Halloween] &c¿Truco o trato? ¡Hoy no hay &4escapatoria!"
-    - "&6[Halloween] &c¿Escuchas esos susurros detrás de tu &4espalda?"
+    - "&6[Halloween] &cAlgo aterrador acecha en la oscuridad... &4¡Corre!"
+    - "&6[Halloween] &c¿Truco o trato? Hoy no hay &4escape&c."
+    - "&6[Halloween] &c¿Escuchas esos susurros silenciosos detrás de tu &4espalda?"
     - "&6[Halloween] &cLa noche acaba de comenzar y tu &4destino &cya está sellado..."
+
+
+# --- Sistema de Actualización ---
+update:
+  api-error: "&cNo se pudo conectar a la API de Modrinth"
+  no-versions: "&cNo se encontraron versiones publicadas"
+  up-to-date: "&aAstraLogin ya está actualizado"
+  local-newer: "&eLa versión instalada es más reciente que la última publicada en Modrinth. Actualización omitida"
+  no-files: "&cNo se encontró ningún archivo descargable para la última versión"
+  directory-error: "&cNo se pudo crear el directorio de actualización"
+  download-error: "&cNo se pudo descargar la actualización"
+  downloaded: "&aActualización de AstraLogin descargada con éxito"
+  restart-required: "&eReinicia el servidor para aplicar la actualización"
+  failed: "&cOcurrió un error al buscar o descargar la actualización"

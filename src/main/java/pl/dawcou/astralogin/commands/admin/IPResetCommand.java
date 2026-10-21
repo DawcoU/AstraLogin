@@ -7,7 +7,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.security.ip.IPManager;
-import pl.dawcou.astralogin.system.utils.SoundManager;
+import pl.dawcou.astralogin.system.SoundManager;
 
 import java.util.UUID;
 

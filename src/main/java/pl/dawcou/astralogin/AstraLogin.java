@@ -1,7 +1,5 @@
 package pl.dawcou.astralogin;
 
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.ProtocolManager;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
@@ -10,7 +8,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import pl.dawcou.astralogin.api.AstraLoginAPI;
+import pl.dawcou.astralogin.api.AstraLoginAPIImpl;
 import pl.dawcou.astralogin.auth.LoginSystem;
+import pl.dawcou.astralogin.auth.security.BackendManager;
 import pl.dawcou.astralogin.auth.sessions.SessionManager;
 import pl.dawcou.astralogin.auth.manage.*;
 import pl.dawcou.astralogin.auth.AccountManager;
@@ -18,7 +19,6 @@ import pl.dawcou.astralogin.auth.manage.spawn.SpawnManager;
 import pl.dawcou.astralogin.auth.passwords.PINManager;
 import pl.dawcou.astralogin.auth.passwords.PasswordManager;
 import pl.dawcou.astralogin.auth.security.premium.PremiumManager;
-import pl.dawcou.astralogin.auth.security.premium.protocol.PacketListener;
 import pl.dawcou.astralogin.auth.security.ip.IPTrustManager;
 import pl.dawcou.astralogin.commands.admin.*;
 import pl.dawcou.astralogin.commands.player.PINCommand;
@@ -38,11 +38,12 @@ import pl.dawcou.astralogin.auth.security.ip.IPManager;
 import pl.dawcou.astralogin.system.LanguageManager;
 import pl.dawcou.astralogin.system.NoticeManager;
 import pl.dawcou.astralogin.system.SchedulerManager;
-import pl.dawcou.astralogin.system.UpdateChecker;
+import pl.dawcou.astralogin.system.updater.AutoUpdater;
+import pl.dawcou.astralogin.system.updater.UpdateChecker;
 import pl.dawcou.astralogin.auth.security.TwoFactorManager;
 import pl.dawcou.astralogin.system.seasonal.SeasonalEventManager;
 import pl.dawcou.astralogin.system.tasks.SecurityReminderTask;
-import pl.dawcou.astralogin.system.utils.SoundManager;
+import pl.dawcou.astralogin.system.SoundManager;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -74,6 +75,8 @@ public class AstraLogin extends JavaPlugin implements Listener {
     private PlayerDataManager playerDataManager;
     private GlobalDataManager globalDataManager;
 
+    private BackendManager backendManager;
+
     private SchedulerManager schedulerManager;
     private SoundManager soundManager;
     private LanguageManager languageManager;
@@ -82,6 +85,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
     private BackupManager backupManager;
     private FilesUpdater filesUpdater;
     private UpdateChecker updateChecker;
+    private AutoUpdater autoUpdater;
 
     // ----------------------------------------------------------------------------------------------------
     // AUTORYZACJA I BEZPIECZENSTWO
@@ -111,10 +115,6 @@ public class AstraLogin extends JavaPlugin implements Listener {
     // ----------------------------------------------------------------------------------------------------
     // PROTOKOLY, NASLUCHIWACZE I KOMENDY
     // ----------------------------------------------------------------------------------------------------
-
-    private ProtocolManager protocolManager;
-    private PacketListener packetListener;
-
     private LoginListeners loginListeners;
     private TechnicalListeners technicalListeners;
 
@@ -140,6 +140,8 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
     public GlobalDataManager getGlobalDataManager() { return globalDataManager; }
 
+    public BackendManager getBackendManager() { return backendManager; }
+
     public SchedulerManager getSchedulerManager() { return schedulerManager; }
     public SoundManager getSoundManager() { return soundManager; }
     public BackupManager getBackupManager() { return backupManager; }
@@ -147,6 +149,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
     public AccountManager getAccountManager() { return accountManager; }
     public LogManager getLogManager() { return logManager; }
     public UpdateChecker getUpdateChecker() { return updateChecker; }
+    public AutoUpdater getAutoUpdater() { return autoUpdater; }
 
     // ----------------------------------------------------------------------------------------------------
     // GETTERY - AUTORYZACJA I BEZPIECZENSTWO
@@ -170,13 +173,6 @@ public class AstraLogin extends JavaPlugin implements Listener {
     public InventoryManager getInventoryManager() { return inventoryManager; }
     public NoticeManager getNoticeManager() { return noticeManager; }
     public SeasonalEventManager getSeasonalEventManager() { return seasonalEventManager; }
-
-    // ----------------------------------------------------------------------------------------------------
-    // GETTERY - PROTOKOLY I KOMENDY
-    // ----------------------------------------------------------------------------------------------------
-
-    public ProtocolManager getProtocolManager() { return protocolManager; }
-    public PacketListener getPacketListener() { return packetListener; }
 
     // TODO: implement ultra advanced quantum potato engine with 9000% more binary and RTX ray tracing
     // Security is more important than backdoors or worms, so you, the reader, move on and don't worry about it.
@@ -234,7 +230,8 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
         // 6. Diagnostyka
         logManager = new LogManager(this);
-        updateChecker = new UpdateChecker(this);
+        updateChecker = new UpdateChecker(this, "sO4dBl28");
+        autoUpdater = new AutoUpdater(this, "sO4dBl28");
 
         // 7. Inicjalizacja logiki i menedżerów
         twoFactorManager = new TwoFactorManager(this, playerDataManager);
@@ -281,13 +278,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
             getLogger().severe("Failed to generate RSA keys: " + e.getMessage());
         }
 
-        // Sprawdzenie i podpięcie ProtocolLiba oraz listenera autologowania
-        if (getServer().getPluginManager().getPlugin("ProtocolLib") != null) {
-            protocolManager = ProtocolLibrary.getProtocolManager();
-            packetListener = new PacketListener(this, protocolManager);
-        } else {
-            getLogger().warning("ProtocolLib is missing from the server! Premium autologin will be disabled.");
-        }
+        backendManager = new BackendManager(this);
 
         loginListeners = new LoginListeners(this);
         technicalListeners = new TechnicalListeners(this);
@@ -370,17 +361,22 @@ public class AstraLogin extends JavaPlugin implements Listener {
         }
 
         // LOGO STARTOWE I SPRAWDZANIE WERSJI
-        schedulerManager.runAsync(() -> {
-            // Logo zawsze przy starcie
-            noticeManager.sendStartupLogo();
+        noticeManager.sendStartupLogo();
 
-            // Sprawdzanie aktualizacji
-            if (getConfig().getBoolean("settings.check-updates", true)) {
-                updateChecker.checkForUpdates(Bukkit.getConsoleSender());
-            } else {
-                noticeManager.sendVersionOk(getServer().getConsoleSender());
-            }
-        });
+        // Sprawdzanie aktualizacji
+        if (getConfig().getBoolean("settings.check-updates", true)) {
+            updateChecker.checkForUpdates(Bukkit.getConsoleSender());
+        } else {
+            noticeManager.sendVersionOk(getServer().getConsoleSender());
+        }
+
+        AstraLoginAPIImpl apiImplementation = new AstraLoginAPIImpl(this);
+        getServer().getServicesManager().register(
+                AstraLoginAPI.class,
+                apiImplementation,
+                this,
+                org.bukkit.plugin.ServicePriority.Normal
+        );
     }
 
     @Override

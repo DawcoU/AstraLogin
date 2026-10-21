@@ -328,6 +328,7 @@ messages:
     delete-hover: "&aKliknij, aby bezpowrotnie usunąć spawn: &e%type%"
 
 
+# --- Wydarzenia Sezonowe ---
 seasonal-events:
   halloween:
     - "&6[Halloween] &cCienie przeszłości obserwują każdy Twój &4krok..."
@@ -335,3 +336,17 @@ seasonal-events:
     - "&6[Halloween] &cCukierek albo psikus? Dzisiaj nie ma &4ucieczki!"
     - "&6[Halloween] &cSłyszysz te ciche szepty za swoimi &4plecami?"
     - "&6[Halloween] &cNoc dopiero się zaczęła, a Twój &4los &czostał już przypieczętowany..."
+
+
+# --- Aktualizacja systemu ---
+update:
+  api-error: "&cNie udało się połączyć z API Modrinth"
+  no-versions: "&cNie znaleziono żadnych opublikowanych wersji"
+  up-to-date: "&aAstraLogin jest już w najnowszej wersji"
+  local-newer: "&eZainstalowana wersja jest nowsza niż najnowsza wersja opublikowana na Modrinth. Pominięto aktualizację"
+  no-files: "&cNie znaleziono pliku do pobrania dla najnowszej wersji"
+  directory-error: "&cNie udało się utworzyć folderu aktualizacji"
+  download-error: "&cNie udało się pobrać aktualizacji"
+  downloaded: "&aPomyślnie pobrano aktualizację AstraLogin"
+  restart-required: "&eUruchom ponownie serwer, aby zastosować aktualizację"
+  failed: "&cWystąpił błąd podczas sprawdzania lub pobierania aktualizacji"

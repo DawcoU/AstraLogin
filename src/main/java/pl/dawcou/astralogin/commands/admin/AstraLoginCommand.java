@@ -7,7 +7,7 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.system.utils.SoundManager;
+import pl.dawcou.astralogin.system.SoundManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -71,6 +71,12 @@ public class AstraLoginCommand implements CommandExecutor, TabCompleter {
                 }
                 return true;
             }
+
+            // Komenda /al update
+            if (args.length == 1 && args[0].equalsIgnoreCase("update")) {
+                plugin.getAutoUpdater().checkAndDownload(sender);
+                return true;
+            }
         }
 
         if (p != null) {
@@ -89,6 +95,7 @@ public class AstraLoginCommand implements CommandExecutor, TabCompleter {
                 hints.add("info");
                 hints.add("help");
                 if (sender.hasPermission("astralogin.reload")) hints.add("reload");
+                if (sender.hasPermission("astralogin.update")) hints.add("update");
             }
         }
 

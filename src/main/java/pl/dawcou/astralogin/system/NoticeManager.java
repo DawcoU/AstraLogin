@@ -35,148 +35,395 @@ public class NoticeManager {
         String lang = getLang().toLowerCase();
 
         String helpTitle;
+        String versionLabel;
+        String authorLabel;
         String playerCmds;
-        String regDesc;
-        String loginDesc;
-        String logoutDesc;
-        String changePassDesc;
-        String pinDesc;
-        String forgotDesc;
-        String tfaDesc;
+
+        // Zmienne dla komend i parametrów gracza
+        String regCmd, regSyntax, regDesc;
+        String loginCmd, loginSyntax, loginDesc;
+        String logoutCmd, logoutDesc;
+        String changePassCmd, changePassSyntax, changePassDesc;
+        String pinCmd, pinSyntax, pinDesc;
+        String forgotCmd, forgotSyntax, forgotDesc;
+        String tfaCmd, tfaSyntax, tfaDesc;
+
+        // Zmienne dla komend i parametrów admina
         String adminCmds;
-        String accountDesc;
-        String listDesc;
-        String resetPassDesc;
-        String resetIpDesc;
-        String resetPinDesc;
-        String resetAccountDesc;
-        String moveDesc;
-        String spawnDesc;
-        String ipManagerDesc;
-        String ipTrustDesc;
-        String reloadDesc;
+        String accountCmd, accountSyntax, accountDesc;
+        String listCmd, listDesc;
+        String resetPassCmd, resetPassSyntax, resetPassDesc;
+        String resetIpCmd, resetIpSyntax, resetIpDesc;
+        String resetPinCmd, resetPinSyntax, resetPinDesc;
+        String resetAccountCmd, resetAccountSyntax, resetAccountDesc;
+        String moveCmd, moveSyntax, moveDesc;
+        String spawnCmd, spawnSyntax, spawnDesc;
+        String ipManagerCmd, ipManagerSyntax, ipManagerDesc;
+        String ipTrustCmd, ipTrustSyntax, ipTrustDesc;
+        String reloadCmd, reloadSyntax, reloadDesc;
+        String updateCmd, updateSyntax, updateDesc;
 
         switch (lang) {
             case "pl":
                 helpTitle = "AstraLogin System Pomocy";
+                versionLabel = "Wersja:";
+                authorLabel = "Autor:";
                 playerCmds = "Komendy Gracza:";
+
+                regCmd = "/rejestruj";
+                regSyntax = "<hasło> <powtórz>";
                 regDesc = "Rejestracja nowego konta";
+
+                loginCmd = "/zaloguj";
+                loginSyntax = "<hasło>";
                 loginDesc = "Logowanie do gry";
+
+                logoutCmd = "/wyloguj";
                 logoutDesc = "Wylogowanie się z serwera";
+
+                changePassCmd = "/zmienhaslo";
+                changePassSyntax = "<stare> <nowe> <powtórz>";
                 changePassDesc = "Zmiana obecnego hasła";
+
+                pinCmd = "/pin";
+                pinSyntax = "<ustaw> <PIN/Auto>";
                 pinDesc = "Wygenerowanie lub ustawienie PIN-u";
+
+                forgotCmd = "/zapomnialemhasla";
+                forgotSyntax = "<PIN>";
                 forgotDesc = "Reset hasła za pomocą PIN-u";
+
+                tfaCmd = "/2fa";
+                tfaSyntax = "<konfiguracja/usun/kod>";
                 tfaDesc = "Zarządzanie i weryfikacja 2FA";
+
                 adminCmds = "Komendy Administracji:";
+
+                accountCmd = "/konto";
+                accountSyntax = "<gracz>";
                 accountDesc = "Zaawansowane statystyki konta";
+
+                listCmd = "/listakont";
                 listDesc = "Lista wszystkich kont AstraLogin";
+
+                resetPassCmd = "/zresetujhaslo";
+                resetPassSyntax = "<gracz>";
                 resetPassDesc = "Usuwa hasło gracza";
+
+                resetIpCmd = "/zresetujip";
+                resetIpSyntax = "<gracz>";
                 resetIpDesc = "Resetuje adres IP gracza";
+
+                resetPinCmd = "/zresetujpin";
+                resetPinSyntax = "<gracz>";
                 resetPinDesc = "Resetuje PIN gracza";
+
+                resetAccountCmd = "/zresetujkonto";
+                resetAccountSyntax = "<gracz>";
                 resetAccountDesc = "Czyszczenie wszystkich danych gracza";
+
+                moveCmd = "/przenieskonto";
+                moveSyntax = "<stary> <nowy>";
                 moveDesc = "Przenoszenie danych na inne konto";
+
+                spawnCmd = "/loginspawn";
+                spawnSyntax = "<ustawspawn/usunspawn> <typ>";
                 spawnDesc = "Ustawianie i usuwanie spawnu";
+
+                ipManagerCmd = "/ipmanager";
+                ipManagerSyntax = "<info/odbanuj/omijanie/usunomijanie> <gracz>";
                 ipManagerDesc = "Zarządzanie blokadami IP";
+
+                ipTrustCmd = "/iptrust";
+                ipTrustSyntax = "<info/ustaw/zresetuj> <IP> <punkty>";
                 ipTrustDesc = "Reputacja IP gracza";
+
+                reloadCmd = "/astralogin";
+                reloadSyntax = "reload";
                 reloadDesc = "Przeładowanie konfiguracji pluginu";
+
+                updateCmd = "/astralogin";
+                updateSyntax = "update";
+                updateDesc = "Pobiera najnowszą wersję z Modrintha";
                 break;
+
             case "de":
                 helpTitle = "AstraLogin Hilfesystem";
+                versionLabel = "Version:";
+                authorLabel = "Autor:";
                 playerCmds = "Spieler-Befehle:";
+
+                regCmd = "/register";
+                regSyntax = "<passwort> <wiederholen>";
                 regDesc = "Registrieren eines neuen Kontos";
+
+                loginCmd = "/login";
+                loginSyntax = "<passwort>";
                 loginDesc = "Auf dem Server anmelden";
+
+                logoutCmd = "/logout";
                 logoutDesc = "Vom Server abmelden";
+
+                changePassCmd = "/changepassword";
+                changePassSyntax = "<altes> <neues> <wiederholen>";
                 changePassDesc = "Aktuelles Passwort ändern";
+
+                pinCmd = "/pin";
+                pinSyntax = "<setzen> <PIN/Auto>";
                 pinDesc = "Konto-PIN festlegen oder generieren";
+
+                forgotCmd = "/forgotpass";
+                forgotSyntax = "<PIN>";
                 forgotDesc = "Passwort mit PIN zurücksetzen";
+
+                tfaCmd = "/2fa";
+                tfaSyntax = "<einrichten/entfernen/code>";
                 tfaDesc = "2FA verwalten und verifizieren";
+
                 adminCmds = "Admin-Befehle:";
+
+                accountCmd = "/account";
+                accountSyntax = "<spieler>";
                 accountDesc = "Erweiterte Kontostatistiken anzeigen";
+
+                listCmd = "/accountslist";
                 listDesc = "Alle AstraLogin-Konten anzeigen";
+
+                resetPassCmd = "/resetpassword";
+                resetPassSyntax = "<spieler>";
                 resetPassDesc = "Löscht das Passwort eines Spielers";
+
+                resetIpCmd = "/resetip";
+                resetIpSyntax = "<spieler>";
                 resetIpDesc = "Setzt die IP-Adresse des Spielers zurück";
+
+                resetPinCmd = "/resetpin";
+                resetPinSyntax = "<spieler>";
                 resetPinDesc = "Setzt den PIN des Spielers zurück";
+
+                resetAccountCmd = "/resetaccount";
+                resetAccountSyntax = "<spieler>";
                 resetAccountDesc = "Löscht alle Spielerdaten";
+
+                moveCmd = "/moveaccount";
+                moveSyntax = "<alt> <neu>";
                 moveDesc = "Überträgt Spielerdaten auf ein anderes Konto";
+
+                spawnCmd = "/loginspawn";
+                spawnSyntax = "<setzen/entfernen> <typ>";
                 spawnDesc = "Setzt und entfernt Login-Spawn";
+
+                ipManagerCmd = "/ipmanager";
+                ipManagerSyntax = "<info/entbannen/bypass/unbypass> <spieler>";
                 ipManagerDesc = "IP-Sperren und Bypasses verwalten";
+
+                ipTrustCmd = "/iptrust";
+                ipTrustSyntax = "<info/setzen/zurücksetzen> <IP> <punkte>";
                 ipTrustDesc = "Zeigt und verwaltet die IP-Reputation";
+
+                reloadCmd = "/astralogin";
+                reloadSyntax = "reload";
                 reloadDesc = "Lädt die Plugin-Konfiguration neu";
+
+                updateCmd = "/astralogin";
+                updateSyntax = "update";
+                updateDesc = "Lädt die neueste Version von Modrinth herunter";
                 break;
+
             case "es":
                 helpTitle = "AstraLogin Sistema de Ayuda";
+                versionLabel = "Versión:";
+                authorLabel = "Autor:";
                 playerCmds = "Comandos de Jugador:";
+
+                regCmd = "/register";
+                regSyntax = "<contraseña> <repetir>";
                 regDesc = "Registrar una nueva cuenta";
+
+                loginCmd = "/login";
+                loginSyntax = "<contraseña>";
                 loginDesc = "Iniciar sesión en el servidor";
+
+                logoutCmd = "/logout";
                 logoutDesc = "Cerrar sesión en el servidor";
+
+                changePassCmd = "/changepassword";
+                changePassSyntax = "<anterior> <nueva> <repetir>";
                 changePassDesc = "Cambiar tu contraseña actual";
+
+                pinCmd = "/pin";
+                pinSyntax = "<establecer> <PIN/Auto>";
                 pinDesc = "Establecer o generar PIN de cuenta";
+
+                forgotCmd = "/forgotpass";
+                forgotSyntax = "<PIN>";
                 forgotDesc = "Restablecer contraseña usando PIN";
+
+                tfaCmd = "/2fa";
+                tfaSyntax = "<configurar/eliminar/código>";
                 tfaDesc = "Administrar y verificar 2FA";
+
                 adminCmds = "Comandos de Administración:";
+
+                accountCmd = "/account";
+                accountSyntax = "<jugador>";
                 accountDesc = "Ver estadísticas avanzadas de la cuenta";
+
+                listCmd = "/accountslist";
                 listDesc = "Ver todas las cuentas de AstraLogin";
+
+                resetPassCmd = "/resetpassword";
+                resetPassSyntax = "<jugador>";
                 resetPassDesc = "Elimina la contraseña de un jugador";
+
+                resetIpCmd = "/resetip";
+                resetIpSyntax = "<jugador>";
                 resetIpDesc = "Restablece la dirección IP del jugador";
+
+                resetPinCmd = "/resetpin";
+                resetPinSyntax = "<jugador>";
                 resetPinDesc = "Restablece el PIN del jugador";
+
+                resetAccountCmd = "/resetaccount";
+                resetAccountSyntax = "<jugador>";
                 resetAccountDesc = "Borra todos los datos del jugador";
+
+                moveCmd = "/moveaccount";
+                moveSyntax = "<anterior> <nuevo>";
                 moveDesc = "Transfiere datos del jugador a otra cuenta";
+
+                spawnCmd = "/loginspawn";
+                spawnSyntax = "<establecer/eliminar> <tipo>";
                 spawnDesc = "Establece y elimina el spawn de inicio de sesión";
+
+                ipManagerCmd = "/ipmanager";
+                ipManagerSyntax = "<info/desbanear/excepción/quitarexcepción> <jugador>";
                 ipManagerDesc = "Gestionar bloqueos de IP y excepciones";
+
+                ipTrustCmd = "/iptrust";
+                ipTrustSyntax = "<info/establecer/restablecer> <IP> <puntuación>";
                 ipTrustDesc = "Muestra y gestiona la reputación de IP";
+
+                reloadCmd = "/astralogin";
+                reloadSyntax = "reload";
                 reloadDesc = "Recarga la configuración del plugin";
+
+                updateCmd = "/astralogin";
+                updateSyntax = "update";
+                updateDesc = "Descarga la última versión desde Modrinth";
                 break;
+
             default:
                 helpTitle = "AstraLogin Help System";
+                versionLabel = "Version:";
+                authorLabel = "Author:";
                 playerCmds = "Player Commands:";
+
+                regCmd = "/register";
+                regSyntax = "<pass> <repeat>";
                 regDesc = "Register a new account";
+
+                loginCmd = "/login";
+                loginSyntax = "<pass>";
                 loginDesc = "Log into the server";
+
+                logoutCmd = "/logout";
                 logoutDesc = "Log out of the server";
+
+                changePassCmd = "/changepassword";
+                changePassSyntax = "<old> <new> <repeat>";
                 changePassDesc = "Change your current password";
+
+                pinCmd = "/pin";
+                pinSyntax = "<set> <PIN/Auto>";
                 pinDesc = "Set or generate account PIN";
+
+                forgotCmd = "/forgotpass";
+                forgotSyntax = "<PIN>";
                 forgotDesc = "Reset password using PIN";
+
+                tfaCmd = "/2fa";
+                tfaSyntax = "<setup/unsetup/code>";
                 tfaDesc = "Manage and verify 2FA";
+
                 adminCmds = "Admin Commands:";
+
+                accountCmd = "/account";
+                accountSyntax = "<player>";
                 accountDesc = "View advanced account stats";
+
+                listCmd = "/accountslist";
                 listDesc = "View all AstraLogin accounts";
+
+                resetPassCmd = "/resetpassword";
+                resetPassSyntax = "<player>";
                 resetPassDesc = "Deletes a player's password";
+
+                resetIpCmd = "/resetip";
+                resetIpSyntax = "<player>";
                 resetIpDesc = "Resets the player's IP address";
+
+                resetPinCmd = "/resetpin";
+                resetPinSyntax = "<player>";
                 resetPinDesc = "Resets the player's PIN";
+
+                resetAccountCmd = "/resetaccount";
+                resetAccountSyntax = "<player>";
                 resetAccountDesc = "Wipes all player data";
+
+                moveCmd = "/moveaccount";
+                moveSyntax = "<old> <new>";
                 moveDesc = "Transfers player data to another account";
+
+                spawnCmd = "/loginspawn";
+                spawnSyntax = "<setspawn/delspawn> <type>";
                 spawnDesc = "Sets and removes login spawn";
+
+                ipManagerCmd = "/ipmanager";
+                ipManagerSyntax = "<info/unban/bypass/unbypass> <player>";
                 ipManagerDesc = "Manage IP bans and bypass";
+
+                ipTrustCmd = "/iptrust";
+                ipTrustSyntax = "<info/set/reset> <IP> <score>";
                 ipTrustDesc = "Shows and manages IP reputation";
+
+                reloadCmd = "/astralogin";
+                reloadSyntax = "reload";
                 reloadDesc = "Reloads plugin configuration";
+
+                updateCmd = "/astralogin";
+                updateSyntax = "update";
+                updateDesc = "Downloads the latest version from Modrinth";
                 break;
         }
 
         sender.sendMessage(p + "§b§l=== " + helpTitle + " ===");
-        sender.sendMessage(p + "§7Wersja: §f" + plugin.getDescription().getVersion() + " §7| Autor: §f" + plugin.getAuthor());
+        sender.sendMessage(p + "§7" + versionLabel + " §f" + plugin.getDescription().getVersion() + " §7| " + authorLabel + " §f" + plugin.getAuthor());
         sender.sendMessage(p + " ");
         sender.sendMessage(p + "§e§l" + playerCmds);
-        sender.sendMessage(p + " §f/register <pass> <repeat> §7- " + regDesc);
-        sender.sendMessage(p + " §f/login <pass> §7- " + loginDesc);
-        sender.sendMessage(p + " §f/logout §7- " + logoutDesc);
-        sender.sendMessage(p + " §f/changepassword <old> <new> <repeat> §7- " + changePassDesc);
-        sender.sendMessage(p + " §f/pin <set> <PIN/Auto> §7- " + pinDesc);
-        sender.sendMessage(p + " §f/forgotpass <PIN> §7- " + forgotDesc);
-        sender.sendMessage(p + " §f/2fa <setup/unsetup/code> §7- " + tfaDesc);
+        sender.sendMessage(p + " §f" + regCmd + " " + regSyntax + " §7- " + regDesc);
+        sender.sendMessage(p + " §f" + loginCmd + " " + loginSyntax + " §7- " + loginDesc);
+        sender.sendMessage(p + " §f" + logoutCmd + " §7- " + logoutDesc);
+        sender.sendMessage(p + " §f" + changePassCmd + " " + changePassSyntax + " §7- " + changePassDesc);
+        sender.sendMessage(p + " §f" + pinCmd + " " + pinSyntax + " §7- " + pinDesc);
+        sender.sendMessage(p + " §f" + forgotCmd + " " + forgotSyntax + " §7- " + forgotDesc);
+        sender.sendMessage(p + " §f" + tfaCmd + " " + tfaSyntax + " §7- " + tfaDesc);
 
-        if (sender.hasPermission("astralogin.account") || sender.hasPermission("astralogin.reload")) {
+        if (sender.hasPermission("astralogin.account") || sender.hasPermission("astralogin.reload") || sender.hasPermission("astralogin.update")) {
             sender.sendMessage(p + " ");
             sender.sendMessage(p + "§c§l" + adminCmds);
-            sender.sendMessage(p + " §f/account <player> §7- " + accountDesc);
-            sender.sendMessage(p + " §f/accountslist §7- " + listDesc);
-            sender.sendMessage(p + " §f/resetpassword <player> §7- " + resetPassDesc);
-            sender.sendMessage(p + " §f/resetip <player> §7- " + resetIpDesc);
-            sender.sendMessage(p + " §f/resetpin <player> §7- " + resetPinDesc);
-            sender.sendMessage(p + " §f/resetaccount <player> §7- " + resetAccountDesc);
-            sender.sendMessage(p + " §f/moveaccount <old> <new> §7- " + moveDesc);
-            sender.sendMessage(p + " §f/loginspawn <setspawn/delspawn> <type> §7- " + spawnDesc);
-            sender.sendMessage(p + " §f/ipmanager <info/unban/bypass/unbypass> <player> §7- " + ipManagerDesc);
-            sender.sendMessage(p + " §f/iptrust <info/set/reset> <IP> <score> §7- " + ipTrustDesc);
-            sender.sendMessage(p + " §f/astralogin reload §7- " + reloadDesc);
+            sender.sendMessage(p + " §f" + accountCmd + " " + accountSyntax + " §7- " + accountDesc);
+            sender.sendMessage(p + " §f" + listCmd + " §7- " + listDesc);
+            sender.sendMessage(p + " §f" + resetPassCmd + " " + resetPassSyntax + " §7- " + resetPassDesc);
+            sender.sendMessage(p + " §f" + resetIpCmd + " " + resetIpSyntax + " §7- " + resetIpDesc);
+            sender.sendMessage(p + " §f" + resetPinCmd + " " + resetPinSyntax + " §7- " + resetPinDesc);
+            sender.sendMessage(p + " §f" + resetAccountCmd + " " + resetAccountSyntax + " §7- " + resetAccountDesc);
+            sender.sendMessage(p + " §f" + moveCmd + " " + moveSyntax + " §7- " + moveDesc);
+            sender.sendMessage(p + " §f" + spawnCmd + " " + spawnSyntax + " §7- " + spawnDesc);
+            sender.sendMessage(p + " §f" + ipManagerCmd + " " + ipManagerSyntax + " §7- " + ipManagerDesc);
+            sender.sendMessage(p + " §f" + ipTrustCmd + " " + ipTrustSyntax + " §7- " + ipTrustDesc);
+            sender.sendMessage(p + " §f" + reloadCmd + " " + reloadSyntax + " §7- " + reloadDesc);
+            sender.sendMessage(p + " §f" + updateCmd + " " + updateSyntax + " §7- " + updateDesc);
         }
 
         sender.sendMessage(p + "§b§l=================================");
@@ -361,6 +608,25 @@ public class NoticeManager {
         String msg;
         switch (getLang().toLowerCase()) {
             case "pl":
+                msg = "§aPomyślnie utworzono kopię zapasową: §e";
+                break;
+            case "de":
+                msg = "§aBackup erfolgreich erstellt: §e";
+                break;
+            case "es":
+                msg = "§aCopia de seguridad creada con éxito: §e";
+                break;
+            default:
+                msg = "§aBackup successfully created: §e";
+                break;
+        }
+        Bukkit.getConsoleSender().sendMessage(getConsolePrefix() + " " + msg + fileName);
+    }
+
+    public void sendAutomaticBackupSave(String fileName) {
+        String msg;
+        switch (getLang().toLowerCase()) {
+            case "pl":
                 msg = "§aPomyślnie utworzono automatyczną kopię zapasową: §e";
                 break;
             case "de":
@@ -371,25 +637,6 @@ public class NoticeManager {
                 break;
             default:
                 msg = "§aAutomatic backup successfully created: §e";
-                break;
-        }
-        Bukkit.getConsoleSender().sendMessage(getConsolePrefix() + " " + msg + fileName);
-    }
-
-    public void sendAutomaticBackupSave(String fileName) {
-        String msg;
-        switch (getLang().toLowerCase()) {
-            case "pl":
-                msg = "§aPomyślnie utworzono kopię zapasową danych przed migracją: §e";
-                break;
-            case "de":
-                msg = "§aDatensicherung vor der Migration erfolgreich erstellt: §e";
-                break;
-            case "es":
-                msg = "§aCopia de seguridad creada con éxito antes de la migración: §e";
-                break;
-            default:
-                msg = "§aBackup of data successfully created before migration: §e";
                 break;
         }
         Bukkit.getConsoleSender().sendMessage(getConsolePrefix() + " " + msg + fileName);
@@ -585,27 +832,37 @@ public class NoticeManager {
         target.sendMessage(prefix + " " + msg);
     }
 
-    public void sendExperimentalNotice(CommandSender target) {
+    public void sendExperimentalNotice(CommandSender target, String latestStable) {
         String lang = getLang().toLowerCase();
         String devTitle;
         String warning;
+        String stableInfo;
+        String download;
 
         switch (lang) {
             case "pl":
                 devTitle = "§bUżywasz eksperymentalnej wersji: §fv";
                 warning = "§cUżywaj tylko dla testów! Kod jest w fazie rozwoju!";
+                stableInfo = "§eNajnowsza stabilna wersja AstraLogin: §fv";
+                download = "§aPobierz: ";
                 break;
             case "de":
                 devTitle = "§bDu verwendest eine experimentelle Version: §fv";
                 warning = "§cNur für Testzwecke verwenden! Der Code befindet sich in der Entwicklung!";
+                stableInfo = "§eNeueste stabile AstraLogin-Version: §fv";
+                download = "§aHerunterladen: ";
                 break;
             case "es":
                 devTitle = "§bEstás usando una versión experimental: §fv";
                 warning = "§c¡Usa solo para pruebas! ¡El código está en desarrollo!";
+                stableInfo = "§eÚltima versión estable de AstraLogin: §fv";
+                download = "§aDescargar: ";
                 break;
             default:
                 devTitle = "§bYou are using an experimental version: §fv";
                 warning = "§cUse only for testing! The code is in development!";
+                stableInfo = "§eLatest stable AstraLogin version: §fv";
+                download = "§aDownload: ";
                 break;
         }
 
@@ -615,11 +872,13 @@ public class NoticeManager {
         target.sendMessage("§7------------ " + prefix + " §7------------");
         target.sendMessage(devTitle + plugin.getDescription().getVersion());
         target.sendMessage(warning);
+        target.sendMessage(stableInfo + latestStable);
+        target.sendMessage(download + "§f§nhttps://modrinth.com/plugin/astralogin/version/" + latestStable);
         target.sendMessage("§7-------------------------------------------");
         target.sendMessage("");
     }
 
-    public void sendPreReleaseNotice(CommandSender target, String version) {
+    public void sendVersionPreReleaseNotice(CommandSender target, String version) {
         String lang = getLang().toLowerCase();
         String title;
         String info;
