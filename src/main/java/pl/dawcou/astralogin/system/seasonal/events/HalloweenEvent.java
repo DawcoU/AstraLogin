@@ -8,13 +8,7 @@ import java.util.concurrent.ThreadLocalRandom;
 // ---------------------------------------------------------------- //
 // HalloweenEvent - Handles Halloween event sound pool and state
 // ---------------------------------------------------------------- //
-public class HalloweenEvent implements SeasonalEvent {
-
-    private final List<String> sounds;
-
-    public HalloweenEvent(List<String> sounds) {
-        this.sounds = sounds;
-    }
+public record HalloweenEvent(List<String> sounds) implements SeasonalEvent {
 
     @Override
     public String getName() {
@@ -24,11 +18,6 @@ public class HalloweenEvent implements SeasonalEvent {
     @Override
     public String getId() {
         return "halloween";
-    }
-
-    @Override
-    public List<String> getSounds() {
-        return sounds;
     }
 
     @Override

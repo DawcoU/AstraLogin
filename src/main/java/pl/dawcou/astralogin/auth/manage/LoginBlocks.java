@@ -184,8 +184,7 @@ public class LoginBlocks implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onAttack(EntityDamageByEntityEvent e) {
-        if (e.getDamager() instanceof Player) {
-            Player p = (Player) e.getDamager();
+        if (e.getDamager() instanceof Player p) {
             if (isNotAuthenticated(p.getUniqueId())) {
                 e.setCancelled(true);
                 sendBlockedMessage(p, p.getUniqueId());
@@ -204,8 +203,7 @@ public class LoginBlocks implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onProjectileLaunch(ProjectileLaunchEvent e) {
-        if (e.getEntity().getShooter() instanceof Player) {
-            Player p = (Player) e.getEntity().getShooter();
+        if (e.getEntity().getShooter() instanceof Player p) {
             if (isNotAuthenticated(p.getUniqueId())) {
                 e.setCancelled(true);
             }
@@ -244,8 +242,7 @@ public class LoginBlocks implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPickup(EntityPickupItemEvent e) {
-        if (e.getEntity() instanceof Player) {
-            Player p = (Player) e.getEntity();
+        if (e.getEntity() instanceof Player p) {
             if (isNotAuthenticated(p.getUniqueId())) {
                 e.setCancelled(true);
             }

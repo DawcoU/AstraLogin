@@ -431,10 +431,8 @@ public class ProtocolLibListener implements Listener {
                                     }
 
                                     // Dokończenie logowania synchronicznie
-                                    ProtocolLibListener.this.plugin.getSchedulerManager().runSync(() -> {
-                                        new LoginCompleter(ProtocolLibListener.this.plugin)
-                                                .complete(channel, offlineUuid, offlineNmsProfile);
-                                    });
+                                    ProtocolLibListener.this.plugin.getSchedulerManager().runSync(() -> new LoginCompleter(ProtocolLibListener.this.plugin)
+                                            .complete(channel, offlineUuid, offlineNmsProfile));
 
                                     ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [7.4] 🔓 Encryption injected and offline login completed for " + username);
 
@@ -484,10 +482,8 @@ public class ProtocolLibListener implements Listener {
                                 }
 
                                 // Sync completion
-                                ProtocolLibListener.this.plugin.getSchedulerManager().runSync(() -> {
-                                    new LoginCompleter(ProtocolLibListener.this.plugin)
-                                            .complete(channel, finalUUID, mojangProfile);
-                                });
+                                ProtocolLibListener.this.plugin.getSchedulerManager().runSync(() -> new LoginCompleter(ProtocolLibListener.this.plugin)
+                                        .complete(channel, finalUUID, mojangProfile));
 
                             } catch (Exception e) {
                                 plugin.getLogger().severe("[7.ERR] ❌ Error during AsyncPlayerPreLoginEvent execution: "

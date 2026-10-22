@@ -9,6 +9,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.jspecify.annotations.NonNull;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.data.PlayerDataManager;
 import pl.dawcou.astralogin.system.SoundManager;
@@ -26,7 +27,7 @@ public class AccountCommand implements CommandExecutor {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(@NonNull CommandSender sender, Command command, @NonNull String label, String[] args) {
         Player p = (sender instanceof Player) ? (Player) sender : null;
 
         // ==========================================
@@ -66,7 +67,7 @@ public class AccountCommand implements CommandExecutor {
             String targetUUIDString = targetUUID.toString();
             PlayerDataManager pdm = plugin.getPlayerDataManager();
 
-            String ip = plugin.getIPManager().getIP(targetUUIDString);
+            String ip = plugin.getIPManager().getIP(targetUUID);
             if (ip == null) {
                 ip = plugin.getLanguageManager().getMessage("account.no-data");
             }
@@ -476,12 +477,7 @@ public class AccountCommand implements CommandExecutor {
                 return true;
             }
 
-            if (p.isOnline()) {
-                String kickReason = plugin.getLanguageManager().getMessage("account.logout-success");
-                p.kickPlayer(kickReason);
-            }
-
-            plugin.getSessionManager().deleteSession(p.getUniqueId());
+            plugin.getLoginSystem().logout(p);
             plugin.getLogManager().log("Player " + p.getName() + " has logged out");
 
             return true;

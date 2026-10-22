@@ -42,8 +42,8 @@ public class IPManager {
     // ----------------------------------------------------------------------------------------------------
     // IP Verification Methods
     // ----------------------------------------------------------------------------------------------------
-    public boolean checkIP(String uuid, String savedIP, String currentIP) {
-        if (uuid != null && ipBanManager.hasBypass(uuid)) {
+    public boolean checkIP(UUID uuid, String savedIP, String currentIP) {
+        if (uuid != null && ipBanManager.hasBypass(uuid.toString())) {
             return true;
         }
         return isValidIP(savedIP, currentIP);
@@ -97,29 +97,26 @@ public class IPManager {
     // ----------------------------------------------------------------------------------------------------
     // Player Data IP Operations
     // ----------------------------------------------------------------------------------------------------
-    public void saveIP(String uuid, String ip) {
+    public void saveIP(UUID uuid, String ip) {
         try {
-            UUID parsedUuid = UUID.fromString(uuid);
-            playerDataManager.set(parsedUuid, "auth.last-ip", ip);
+            playerDataManager.set(uuid, "auth.last-ip", ip);
         } catch (IllegalArgumentException e) {
             plugin.getLogger().warning("Could not parse UUID for IP saving: " + uuid);
         }
     }
 
-    public String getIP(String uuid) {
+    public String getIP(UUID uuid) {
         try {
-            UUID parsedUuid = UUID.fromString(uuid);
-            return playerDataManager.getString(parsedUuid, "auth.last-ip");
+            return playerDataManager.getString(uuid, "auth.last-ip");
         } catch (IllegalArgumentException e) {
             plugin.getLogger().warning("Could not parse UUID for IP retrieval: " + uuid);
             return null;
         }
     }
 
-    public void deleteIP(String uuid) {
+    public void deleteIP(UUID uuid) {
         try {
-            UUID parsedUuid = UUID.fromString(uuid);
-            playerDataManager.remove(parsedUuid, "auth.last-ip");
+            playerDataManager.remove(uuid, "auth.last-ip");
         } catch (IllegalArgumentException e) {
             plugin.getLogger().warning("Could not parse UUID for IP deletion: " + uuid);
         }

@@ -1,6 +1,7 @@
 package pl.dawcou.astralogin.file;
 
 import org.bukkit.configuration.file.FileConfiguration;
+import org.jspecify.annotations.NonNull;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 
@@ -88,7 +89,7 @@ public class BackupManager {
 
                 Files.walkFileTree(sourcePath, new SimpleFileVisitor<>() {
                     @Override
-                    public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                    public @NonNull FileVisitResult preVisitDirectory(@NonNull Path dir, @NonNull BasicFileAttributes attrs) {
                         // Porównujemy gotowe obiekty
                         if (dir.equals(backupsPath) || dir.equals(logsPath)) {
                             return FileVisitResult.SKIP_SUBTREE;
@@ -97,7 +98,7 @@ public class BackupManager {
                     }
 
                     @Override
-                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    public @NonNull FileVisitResult visitFile(@NonNull Path file, @NonNull BasicFileAttributes attrs) throws IOException {
                         String zipEntryName = sourcePath.relativize(file).toString().replace("\\", "/");
                         zos.putNextEntry(new ZipEntry(zipEntryName));
                         Files.copy(file, zos);

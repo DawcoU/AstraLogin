@@ -8,11 +8,13 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.api.events.PlayerPremiumLoginEvent;
 import pl.dawcou.astralogin.auth.LoginSystem;
 import pl.dawcou.astralogin.auth.manage.spawn.SpawnType;
 import pl.dawcou.astralogin.auth.security.ip.IPTrustManager;
 
 import java.time.Duration;
+import java.util.Objects;
 import java.util.UUID;
 
 public class JoinHandler {
@@ -31,7 +33,7 @@ public class JoinHandler {
         LoginSystem loginSystem = plugin.getLoginSystem();
         Player p = e.getPlayer();
         UUID uuid = p.getUniqueId();
-        String ip = p.getAddress().getAddress().getHostAddress();
+        String ip = Objects.requireNonNull(p.getAddress()).getAddress().getHostAddress();
 
         // Update Checker
         if (plugin.getConfig().getBoolean("settings.check-updates", true)
@@ -46,6 +48,12 @@ public class JoinHandler {
             plugin.getSchedulerManager().runForEntity(p, () -> {
                 IPTrustManager.TrustLevel level = plugin.getIpTrustManager().getTrustLevel(ip);
                 if (premium && (level != IPTrustManager.TrustLevel.FATAL && !plugin.getPlayerDataManager().getBoolean(uuid, "account.suspicious", false))) {
+                    PlayerPremiumLoginEvent event = new PlayerPremiumLoginEvent(p,ip);
+                    Bukkit.getPluginManager().callEvent(event);
+                    if (event.isCancelled()) {
+                        return;
+                    }
+
                     p.sendMessage(plugin.getLanguageManager().getWithPrefix("premium.success"));
                     plugin.getLogManager().log("Premium account detected for player " + p.getName());
 
@@ -75,9 +83,7 @@ public class JoinHandler {
                     loginSystem.getLoggedIn().remove(uuid);
                 } else {
                     // Jeśli hasło przeszło z sesji, upewniamy się, że gracz ma status zalogowanego z hasła
-                    if (!loginSystem.getLoggedIn().contains(uuid)) {
-                        loginSystem.getLoggedIn().add(uuid);
-                    }
+                    loginSystem.getLoggedIn().add(uuid);
                 }
 
                 if (plugin.getConfig().getBoolean("visuals.use-blindness")) {

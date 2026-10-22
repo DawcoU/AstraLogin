@@ -30,7 +30,7 @@ public class MojangApiService {
      */
     public GameProfile fetchMojangProfile(String username, String serverHash) {
         if (plugin.isDevMockMode()) {
-            plugin.getLogger().warning("[DEV-MOCK] Bypassing HTTP request to Mojang for testing!");
+            plugin.getPremiumManager().debugWarning("[DEV-MOCK] Bypassing HTTP request to Mojang for testing!");
 
             UUID mockUuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(StandardCharsets.UTF_8));
             return new GameProfile(mockUuid, username);
@@ -42,8 +42,8 @@ public class MojangApiService {
                     + "&serverId="
                     + URLEncoder.encode(serverHash, StandardCharsets.UTF_8);
 
-            plugin.getLogger().info("DEBUG [Mojang API] 🌐 Requesting hasJoined: username=" + username + ", serverHash=" + serverHash);
-            plugin.getLogger().info("DEBUG [Mojang API] 🔗 Full URL: " + urlString);
+            plugin.getPremiumManager().debug("DEBUG [Mojang API] 🌐 Requesting hasJoined: username=" + username + ", serverHash=" + serverHash);
+            plugin.getPremiumManager().debug("DEBUG [Mojang API] 🔗 Full URL: " + urlString);
 
             URL url = URI.create(urlString).toURL();
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -90,11 +90,11 @@ public class MojangApiService {
                     }
                 }
 
-                plugin.getLogger().info("DEBUG [MOJANG-API] 🔓 Player " + name + " successfully verified by Mojang!");
+                plugin.getPremiumManager().debug("DEBUG [MOJANG-API] 🔓 Player " + name + " successfully verified by Mojang!");
 
                 return profile;
             } else {
-                plugin.getLogger().severe("DEBUG [Mojang API] ❌ Unexpected HTTP response=" + responseCode + " for " + username);
+                plugin.getPremiumManager().debugWarning("DEBUG [Mojang API] ❌ Unexpected HTTP response=" + responseCode + " for " + username);
             }
 
             return null;

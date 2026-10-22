@@ -72,7 +72,7 @@ public class SeasonalEventManager {
 
         if (matchedEvents.size() == 1) {
             this.activeEvent = matchedEvents.get(0);
-            plugin.getNoticeManager().sendSeasonalEventActivated(activeEvent.getName());
+            plugin.getNoticeManager().sendSeasonalEventActivated(Objects.requireNonNull(activeEvent).getName());
         }
     }
 

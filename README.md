@@ -131,23 +131,25 @@ If you need help, want to report a bug, or follow the development by **DawcoU**,
 
 ---
 
-### 📦 AstraLogin API (JitPack)
+### 📦 AstraLogin API & Events (JitPack)
 
 You can easily use AstraLogin as a dependency in your own projects using JitPack.
 
-> ⚠️ **Note:** The API is available starting from **v4.6.0** and newer. Versions below `v4.6.0` do not support the API.
+> ⚠️ **Note:** The API and Custom Events are available starting from **v4.6.0** and newer. Versions below `v4.6.0` do not support the API.
 > Replace `Tag` in the examples below with a specific version tag from [AstraLogin GitHub Releases / Tags](https://github.com/DawcoU/AstraLogin/tags) (e.g., `v4.6.0`).
 
-#### Gradle
+> ⚖️ **API Licensing Exception:** The API interfaces and classes are **exempt** from the main project's strict ARR (All Rights Reserved) license. You are fully authorized and legally safe to develop companion plugins, extensions, or helper tools (such as small utilities checking login status or 2FA) that hook into AstraLogin's API without violating terms! 🔓✨
+
+#### Gradle (`build.gradle`)
 
 ```gradle
 repositories {
     mavenCentral()
-    maven { url '[https://jitpack.io](https://jitpack.io)' }
+    maven { url = 'https://jitpack.io' }
 }
 
 dependencies {
-    implementation 'com.github.DawcoU:AstraLogin:Tag'
+    compileOnly 'com.github.DawcoU:AstraLogin:Tag'
 }
 
 ```
@@ -158,7 +160,7 @@ dependencies {
 <repositories>
     <repository>
         <id>jitpack.io</id>
-      <url>[https://jitpack.io](https://jitpack.io)</url>
+        <url>https://jitpack.io</url>
     </repository>
 </repositories>
 
@@ -167,12 +169,15 @@ dependencies {
         <groupId>com.github.DawcoU</groupId>
         <artifactId>AstraLogin</artifactId>
         <version>Tag</version>
+        <scope>provided</scope>
     </dependency>
 </dependencies>
 
 ```
 
-### 💻 Example API Usage
+---
+
+### 💻 Example 1: Basic API Access
 
 ```java
 import org.bukkit.Bukkit;
@@ -197,3 +202,36 @@ public class ExamplePlugin {
         return api != null && api.isLogged(uuid);
     }
 }
+
+```
+
+---
+
+### 🔔 Example 2: Listening to AstraLogin Events
+
+```java
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import pl.dawcou.astralogin.api.events.PlayerLoginEvent;
+
+public class CustomLoginListener implements Listener {
+
+    @EventHandler
+    public void onPlayerLogin(PlayerLoginEvent event) {
+        // Retrieve parameters provided by AstraLoginEvent
+        Player player = event.getPlayer();
+        String ip = event.getIp();
+        long timestamp = event.getTimestamp();
+
+        // Perform custom action on successful login
+        player.sendMessage("Welcome back! Successfully logged in from IP: " + ip);
+
+        // Example: Check or cancel event status if needed (since PlayerLoginEvent implements Cancellable)
+        if (event.isCancelled()) {
+            return;
+        }
+    }
+}
+
+```

@@ -4,7 +4,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.auth.LoginSystem;
 import pl.dawcou.astralogin.auth.security.ip.IPManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 
@@ -19,12 +18,11 @@ public class PreLoginHandler {
     }
 
     public void handlePreLogin(AsyncPlayerPreLoginEvent e) {
-        LoginSystem loginSystem = plugin.getLoginSystem();
         UUID uuid = e.getUniqueId();
         IPManager ipManager = plugin.getIPManager();
 
         String currentIP = e.getAddress().getHostAddress();
-        String savedIP = ipManager.getIP(uuid.toString());
+        String savedIP = ipManager.getIP(uuid);
 
         String playerName = e.getName();
 
@@ -99,7 +97,7 @@ public class PreLoginHandler {
         }
 
         // Sprawdzenie Zmiany IP
-        if (plugin.getConfig().getBoolean("security.ip-security.enabled", true) && savedIP != null && !plugin.getIPManager().checkIP(uuid.toString(), savedIP, currentIP)) {
+        if (plugin.getConfig().getBoolean("security.ip-security.enabled", true) && savedIP != null && !plugin.getIPManager().checkIP(uuid, savedIP, currentIP)) {
             plugin.getLogManager().log("Player " + playerName + " was detected with an IP mismatch. Current IP: " + currentIP + ", Saved IP: " + savedIP);
             plugin.getIpTrustManager().addTrustScore(
                     currentIP,

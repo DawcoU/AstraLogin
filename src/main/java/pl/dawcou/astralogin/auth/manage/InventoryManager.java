@@ -120,12 +120,11 @@ public class InventoryManager {
             }
         }
 
-        deleteInventoryCache(uuid.toString());
+        deleteInventoryCache(uuid);
     }
 
-    public void deleteInventoryCache(String uuidString) {
+    public void deleteInventoryCache(UUID uuid) {
         try {
-            UUID uuid = UUID.fromString(uuidString);
             playerDataManager.remove(uuid, "inventory");
         } catch (IllegalArgumentException ignored) {
         }

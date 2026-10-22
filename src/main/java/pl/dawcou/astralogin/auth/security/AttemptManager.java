@@ -5,6 +5,7 @@ import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -22,7 +23,7 @@ public class AttemptManager {
             return;
         }
 
-        String ip = p.getAddress().getAddress().getHostAddress();
+        String ip = Objects.requireNonNull(p.getAddress()).getAddress().getHostAddress();
 
         int max = plugin.getConfig().getInt("security.attempts.max", 3);
         int margin = plugin.getConfig().getInt("security.attempts.margin", 2);

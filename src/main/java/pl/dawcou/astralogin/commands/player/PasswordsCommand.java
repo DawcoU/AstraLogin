@@ -6,6 +6,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.jspecify.annotations.NonNull;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.passwords.PasswordHasher;
 import pl.dawcou.astralogin.auth.passwords.PasswordValidator;
@@ -14,6 +15,7 @@ import pl.dawcou.astralogin.system.utils.TimeUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -26,7 +28,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(@NonNull CommandSender sender, Command command, @NonNull String label, String[] args) {
         Player p = (sender instanceof Player) ? (Player) sender : null;
 
         if (command.getName().equalsIgnoreCase("zresetujhaslo") || command.getName().equalsIgnoreCase("resetpassword")) {
@@ -83,7 +85,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
             Player targetP = Bukkit.getPlayer(targetUUID);
 
             if (targetP != null && targetP.isOnline()) {
-                String playerIP = targetP.getAddress().getAddress().getHostAddress();
+                String playerIP = Objects.requireNonNull(targetP.getAddress()).getAddress().getHostAddress();
                 plugin.getIPManager().resetIPAttempts(playerIP);
                 targetP.kickPlayer(plugin.getLanguageManager().getMessage("reset-password.player-kick"));
             }
@@ -103,7 +105,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            String ip = p.getAddress().getAddress().getHostAddress();
+            String ip = Objects.requireNonNull(p.getAddress()).getAddress().getHostAddress();
             String PIN = args[0];
             UUID playerUUID = p.getUniqueId();
 
@@ -124,9 +126,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                             plugin.getPasswordManager().savePassword(playerUUID, result.newHash());
                         }
 
-                        plugin.getSchedulerManager().runSync(() -> {
-                            p.kickPlayer(plugin.getLanguageManager().getMessage("forgot-password.player-kick"));
-                        });
+                        plugin.getSchedulerManager().runSync(() -> p.kickPlayer(plugin.getLanguageManager().getMessage("forgot-password.player-kick")));
 
                         plugin.getPasswordManager().deletePassword(playerUUID);
 
@@ -184,7 +184,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            String ip = p.getAddress().getAddress().getHostAddress();
+            String ip = Objects.requireNonNull(p.getAddress()).getAddress().getHostAddress();
             String oldPassword = args[0];
             String newPassword = args[1];
             String newPasswordConfirm = args[2];
@@ -349,7 +349,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+    public List<String> onTabComplete(@NonNull CommandSender sender, Command command, @NonNull String alias, String[] args) {
         List<String> hints = new ArrayList<>();
         String cmd = command.getName();
 

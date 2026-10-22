@@ -10,7 +10,7 @@ public interface SeasonalEvent {
     String getName();
     String getId();
 
-    List<String> getSounds();
+    List<String> sounds();
 
     String getRandomSound();
 }

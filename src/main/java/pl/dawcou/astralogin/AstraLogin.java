@@ -370,6 +370,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
             noticeManager.sendVersionOk(getServer().getConsoleSender());
         }
 
+        // Uruchamianie API
         AstraLoginAPIImpl apiImplementation = new AstraLoginAPIImpl(this);
         getServer().getServicesManager().register(
                 AstraLoginAPI.class,

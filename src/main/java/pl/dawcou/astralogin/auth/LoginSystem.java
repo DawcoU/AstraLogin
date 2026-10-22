@@ -9,7 +9,11 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffectType;
+import org.jspecify.annotations.NonNull;
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.api.events.PlayerFailedLoginEvent;
+import pl.dawcou.astralogin.api.events.PlayerLoginEvent;
+import pl.dawcou.astralogin.api.events.PlayerRegisterEvent;
 import pl.dawcou.astralogin.auth.manage.spawn.SpawnType;
 import pl.dawcou.astralogin.auth.passwords.PasswordValidator;
 import pl.dawcou.astralogin.system.SoundManager;
@@ -38,7 +42,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
     // I have no idea why this works, but touching it would be irresponsible.
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(@NonNull CommandSender sender, Command command, @NonNull String label, String[] args) {
         Player p = (sender instanceof Player) ? (Player) sender : null;
 
         if (command.getName().equalsIgnoreCase("zarejestruj") || command.getName().equalsIgnoreCase("register") || command.getName().equalsIgnoreCase("reg")) {
@@ -101,7 +105,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
             int max = plugin.getConfig().getInt("features.password.max-password-length", 24);
             max = Math.min(32, max);
 
-            // Dodatkowe zabezpieczenie: gdyby admin w configu ustawił min większe niż max (np. min: 20, max: 10)
+            // Dodatkowe zabezpieczenie: gdyby admin w configu ustawił min większe niż max
             if (min > max) {
                 min = 6;
                 max = 24;
@@ -118,15 +122,14 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            // PRZYGOTOWANIE DANYCH DO ASYNC ----
-            UUID playerUUID = p.getUniqueId(); // Unikalne UUID gracza
-            String uuidString = playerUUID.toString(); // UUID jako String
-            String playerName = p.getName(); // Nick gracza
-            String ip = p.getAddress().getAddress().getHostAddress(); // IP gracza
-            String passwordToHash = args[0]; // Surowe hasło do zahashowania (Argon2id / BCrypt)
+            UUID playerUUID = p.getUniqueId();
+            String uuidString = playerUUID.toString();
+            String playerName = p.getName();
+            String ip = Objects.requireNonNull(p.getAddress()).getAddress().getHostAddress();
+            String passwordToHash = args[0]; // Surowe hasło do shashowania
 
             plugin.getSchedulerManager().runAsync(() -> {
-                // Rejestracja/hashowanie przez hasher z obsługą statusów (tak jak w loginie)
+                // Rejestracja/hashowanie przez hasher z obsługą statusów
                 var result = plugin.getPasswordManager().getPasswordHasher().hashPassword(playerUUID, passwordToHash);
 
                 switch (result.status()) {
@@ -135,7 +138,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
 
                         // 2. Zapisujemy dane
                         plugin.getPasswordManager().savePassword(playerUUID, hashedPass);
-                        plugin.getIPManager().saveIP(uuidString, ip);
+                        plugin.getIPManager().saveIP(playerUUID, ip);
 
                         // 3. Wracamy na główny wątek (Sync)
                         plugin.getSchedulerManager().runSync(() -> {
@@ -161,7 +164,14 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                                 plugin.getLogManager().log("Player " + p.getName() + " registered, but has active 2FA. Waiting for code...");
                                 plugin.getSoundManager().playSound(p, SoundManager.SoundType.SECURITY_REMINDER);
                             } else {
+                                PlayerRegisterEvent event = new PlayerRegisterEvent(p, ip);
+                                Bukkit.getPluginManager().callEvent(event);
+                                if (event.isCancelled()) {
+                                    return;
+                                }
+
                                 finishLogin(p);
+
                                 p.sendTitle(
                                         plugin.getLanguageManager().getMessage("title.register"),
                                         plugin.getLanguageManager().getMessage("title.register-subtitle"),
@@ -227,7 +237,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
 
             if (args.length == 1) {
                 String inputPassword = args[0];
-                String currentIP = p.getAddress().getAddress().getHostAddress();
+                String currentIP = Objects.requireNonNull(p.getAddress()).getAddress().getHostAddress();
 
                 plugin.getSchedulerManager().runAsync(() -> {
                     // Sprawdzamy poprawność nowym systemem z obsługą UUID dla limitera
@@ -239,14 +249,14 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                                 plugin.getPasswordManager().savePassword(playerUUID, result.newHash());
                             }
 
-                            plugin.getIPManager().saveIP(uuidString, currentIP);
+                            plugin.getIPManager().saveIP(playerUUID, currentIP);
 
                             // POBIERAMY STATUSY: Czy sesje 2FA są aktywne w konfiguracji pluginu?
                             boolean is2FASessionEnabled = plugin.getConfig().getBoolean("security.2fa.session.enabled", true);
                             boolean is2FAEnabled = plugin.getTwoFactorManager().has2FA(playerUUID);
 
                             // Jeśli opcja sesji 2FA jest wyłączona w configu, 'hasActive2FA' ZAWSZE traktujemy jako false
-                            boolean hasActive2FA = is2FASessionEnabled && plugin.getSessionManager().getTwoFactorSessionManager().hasActive2FASession(playerUUID);
+                            boolean hasActive2FA = is2FASessionEnabled && plugin.getSessionManager().getTwoFactorSessionManager().hasActive2FASession(playerUUID, currentIP);
 
                             // KOMBINACJA: Hasło poprawne, 2FA włączone, ale BRAK aktywnej sesji 2FA (lub sesje wyłączone w configu)
                             if (is2FAEnabled && !hasActive2FA) {
@@ -270,7 +280,14 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                                 plugin.getSchedulerManager().runSync(() -> {
                                     if (!p.isOnline()) return;
 
+                                    PlayerLoginEvent event = new PlayerLoginEvent(p, currentIP);
+                                    Bukkit.getPluginManager().callEvent(event);
+                                    if (event.isCancelled()) {
+                                        return;
+                                    }
+
                                     finishLogin(p);
+
                                     p.sendTitle(
                                             plugin.getLanguageManager().getMessage("title.login"),
                                             plugin.getLanguageManager().getMessage("title.login-subtitle"),
@@ -291,7 +308,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                                     plugin.getSessionManager().saveSession(playerUUID, currentIP);
 
                                     // Zapisujemy sesję 2FA na dysk TYLKO jeśli funkcja sesji 2FA jest włączona w config.yml!
-                                    if (is2FAEnabled && is2FASessionEnabled) {
+                                    if (is2FAEnabled) {
                                         plugin.getSessionManager().getTwoFactorSessionManager().saveSession2FA(playerUUID, currentIP);
                                     }
                                 });
@@ -300,6 +317,12 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
 
                         case INVALID_PASSWORD:
                             plugin.getSchedulerManager().runSync(() -> {
+                                PlayerFailedLoginEvent event = new PlayerFailedLoginEvent(p, currentIP);
+                                Bukkit.getPluginManager().callEvent(event);
+                                if (event.isCancelled()) {
+                                    return;
+                                }
+
                                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.wrong"));
                                 plugin.getLogManager().log("Player " + p.getName() + " entered the wrong password");
                                 plugin.getSoundManager().playSound(p, SoundManager.SoundType.WRONG_PASSWORD);
@@ -349,7 +372,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
 
     public void finishLogin(Player p) {
         UUID uuid = p.getUniqueId();
-        String ip = p.getAddress().getAddress().getHostAddress();
+        String ip = Objects.requireNonNull(p.getAddress()).getAddress().getHostAddress();
 
         loggedIn.add(uuid);
         plugin.getPlayerDataManager().remove(uuid, "account.suspicious");
@@ -392,8 +415,17 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
         plugin.getSeasonalEventManager().sendEventNotice(p);
     }
 
+    public void logout(Player p) {
+        if (p.isOnline()) {
+            String kickReason = plugin.getLanguageManager().getMessage("account.logout-success");
+            p.kickPlayer(kickReason);
+        }
+
+        plugin.getSessionManager().deleteSession(p.getUniqueId());
+    }
+
     @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+    public List<String> onTabComplete(@NonNull CommandSender sender, Command command, @NonNull String alias, String[] args) {
         List<String> hints = new ArrayList<>();
         String cmd = command.getName();
 

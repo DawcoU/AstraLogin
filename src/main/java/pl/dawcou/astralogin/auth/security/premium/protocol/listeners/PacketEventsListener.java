@@ -212,9 +212,7 @@ public class PacketEventsListener extends PacketListenerAbstract implements List
                                     return;
                                 }
 
-                                plugin.getSchedulerManager().runSync(() -> {
-                                    new LoginCompleter(plugin).complete(channel, offlineUuid, offlineProfile);
-                                });
+                                plugin.getSchedulerManager().runSync(() -> new LoginCompleter(plugin).complete(channel, offlineUuid, offlineProfile));
                             } catch (Exception e) {
                                 e.printStackTrace();
                                 if (channel.isOpen()) channel.close();
@@ -241,9 +239,7 @@ public class PacketEventsListener extends PacketListenerAbstract implements List
                                 return;
                             }
 
-                            plugin.getSchedulerManager().runSync(() -> {
-                                new LoginCompleter(plugin).complete(channel, finalUUID, mojangProfile);
-                            });
+                            plugin.getSchedulerManager().runSync(() -> new LoginCompleter(plugin).complete(channel, finalUUID, mojangProfile));
                         } catch (Exception e) {
                             plugin.getLogger().severe("DEBUG [6.0] ❌ Error during AsyncPlayerPreLoginEvent execution: " + e.getMessage());
                             e.printStackTrace();
@@ -282,9 +278,7 @@ public class PacketEventsListener extends PacketListenerAbstract implements List
             }
 
             // Ukończenie logowania na wątku głównym serwera
-            plugin.getSchedulerManager().runSync(() -> {
-                new LoginCompleter(plugin).complete(channel, uuid, offlineProfile);
-            });
+            plugin.getSchedulerManager().runSync(() -> new LoginCompleter(plugin).complete(channel, uuid, offlineProfile));
         } catch (Exception e) {
             e.printStackTrace();
             plugin.getSchedulerManager().runSync(() -> {

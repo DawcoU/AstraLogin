@@ -66,6 +66,9 @@ public class SchedulerManager {
      * Executes a task for a specific entity on its region thread (Folia compatible).
      */
     public void runForEntity(Entity entity, Runnable runnable) {
+        if (!plugin.isEnabled()) {
+            return;
+        }
         if (isFolia) {
             entity.getScheduler().run(plugin, task -> runnable.run(), null);
         } else {
@@ -77,6 +80,9 @@ public class SchedulerManager {
      * Executes a delayed task for a specific entity on its region thread (Folia compatible).
      */
     public Task runForEntityLater(Entity entity, Runnable runnable, long delayTicks) {
+        if (!plugin.isEnabled()) {
+            return () -> {};
+        }
         if (isFolia) {
             var foliaTask = entity.getScheduler().runDelayed(plugin, task -> runnable.run(), null, delayTicks);
             return foliaTask != null ? foliaTask::cancel : () -> {};
@@ -100,6 +106,9 @@ public class SchedulerManager {
      * Executes a task asynchronously immediately.
      */
     public void runAsync(Runnable runnable) {
+        if (!plugin.isEnabled()) {
+            return;
+        }
         if (hasPaperAsyncApi) {
             Bukkit.getServer().getAsyncScheduler().runNow(plugin, task -> runnable.run());
         } else {
@@ -111,6 +120,9 @@ public class SchedulerManager {
      * Executes a task asynchronously with repeating period.
      */
     public Task runAsyncRepeating(Consumer<Task> taskConsumer, long initialDelay, long period, TimeUnit unit) {
+        if (!plugin.isEnabled()) {
+            return () -> {};
+        }
         if (hasPaperAsyncApi) {
             var paperTask = Bukkit.getServer().getAsyncScheduler().runAtFixedRate(
                     plugin,
@@ -151,6 +163,9 @@ public class SchedulerManager {
      * Executes a task asynchronously with delay in ticks.
      */
     public void runAsyncLater(Runnable runnable, long delayTicks) {
+        if (!plugin.isEnabled()) {
+            return;
+        }
         if (hasPaperAsyncApi) {
             Bukkit.getServer().getAsyncScheduler().runDelayed(
                     plugin,
@@ -167,6 +182,9 @@ public class SchedulerManager {
      * Executes a repeating task synchronously (GlobalRegionScheduler on Folia).
      */
     public Task runSyncRepeating(Consumer<Task> taskConsumer, long initialDelayTicks, long periodTicks) {
+        if (!plugin.isEnabled()) {
+            return () -> {};
+        }
         if (hasPaperAsyncApi && isFolia) {
             var foliaTask = Bukkit.getServer().getGlobalRegionScheduler().runAtFixedRate(
                     plugin,
@@ -203,6 +221,9 @@ public class SchedulerManager {
      * Executes a delayed synchronous task (GlobalRegionScheduler on Folia).
      */
     public Task runSyncLater(Runnable runnable, long delayTicks) {
+        if (!plugin.isEnabled()) {
+            return () -> {};
+        }
         if (hasPaperAsyncApi && isFolia) {
             var foliaTask = Bukkit.getServer().getGlobalRegionScheduler().runDelayed(
                     plugin,
@@ -220,6 +241,9 @@ public class SchedulerManager {
      * Executes a synchronous task on the global main thread / global region.
      */
     public void runSync(Runnable runnable) {
+        if (!plugin.isEnabled()) {
+            return;
+        }
         if (hasPaperAsyncApi && isFolia) {
             Bukkit.getServer().getGlobalRegionScheduler().run(plugin, task -> runnable.run());
         } else {
@@ -232,6 +256,9 @@ public class SchedulerManager {
      * or on the main server thread on Paper.
      */
     public void executeAt(Location location, Runnable runnable) {
+        if (!plugin.isEnabled()) {
+            return;
+        }
         if (location == null || location.getWorld() == null) {
             return;
         }

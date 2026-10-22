@@ -9,6 +9,7 @@ import pl.dawcou.astralogin.auth.manage.spawn.SpawnManager;
 import pl.dawcou.astralogin.auth.sessions.SessionManager;
 import pl.dawcou.astralogin.auth.security.TwoFactorManager;
 
+import java.util.Objects;
 import java.util.UUID;
 
 public class QuitHandler {
@@ -38,7 +39,7 @@ public class QuitHandler {
                 }
 
                 if (plugin.getConfig().getBoolean("features.session.enabled") && sessionManager != null) {
-                    sessionManager.saveSession(uuid, p.getAddress().getAddress().getHostAddress());
+                    sessionManager.saveSession(uuid, Objects.requireNonNull(p.getAddress()).getAddress().getHostAddress());
                 }
 
             } else {

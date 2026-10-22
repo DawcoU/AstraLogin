@@ -8,10 +8,7 @@ import pl.dawcou.astralogin.data.PlayerDataManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 
 import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 //--------------------------------------------------
@@ -96,13 +93,6 @@ public class TwoFactorManager {
         pendingSetups.remove(uuid);
         setupExpirations.remove(uuid);
         pendingBackupCodes.remove(uuid);
-    }
-
-    public void invalidateSetup(String uuidStr) {
-        try {
-            UUID uuid = UUID.fromString(uuidStr);
-            invalidateSetup(uuid);
-        } catch (IllegalArgumentException ignored) {}
     }
 
     /**
@@ -190,11 +180,7 @@ public class TwoFactorManager {
                     String cleanCode = code.trim().toUpperCase();
                     String hashed = plugin.getPasswordManager().getPasswordHasher().hashPassword(cleanCode).hash();
 
-                    if (hashed != null) {
-                        hashedCodes.add(hashed);
-                    } else {
-                        hashedCodes.add(cleanCode);
-                    }
+                    hashedCodes.add(Objects.requireNonNullElse(hashed, cleanCode));
                 }
             }
 

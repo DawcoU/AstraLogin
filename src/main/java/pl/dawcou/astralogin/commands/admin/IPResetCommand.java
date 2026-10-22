@@ -5,6 +5,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.jspecify.annotations.NonNull;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.security.ip.IPManager;
 import pl.dawcou.astralogin.system.SoundManager;
@@ -25,7 +26,7 @@ public class IPResetCommand implements CommandExecutor {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(@NonNull CommandSender sender, Command command, @NonNull String label, String[] args) {
         Player p = (sender instanceof Player) ? (Player) sender : null;
 
         if (command.getName().equalsIgnoreCase("zresetujip") || command.getName().equalsIgnoreCase("resetip")) {
@@ -56,9 +57,7 @@ public class IPResetCommand implements CommandExecutor {
                 return true;
             }
 
-            String uuid = targetUuid.toString();
-
-            if (ipManager.getIP(uuid) == null) {
+            if (ipManager.getIP(targetUuid) == null) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-ip.no-ip"));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
@@ -66,7 +65,7 @@ public class IPResetCommand implements CommandExecutor {
                 return true;
             }
 
-            ipManager.deleteIP(uuid);
+            ipManager.deleteIP(targetUuid);
 
             Player onlineTarget = Bukkit.getPlayerExact(targetName);
             if (onlineTarget != null) {

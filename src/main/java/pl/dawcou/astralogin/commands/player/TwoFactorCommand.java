@@ -6,16 +6,14 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.jspecify.annotations.NonNull;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.LoginSystem;
 import pl.dawcou.astralogin.auth.security.TwoFactorManager;
 import pl.dawcou.astralogin.system.SoundManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -32,7 +30,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(@NonNull CommandSender sender, Command command, @NonNull String label, String[] args) {
         Player p = (sender instanceof Player) ? (Player) sender : null;
 
         //--------------------------------------------------
@@ -219,7 +217,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             }
 
             String inputCode = args[1];
-            String ip = p.getAddress().getAddress().getHostAddress();
+            String ip = Objects.requireNonNull(p.getAddress()).getAddress().getHostAddress();
 
             // Użycie kodu zapasowego (async z weryfikacją statusów)
             if (inputCode.contains("-")) {
@@ -296,7 +294,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
         }
 
         String rawInput = String.join("", args).trim();
-        String ip = p.getAddress().getAddress().getHostAddress();
+        String ip = Objects.requireNonNull(p.getAddress()).getAddress().getHostAddress();
 
         // SCENARIUSZ Z KODEM ZAPASOWYM PODCZAS LOGOWANIA
         if (loginSystem.isWaitingFor2FA(uuid) && rawInput.contains("-")) {
@@ -363,15 +361,13 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             String secret = twoFactorManager.getPendingSecret(uuid);
 
             if (twoFactorManager.verifyCode(secret, code)) {
-                plugin.getSchedulerManager().runAsync(() -> {
-                    twoFactorManager.save2FA(uuid, secret, () -> {
-                        plugin.getLogManager().log("Player " + p.getName() + " successfully completed 2FA setup");
-                        plugin.getSchedulerManager().runSync(() -> {
-                            p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.success"));
-                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
-                        });
+                plugin.getSchedulerManager().runAsync(() -> twoFactorManager.save2FA(uuid, secret, () -> {
+                    plugin.getLogManager().log("Player " + p.getName() + " successfully completed 2FA setup");
+                    plugin.getSchedulerManager().runSync(() -> {
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.success"));
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
                     });
-                });
+                }));
             } else {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.wrong-code"));
                 plugin.getSoundManager().playSound(p, SoundManager.SoundType.WRONG_PASSWORD);
@@ -419,7 +415,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+    public List<String> onTabComplete(@NonNull CommandSender sender, Command command, @NonNull String alias, String[] args) {
         if (!command.getName().equalsIgnoreCase("2fa")) return null;
 
         if (args.length == 1) {

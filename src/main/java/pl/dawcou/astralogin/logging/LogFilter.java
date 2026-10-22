@@ -77,12 +77,12 @@ public class LogFilter extends AbstractFilter {
         }
 
         // /2fa unsetup <kod> / /tfa unsetup <kod>
-        if (message.matches("(?i).*\\/(2fa|tfa)\\s+unsetup\\s+\\d+.*")) {
+        if (message.matches("(?i).*(2fa|tfa)\\s+unsetup\\s+\\d+.*")) {
             return 2;
         }
 
         // /2fa <kod> / /tfa <kod> — maskujemy pierwszy argument tylko jeśli jest liczbą
-        if (message.matches("(?i).*\\/(2fa|tfa)\\s+\\d+.*")) {
+        if (message.matches("(?i).*(2fa|tfa)\\s+\\d+.*")) {
             return 1;
         }
 

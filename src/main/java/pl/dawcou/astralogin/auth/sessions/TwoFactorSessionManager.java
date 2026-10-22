@@ -9,7 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 //--------------------------------------------------
-// Menedżer sesji dwuetapowej weryfikacji (2FA) w plikach gracza
+// Menedżer sesji dwuetapowej weryfikacji (2FA) oparty na PlayerDataManager z weryfikacją IP
 //--------------------------------------------------
 public class TwoFactorSessionManager {
 
@@ -28,34 +28,32 @@ public class TwoFactorSessionManager {
      * Zapisuje aktywną sesję 2FA w pamięci RAM i w pliku JSON gracza.
      */
     public void saveSession2FA(UUID uuid, String ip) {
-        if (uuid == null) return;
+        if (uuid == null || ip == null) return;
 
         long now = System.currentTimeMillis();
 
         twoFactorSessions.put(uuid, now);
-        if (ip != null) {
-            twoFactorSessionsIP.put(uuid, ip);
-        }
+        twoFactorSessionsIP.put(uuid, ip);
 
         playerDataManager.set(uuid, "sessions.2fa.timestamp", now);
-        if (ip != null) {
-            playerDataManager.set(uuid, "sessions.2fa.ip", ip);
-        }
+        playerDataManager.set(uuid, "sessions.2fa.ip", ip);
     }
 
     /**
-     * Sprawdza ważność sesji 2FA gracza.
+     * Sprawdza ważność sesji 2FA gracza oraz zgodność adresu IP.
      */
-    public boolean hasActive2FASession(UUID uuid) {
-        if (uuid == null) return false;
+    public boolean hasActive2FASession(UUID uuid, String currentIP) {
+        if (uuid == null || currentIP == null) return false;
 
         long now = System.currentTimeMillis();
         long limit = get2FALimitMillis();
 
-        // 1. Sprawdzamy najpierw RAM
-        if (twoFactorSessions.containsKey(uuid)) {
+        // 1. Sprawdzamy najpierw pamięć RAM
+        if (twoFactorSessions.containsKey(uuid) && twoFactorSessionsIP.containsKey(uuid)) {
+            String savedIP = twoFactorSessionsIP.get(uuid);
             long timestamp = twoFactorSessions.get(uuid);
-            if (now - timestamp >= limit) {
+
+            if (!currentIP.equals(savedIP) || (now - timestamp > limit)) {
                 deleteSession2FA(uuid);
                 return false;
             }
@@ -66,12 +64,12 @@ public class TwoFactorSessionManager {
         long timestamp = playerDataManager.getLong(uuid, "sessions.2fa.timestamp", 0L);
         String savedIP = playerDataManager.getString(uuid, "sessions.2fa.ip");
 
-        if (timestamp > 0 && (now - timestamp < limit)) {
-            twoFactorSessions.put(uuid, timestamp);
-            if (savedIP != null) {
+        if (timestamp > 0 && savedIP != null && (now - timestamp <= limit)) {
+            if (currentIP.equals(savedIP)) {
+                twoFactorSessions.put(uuid, timestamp);
                 twoFactorSessionsIP.put(uuid, savedIP);
+                return true;
             }
-            return true;
         }
 
         deleteSession2FA(uuid);
@@ -87,7 +85,8 @@ public class TwoFactorSessionManager {
         twoFactorSessions.remove(uuid);
         twoFactorSessionsIP.remove(uuid);
 
-        playerDataManager.remove(uuid, "sessions.2fa");
+        playerDataManager.remove(uuid, "sessions.2fa.timestamp");
+        playerDataManager.remove(uuid, "sessions.2fa.ip");
     }
 
     public long get2FALimitMillis() {
@@ -107,11 +106,9 @@ public class TwoFactorSessionManager {
             long timestamp = playerDataManager.getLong(uuid, "sessions.2fa.timestamp", 0L);
             String savedIP = playerDataManager.getString(uuid, "sessions.2fa.ip");
 
-            if (timestamp > 0 && (now - timestamp < limit)) {
+            if (timestamp > 0 && savedIP != null && (now - timestamp <= limit)) {
                 twoFactorSessions.put(uuid, timestamp);
-                if (savedIP != null) {
-                    twoFactorSessionsIP.put(uuid, savedIP);
-                }
+                twoFactorSessionsIP.put(uuid, savedIP);
                 count++;
             } else if (timestamp > 0) {
                 deleteSession2FA(uuid);

@@ -6,6 +6,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.jspecify.annotations.NonNull;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.security.ip.IPBanManager;
 import pl.dawcou.astralogin.auth.security.ip.IPManager;
@@ -13,6 +14,7 @@ import pl.dawcou.astralogin.system.SoundManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -25,7 +27,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, String[] args) {
         Player p = (sender instanceof Player) ? (Player) sender : null;
 
         if (args.length < 2) {
@@ -61,7 +63,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
         IPManager ipManager = plugin.getIPManager();
         IPBanManager banManager = ipManager.getIpBanManager();
-        String playerIp = ipManager.getIP(uuid);
+        String playerIp = ipManager.getIP(targetUuid);
 
         switch (action) {
             case "info":
@@ -164,12 +166,12 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
                 // 2. Pobieramy gracza online (jeśli gracz jest offline, getPlayerExact zwróci null)
                 Player onlineTarget = Bukkit.getPlayerExact(targetName);
-                String savedIP = ipManager.getIP(uuid);
+                String savedIP = ipManager.getIP(targetUuid);
 
                 if (plugin.getConfig().getBoolean("security.ip-security.enabled", true) && onlineTarget != null) {
-                    String currentIp = onlineTarget.getAddress().getAddress().getHostAddress();
+                    String currentIp = Objects.requireNonNull(onlineTarget.getAddress()).getAddress().getHostAddress();
 
-                    if (savedIP != null && !ipManager.checkIP(uuid, savedIP, currentIp)) {
+                    if (savedIP != null && !ipManager.checkIP(targetUuid, savedIP, currentIp)) {
 
                         plugin.getLogManager().log("Player " + targetName + " was detected with an IP mismatch after unbypass. Current IP: " + currentIp + ", Saved IP: " + savedIP);
                         plugin.getIpTrustManager().addTrustScore(
@@ -194,7 +196,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+    public List<String> onTabComplete(@NonNull CommandSender sender, @NonNull Command command, @NonNull String alias, String[] args) {
         List<String> hints = new ArrayList<>();
 
         if (args.length == 1) {
