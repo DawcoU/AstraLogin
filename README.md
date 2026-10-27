@@ -21,6 +21,40 @@ Paper or its forks are strongly recommended for the best experience.
 
 ---
 
+## 📸 Screenshots & Showcase
+
+# 🔑 Login Screen
+
+<p align="center">
+  <img src="https://cdn.modrinth.com/data/cached_images/f53ab0ac8905f37fa35081639c1874b68b1713fc.png" alt="Login screen" width="75%" />
+</p>
+
+<br>
+
+# 💻 2FA Setup
+
+<p align="center">
+  <img src="https://cdn.modrinth.com/data/cached_images/b34aafae864de4b1c352d730df345a189cf2c6fd_0.webp" alt="2FA Setup" width="75%" />
+</p>
+
+<br>
+
+# 🚫 Too Many Failed Logins
+
+<p align="center">
+  <img src="https://cdn.modrinth.com/data/cached_images/dab3c339698de86954d31ef37f7222f845e9cb20_0.webp" alt="Too Many Failed Logins" width="75%" />
+</p>
+
+<br>
+
+# 🔧 Config
+
+<p align="center">
+  <img src="https://cdn.modrinth.com/data/cached_images/3f11a17e798e73510b568b6c17041876c0aa7e2c.png" alt="Config" width="75%" />
+</p>
+
+---
+
 ### 🚀 Key Features
 
 * **Advanced Security:** Password hashing using the **BCrypt** or **Argon2id** algorithm, ensuring no plain text is ever stored and protecting against dictionary attacks. Passwords are automatically re-hashed using the selected hashing algorithm after a successful login when necessary. 🛡️🔑🔐💻
@@ -28,40 +62,40 @@ Paper or its forks are strongly recommended for the best experience.
 * **Strict Input Validation:** Prevents players from registering with unauthorized characters, emojis, or special symbols. Includes a configurable regex pattern and pre-built rules to block weak passwords, such as those made entirely of letters or entirely of numbers. 🛑🔤🚫⚠️
 * **Detailed Event Logging:** All key server events, including player logins, suspicious access attempts, and administrative actions, are logged to dedicated files in the `logs` folder inside the plugin directory. 📁📝📜🔍
 * **Smart Brute-Force Protection:** 🚫🤖🔨
-* **Failed Attempts Limit:** Automatically kicks players after exceeding allowed login attempts. 🥾❌
-* **Margin of Error:** Configure extra "mercy" chances (margin) before a final action is taken. ⏳🛡️
-* **Temporary IP Bans:** If the limit is reached, the user's IP is banned to prevent further attacks without bloating your database. 🚫🛡️🌐🔒
+  * **Failed Attempts Limit:** Automatically kicks players after exceeding allowed login attempts. 🥾❌
+  * **Margin of Error:** Configure extra "mercy" chances (margin) before a final action is taken. ⏳🛡️
+  * **Temporary IP Bans:** If the limit is reached, the user's IP is banned to prevent further attacks without bloating your database. 🚫🛡️🌐🔒
 
 
 * **Two-Factor Authentication (2FA):** Next-level account security! Players can link their accounts to authenticator apps to protect themselves from hackers. 📱🔐📲🛡️
 * **Account Management & Statistics:** Comprehensive tracking of player data, including registration/last login dates, 2FA status, UUIDs, and more! 📊🔍📈👤
 * **Session System:** Allows players to rejoin without re-typing their password within a configurable time limit (IP-based). 🕒🔄💻
-* **Dedicated 2FA Sessions:** Separately manages 2FA verification, allowing players to authenticate their 2FA code periodically (e.g., once every 2 days) independently from the main login session. 📱🕒🔐⌛
+  * **Dedicated 2FA Sessions:** Separately manages 2FA verification, allowing players to authenticate their 2FA code periodically (e.g., once every 2 days) independently from the main login session. 📱🕒🔐⌛
 
 
 * **In-Game Player Protection:** 🛡️🌍
-* **Equipment Protection:** Complete concealment of player inventory and armor during the login process to prevent exploits and unauthorized spying on other players' gear. 🎒🗡️🦺
-* **Location Protection:** Teleports unauthorized players to a secure location (or spawn) and restores their previous position only after successful login, preventing coordinate leaks and exploits. 📍🌍🗺️✨
-* **Inventory Storage:** Temporarily holds player items during the login process until they are authorized. 📦💾🔒
+  * **Equipment Protection:** Complete concealment of player inventory and armor during the login process to prevent exploits and unauthorized spying on other players' gear. 🎒🗡️🦺
+  * **Location Protection:** Teleports unauthorized players to a secure location (or spawn) and restores their previous position only after successful login, preventing coordinate leaks and exploits. 📍🌍🗺️✨
+  * **Inventory Storage:** Temporarily holds player items during the login process until they are authorized. 📦💾🔒
 
 
 * **Visual Effects:** 🎨✨🎆
-* **Blindness Effect:** Keeps unauthorized players in total darkness. 🌑🕶️
-* **HEX Colors:** Full support for modern HEX color codes in the prefix and all messages via MiniMessage/Legacy! 🌈🎨🖌️
-* **Interactive Sound Effects:** Plays custom, configurable sound effects during various player actions (e.g., successful login, wrong password entry, invalid password format) to enhance the user experience. 🔊🎶✨
+  * **Blindness Effect:** Keeps unauthorized players in total darkness. 🌑🕶️
+  * **HEX Colors:** Full support for modern HEX color codes in the prefix and all messages via MiniMessage/Legacy! 🌈🎨🖌️
+  * **Interactive Sound Effects:** Plays custom, configurable sound effects during various player actions (e.g., successful login, wrong password entry, invalid password format) to enhance the user experience. 🔊🎶✨
 
 
 * **Seasonal Events:** 🎃🎄 Automatically activates themed events during configured dates, replacing standard sound effects with randomly selected seasonal sounds and displaying atmospheric messages.
 * **Localization & Multilingual Support:** Native built-in language files with full translation support for **English**, **Polish**, **Spanish**, and **German**. 🌐🇵🇱🇬🇧🇪🇸🇩🇪
 * **Admin Utilities:** 🛠️⚙️🧰
-* **Auto-Updater:** Configuration files automatically update when you install a newer plugin version. Additionally, you can automatically download the latest `.jar` file from Modrinth directly into the server's `update` folder via command, ensuring it installs seamlessly upon the next server restart. 🔄⚡
-* **Update Notifications:** Notifies administrators when a new version is available, with warnings about pre-release versions, newer versions, and available patches. 🛜🔔⚠️
+  * **Auto-Updater:** Configuration files automatically update when you install a newer plugin version. Additionally, you can automatically download the latest `.jar` file from Modrinth directly into the server's `update` folder via command, ensuring it installs seamlessly upon the next server restart. 🔄⚡
+  * **Update Notifications:** Notifies administrators when a new version is available, with warnings about pre-release versions, newer versions, and available patches. 🛜🔔⚠️
 
 
 * **Smart Schedulers:** Automatically selects the most suitable scheduler based on the server engine and available scheduling APIs, ensuring compatibility across supported platforms such as Paper, Folia, and other supported server implementations. ⚙️🧠🔄
 * **AutoLogin Premium:** Automatic login system for premium accounts: 🌟👤💻
-* **FULL Mode:** Secure, complete Minecraft/Mojang session authentication handshake (requires ProtocolLib or PacketEvents depending on the selected backend configuration). 🔒✅
-* **MINI Mode:** Prototype mode that checks nickname existence in Mojang database without full authentication, allowing cracked logins with that nickname without a password. 🧪🔓
+  * **FULL Mode:** Secure, complete Minecraft/Mojang session authentication handshake (requires ProtocolLib or PacketEvents depending on the selected backend configuration). 🔒✅
+  * **MINI Mode:** Prototype mode that checks nickname existence in Mojang database without full authentication, allowing cracked logins with that nickname without a password. 🧪🔓
 
 
 * **Password Recovery:** Using the PIN as a separate source of authentication confirmation, you can reset your password yourself. 🔑🔄📌🛡️
@@ -86,7 +120,7 @@ Paper or its forks are strongly recommended for the best experience.
 | `/resetip <player>`                                          | Resets the player's IP address 🌐                                               | `astralogin.resetip`                                                                                                      |
 | `/resetpin <player>`                                         | Resets the player's PIN 🔑❌                                                    | `astralogin.resetpin`                                                                                                     |
 | `/reset2fa <player>`                                         | Resets a player's 2FA 🔐                                                        | `astralogin.reset2fa`                                                                                                     |
-| `/resetaccount <player>`                                     | **Wipes all player data** (password, IP, location, 2FA) ⚠️                      | `astralogin.resetaccount`                                                                                                 |
+| `/resetaccount <player>`                                     | **Wipes all player data** (password, IP, location, 2FA eg.) ⚠️                  | `astralogin.resetaccount`                                                                                                 |
 | `/moveaccount <old player> <new player>`                     | Transfers all AstraLogin player data to another account ▶️                       | `astralogin.moveaccount`                                                                                                  |
 | `/loginspawn <setspawn/delspawn> <before_login/after_login>` | Sets and removes the selected login spawn 🗺️                                    | `astralogin.spawn.setspawn`, `astralogin.spawn.delspawn`                                                                  |
 | `/astralogin reload`                                         | Reloads the plugin configuration ⚙️                                             | `astralogin.reload`                                                                                                       |

@@ -57,7 +57,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             UUID targetUUID = plugin.getAccountManager().getUuidByUsername(targetInput);
 
             if (targetUUID == null) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.not-found")
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found")
                         .replace("%target%", targetInput));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);

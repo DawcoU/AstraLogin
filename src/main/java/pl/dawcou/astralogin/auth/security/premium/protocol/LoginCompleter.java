@@ -3,9 +3,12 @@ package pl.dawcou.astralogin.auth.security.premium.protocol;
 import com.mojang.authlib.GameProfile;
 import io.netty.channel.Channel;
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.auth.security.premium.protocol.reflections.NMSReflection;
+import pl.dawcou.astralogin.auth.security.premium.protocol.reflections.ProfilesReflection;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.UUID;
 
 public class LoginCompleter {
@@ -179,33 +182,84 @@ public class LoginCompleter {
 
         plugin.getPremiumManager().debug(
                 "DEBUG [8.7] ✅ Successfully completed Premium authorization for "
-                        + NMSReflection.getProfileName(profile)
+                        + ProfilesReflection.getProfileName(profile)
         );
     }
 
+
     /**
-     * Helper to dynamically scan for a completion method accepting GameProfile as parameter
+     * Helper to dynamically scan for a completion method accepting GameProfile.
+     * Preserves the existing lookup strategy while rejecting ambiguous matches.
      */
-    private Method findProfileCompletionMethod(Class<?> listenerClass, Class<?> profileClass) {
-        for (Class<?> current = listenerClass; current != null; current = current.getSuperclass()) {
-            for (Method method : current.getDeclaredMethods()) {
-                if (method.getParameterCount() == 1
-                        && method.getParameterTypes()[0].isAssignableFrom(profileClass)
-                        && method.getReturnType().equals(void.class)) {
+    private Method findProfileCompletionMethod(
+            Class<?> listenerClass,
+            Class<?> profileClass
+    ) {
+        if (listenerClass == null || profileClass == null) {
+            return null;
+        }
 
-                    String mName = method.getName().toLowerCase();
+        for (Class<?> current = listenerClass;
+             current != null;
+             current = current.getSuperclass()) {
 
-                    // Filter out irrelevant single-parameter methods (Disconnect, Kick, Cookie API)
-                    if (!mName.contains("disconnect")
-                            && !mName.contains("kick")
-                            && !mName.contains("cookie")) {
-                        return method;
+            Method[] methods;
+
+            try {
+                methods = current.getDeclaredMethods();
+            } catch (Throwable ignored) {
+                // A class that cannot be inspected should not break login lookup.
+                continue;
+            }
+
+            for (Method method : methods) {
+                try {
+                    // Preserve the original parameter and return-type checks.
+                    if (method.getParameterCount() != 1
+                            || !method.getParameterTypes()[0]
+                            .isAssignableFrom(profileClass)
+                            || method.getReturnType() != void.class) {
+                        continue;
                     }
+
+                    String mName = method.getName()
+                            .toLowerCase(java.util.Locale.ROOT);
+
+                    // Preserve the original exclusions.
+                    if (mName.contains("disconnect")
+                            || mName.contains("kick")
+                            || mName.contains("cookie")) {
+                        continue;
+                    }
+
+                    // Reject static methods: completion must operate on the listener.
+                    if (Modifier.isStatic(
+                            method.getModifiers())) {
+                        continue;
+                    }
+
+                    // Avoid synthetic and compiler-generated bridge methods.
+                    if (method.isSynthetic() || method.isBridge()) {
+                        continue;
+                    }
+
+                    // Reject overly generic parameter types such as Object.
+                    Class<?> parameterType = method.getParameterTypes()[0];
+                    if (parameterType == Object.class) {
+                        continue;
+                    }
+
+                    return method;
+
+                } catch (Throwable ignored) {
+                    // An inaccessible or unusual candidate must not abort the scan.
                 }
             }
         }
+
         return null;
     }
+
 
     private void killConnection(Channel channel, String reason) {
         plugin.getPremiumManager().debugSevere(

@@ -35,6 +35,7 @@ public class ConfigConverter {
         migrated |= migrateFeaturesToSecurity(config);
         migrated |= migrateHashingSettings(config);
         migrated |= migrateIpSecurity(config);
+        migrated |= migrateUpdateSection(config);
 
         if (migrated) {
             saveConfig(config, configFile);
@@ -222,6 +223,21 @@ public class ConfigConverter {
     }
 
     /*
+     * Migrates the key to the update section.
+     */
+    private boolean migrateUpdateSection(FileConfiguration config) {
+        if (!config.contains("settings.check-updates")) {
+            return false;
+        }
+
+        config.set("settings.update.check-updates", config.get("settings.check-updates"));
+        config.set("settings.check-updates", null);
+
+        plugin.getNoticeManager().sendSuccessMigrationNotice("config.yml (update section)");
+        return true;
+    }
+
+    /*
      * Thread-safe saving of configuration files.
      */
     private void saveConfig(FileConfiguration config, File file) {
@@ -246,6 +262,11 @@ public class ConfigConverter {
         }
 
         FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
+
+        // Check legacy check-updates setting
+        if (config.contains("settings.check-updates")) {
+            return true;
+        }
 
         // Check timer
         ConfigurationSection timer = config.getConfigurationSection("features.timer");

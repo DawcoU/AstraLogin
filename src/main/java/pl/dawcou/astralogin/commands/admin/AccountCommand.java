@@ -56,7 +56,7 @@ public class AccountCommand implements CommandExecutor {
             UUID targetUUID = plugin.getAccountManager().getUuidByUsername(inputName);
 
             if (targetUUID == null || targetName == null) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account.not-found")
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found")
                         .replace("%target%", inputName));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
@@ -82,7 +82,7 @@ public class AccountCommand implements CommandExecutor {
                 loginDate = plugin.getLanguageManager().getMessage("account.not-found");
             }
 
-            boolean isRegistered = pdm.getBoolean(targetUUID, "account.is-registered", false);
+            boolean isRegistered = plugin.getPasswordManager().isRegistered(targetUUID);
             boolean Has2FA = plugin.getTwoFactorManager().has2FA(targetUUID);
 
             if (!isRegistered) {
@@ -133,7 +133,7 @@ public class AccountCommand implements CommandExecutor {
             UUID targetUUID = plugin.getAccountManager().getUuidByUsername(inputName);
 
             if (targetUUID == null || targetName == null) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("purge-account.not-found").replace("%target%", inputName));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found").replace("%target%", inputName));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 }
@@ -333,7 +333,7 @@ public class AccountCommand implements CommandExecutor {
 
             UUID oldUUIDObj = plugin.getAccountManager().getUuidByUsername(oldNickname);
             if (oldUUIDObj == null) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.player-not-exists")
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found")
                         .replace("%target%", oldNickname));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);

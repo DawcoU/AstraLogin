@@ -198,7 +198,6 @@ messages:
   # --- Kontoinfo-Befehl (/account) ---
   account:
     usage: "&cKorrekte Verwendung: &e/account <spieler>"
-    not-found: "&cSpieler &6%target% &chat sich noch nie auf diesem Server registriert"
     no-data: "Keine Daten"
     logout-success: "&aErfolgreich abgemeldet"
 
@@ -246,7 +245,6 @@ messages:
     new-player-exists: "&cDie neue UUID &6(%uuid%) &cexistiert bereits in der Plugindatenbank!"
     old-player-no-data: "&cSpieler &6%target% &chat keine gespeicherten Daten in diesem Plugin. Nichts zu übertragen!"
 
-    player-not-exists: "&cSpieler &6%target% &chat noch nie auf diesem Server gespielt!"
     player-is-the-same: "&cAlter und neuer Spielername sind identisch!"
 
     players-online: "&cSpieler &6%old% &cder &6%new% &cist online! &4Sie müssen während der Migration offline sein, um Datenbeschädigungen zu vermeiden!"
@@ -259,7 +257,6 @@ messages:
   # --- Passwort zurücksetzen (/resetpassword) ---
   reset-password:
     usage: "&cKorrekte Verwendung: &e/resetpassword <spieler>"
-    no-account: "&cDieser Spieler hat kein registriertes Passwort!"
 
     admin-success: "&aPasswort für Spieler &6%player% &aerfolgreich zurückgesetzt"
 
@@ -340,6 +337,7 @@ seasonal-events:
 
 # --- Update-System ---
 update:
+  in-progress: "&cDie Suche nach Aktualisierungen läuft bereits..."
   api-error: "&cVerbindung zur Modrinth-API fehlgeschlagen"
   no-versions: "&cKeine veröffentlichten Versionen gefunden"
   up-to-date: "&aAstraLogin ist bereits auf dem neuesten Stand"

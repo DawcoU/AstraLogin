@@ -1,11 +1,9 @@
-package pl.dawcou.astralogin.auth.security.premium.protocol;
+package pl.dawcou.astralogin.auth.security.premium.protocol.reflections;
 
-import com.mojang.authlib.GameProfile;
 import pl.dawcou.astralogin.AstraLogin;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.UUID;
 
 public final class NMSReflection {
 
@@ -101,56 +99,8 @@ public final class NMSReflection {
         for (Class<?> current = clazz; current != null; current = current.getSuperclass()) {
             try {
                 return current.getDeclaredMethod(name, parameterTypes);
-            } catch (NoSuchMethodException ignored) {
-            }
+            } catch (NoSuchMethodException ignored) {}
         }
         return null;
-    }
-
-    public static UUID getProfileId(GameProfile profile) {
-        if (profile == null) return null;
-        try {
-            Method method = profile.getClass().getMethod("id");
-            return (UUID) method.invoke(profile);
-        } catch (Exception e1) {
-            try {
-                Method method = profile.getClass().getMethod("getId");
-                return (UUID) method.invoke(profile);
-            } catch (Exception e2) {
-                try {
-                    Field field = profile.getClass().getDeclaredField("id");
-                    field.setAccessible(true);
-                    return (UUID) field.get(profile);
-                } catch (Exception e3) {
-                    return null;
-                }
-            }
-        }
-    }
-
-    public static String getProfileName(GameProfile profile) {
-        if (profile == null) {
-            return "Unknown";
-        }
-        try {
-            Method method = profile.getClass().getMethod("name");
-            String name = (String) method.invoke(profile);
-            return name != null ? name : "Unknown";
-        } catch (Exception e1) {
-            try {
-                Method method = profile.getClass().getMethod("getName");
-                String name = (String) method.invoke(profile);
-                return name != null ? name : "Unknown";
-            } catch (Exception e2) {
-                try {
-                    Field field = profile.getClass().getDeclaredField("name");
-                    field.setAccessible(true);
-                    String name = (String) field.get(profile);
-                    return name != null ? name : "Unknown";
-                } catch (Exception e3) {
-                    return "Unknown";
-                }
-            }
-        }
     }
 }

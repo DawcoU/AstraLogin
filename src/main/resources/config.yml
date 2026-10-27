@@ -13,8 +13,12 @@ settings:
   # Selecciona el idioma del plugin (Disponibles: pl, en, de, es)
   language: en
 
-  # Should the plugin check for newer versions of the plugin?
-  check-updates: true
+  update:
+    # Should the plugin check for newer versions of the plugin?
+    check-updates: true
+
+    # Should it automatically check and download the latest version of the plugin when the plugin starts?
+    auto-update: false
 
   debug:
     # Should debug mode be enabled?

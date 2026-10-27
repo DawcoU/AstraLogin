@@ -51,7 +51,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
             UUID targetUUID = plugin.getAccountManager().getUuidByUsername(targetInput);
 
             if (targetUUID == null) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-password.no-account"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found"));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 }

@@ -1,4 +1,3 @@
-
 package pl.dawcou.astralogin.system.updater;
 
 import com.google.gson.JsonArray;
@@ -26,12 +25,24 @@ public class AutoUpdater {
     private final AstraLogin plugin;
     private final String projectId;
 
+    private boolean updating = false;
+
     public AutoUpdater(AstraLogin plugin, String projectId) {
         this.plugin = plugin;
         this.projectId = projectId;
+
+        if (plugin.getConfig().getBoolean("settings.update.auto-update", false)) {
+            checkAndDownload(Bukkit.getConsoleSender());
+        }
     }
 
     public void checkAndDownload(CommandSender commandTarget) {
+        if (updating) {
+            sendUpdateMessage(commandTarget, "update.in-progress", false);
+            return;
+        }
+        updating = true;
+
         plugin.getSchedulerManager().runAsync(() -> {
             try {
                 String urlStr =
@@ -73,7 +84,6 @@ public class AutoUpdater {
                     return;
                 }
 
-                // The first entry is the latest version returned by Modrinth.
                 JsonObject latestVersion =
                         versions.get(0).getAsJsonObject();
 
@@ -199,17 +209,9 @@ public class AutoUpdater {
                                 .toURI()
                 );
 
-                File renamedJar = new File(
-                        currentJar.getParentFile(),
-                        filename
-                );
-
                 if (!currentJar.getName().equals(filename)) {
-                    if (!currentJar.renameTo(renamedJar)) {
-                        plugin.getLogger().warning(
-                                "Failed to rename the current AstraLogin JAR"
-                        );
-                    }
+                    // Automatyczne zlecenie usunięcia starego pliku przez JVM przy zamknięciu serwera
+                    currentJar.deleteOnExit();
                 }
 
                 plugin.getLogger().info(
@@ -228,6 +230,9 @@ public class AutoUpdater {
                 );
 
                 sendUpdateMessage(commandTarget, "update.failed", false);
+            } finally {
+                // ZAWSZE zdejmuje flagę na koniec, bez względu na to jak metoda się skończyła
+                updating = false;
             }
         });
     }

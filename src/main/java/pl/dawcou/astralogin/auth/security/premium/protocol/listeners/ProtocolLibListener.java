@@ -14,9 +14,10 @@ import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.security.premium.api.MojangApiService;
 import pl.dawcou.astralogin.auth.security.premium.protocol.LoginCompleter;
-import pl.dawcou.astralogin.auth.security.premium.protocol.NMSReflection;
+import pl.dawcou.astralogin.auth.security.premium.protocol.reflections.NMSReflection;
 import pl.dawcou.astralogin.auth.security.premium.protocol.NettyChannelExtractor;
 import pl.dawcou.astralogin.auth.security.premium.protocol.cipher.EncryptionUtils;
+import pl.dawcou.astralogin.auth.security.premium.protocol.reflections.ProfilesReflection;
 import pl.dawcou.astralogin.auth.security.premium.session.PremiumSessionManager;
 
 import javax.crypto.SecretKey;
@@ -448,8 +449,8 @@ public class ProtocolLibListener implements Listener {
                             return;
                         }
 
-                        UUID finalUUID = NMSReflection.getProfileId(mojangProfile);
-                        String finalName = NMSReflection.getProfileName(mojangProfile);
+                        UUID finalUUID = ProfilesReflection.getProfileId(mojangProfile);
+                        String finalName = ProfilesReflection.getProfileName(mojangProfile);
                         if (finalName.equals("Unknown")) {
                             finalName = username;
                         }

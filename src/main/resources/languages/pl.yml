@@ -15,6 +15,7 @@ messages:
     no-permission: "&cNie masz permisji!"
     reload-success: "&aKonfiguracja przeładowana pomyślnie!"
     blocked-action: "&cNie możesz wykonać tej akcji, dopóki się nie zalogujesz!"
+    player-not-found: "&cGracz &6%target% &cnie istnieje w bazie danych serwera!"
 
 
   # --- Logowanie ---
@@ -198,7 +199,6 @@ messages:
   # --- Komenda /konto i wyloguj ---
   account:
     usage: "&cPoprawne użycie: &e/konto <nick>"
-    not-found: "&cGracz &6%target% &cnigdy nie zarejestrował się na serwerze"
     no-data: "Brak danych"
     logout-success: "&aWylogowano Pomyślnie"
 
@@ -246,7 +246,6 @@ messages:
     new-player-exists: "&cNowe UUID &6(%uuid%) &cistnieje już w bazie danych pluginu!"
     old-player-no-data: "&cGracz &6%target% &cnie posiada żadnych zapisanych danych w tym pluginie. Nie ma czego przenosić!"
 
-    player-not-exists: "&cGracz &6%target% &cnigdy nie grał na tym serwerze!"
     player-is-the-same: "&cGracz stary i nowy jest taki sam!"
 
     players-online: "&cGracz &6%old% &club &6%new% &csą online! &4Nie mogą być w trakcie migracji na serwerze aby nie uszkodzić danych!"
@@ -259,7 +258,6 @@ messages:
   # --- Reset hasła /zresetujhaslo ---
   reset-password:
     usage: "&cPoprawne użycie: &e/zresetujhaslo <gracz>"
-    no-account: "&cTen gracz nie ma zarejestrowanego hasła!"
 
     admin-success: "&aHasło gracza &6%player% &azostało zresetowane"
 
@@ -289,7 +287,6 @@ messages:
   # --- Reset całego konta /zresetujkonto ---
   purge-account:
     usage: "&cPoprawne użycie: &e/zresetujkonto <nick>"
-    not-found: "&cNie znaleziono gracza &6%target &cw bazie danych serwera"
     admin-success: "&aPomyślnie usunięto WSZYSTKIE dane konta gracza &e%player%"
 
     player-kick: "&cTwoje konto zostało całkowicie usunięte z bazy danych serwera przez administratora"
@@ -340,6 +337,7 @@ seasonal-events:
 
 # --- Aktualizacja systemu ---
 update:
+  in-progress: "&cSprawdzanie aktualizacji jest już w toku..."
   api-error: "&cNie udało się połączyć z API Modrinth"
   no-versions: "&cNie znaleziono żadnych opublikowanych wersji"
   up-to-date: "&aAstraLogin jest już w najnowszej wersji"

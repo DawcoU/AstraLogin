@@ -364,10 +364,10 @@ public class AstraLogin extends JavaPlugin implements Listener {
         noticeManager.sendStartupLogo();
 
         // Sprawdzanie aktualizacji
-        if (getConfig().getBoolean("settings.check-updates", true)) {
+        if (getConfig().getBoolean("settings.update.check-updates", true)) {
             updateChecker.checkForUpdates(Bukkit.getConsoleSender());
         } else {
-            noticeManager.sendVersionOk(getServer().getConsoleSender());
+            noticeManager.sendLatestVersionNotice(getServer().getConsoleSender());
         }
 
         // Uruchamianie API

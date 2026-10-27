@@ -36,7 +36,7 @@ public class JoinHandler {
         String ip = Objects.requireNonNull(p.getAddress()).getAddress().getHostAddress();
 
         // Update Checker
-        if (plugin.getConfig().getBoolean("settings.check-updates", true)
+        if (plugin.getConfig().getBoolean("settings.update.check-updates", true)
                 && p.hasPermission("astralogin.update")) {
 
             plugin.getUpdateChecker().checkForUpdates(p);

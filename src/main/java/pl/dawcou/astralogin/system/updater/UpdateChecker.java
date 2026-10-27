@@ -23,7 +23,6 @@ public class UpdateChecker {
         this.projectId = projectId;
     }
 
-
     public void checkForUpdates(CommandSender target) {
         plugin.getSchedulerManager().runAsync(() -> {
             HttpURLConnection connection = null;
@@ -109,10 +108,10 @@ public class UpdateChecker {
         });
     }
 
-    // ------------------------------------------------------------------
-    // Compares software versions sequentially with proper DEV handling
-    // ------------------------------------------------------------------
 
+    /**
+     * Compares installed and published versions and sends at most one notice.
+     */
     private void checkVersion(
             CommandSender sender,
             String current,
@@ -121,12 +120,80 @@ public class UpdateChecker {
     ) {
         String latestVersion = latest.getVersion();
 
-        int coreComparison;
-        int versionComparison;
-
         try {
-            coreComparison = VersionComparator.compareCore(latestVersion, current);
-            versionComparison = VersionComparator.compare(latestVersion, current);
+            // Positive: published version is newer.
+            // Negative: installed version is newer.
+            int versionComparison =
+                    VersionComparator.compare(latestVersion, current);
+
+            int stableComparison =
+                    VersionComparator.compare(latestStableVersion, current);
+
+            boolean currentExperimental = current.contains("-");
+            boolean latestPreRelease =
+                    latest.isPrerelease() || latestVersion.contains("-");
+
+            // 1. A newer stable release takes priority over a pre-release.
+            if (stableComparison > 0) {
+                int coreComparison = VersionComparator.compareCore(
+                        latestStableVersion, current
+                );
+
+                if (currentExperimental && coreComparison == 0) {
+                    plugin.getSchedulerManager().runSync(
+                            () -> plugin.getNoticeManager()
+                                    .sendStableReleaseNotice(
+                                            sender, latestStableVersion
+                                    )
+                    );
+                } else {
+                    sendStableVersionUpdateNotice(
+                            sender, current, latestStableVersion
+                    );
+                }
+                return;
+            }
+
+            // 2. The installed version is ahead of both public versions.
+            // This is DEV status, regardless of whether its name contains "-dev".
+            if (versionComparison < 0 && stableComparison < 0) {
+                plugin.getSchedulerManager().runSync(
+                        () -> plugin.getNoticeManager()
+                                .sendVersionDevNotice(
+                                        sender, latestVersion
+                                )
+                );
+                return;
+            }
+
+            // 3. A newer pre-release is available.
+            if (latestPreRelease && versionComparison > 0) {
+                plugin.getSchedulerManager().runSync(
+                        () -> plugin.getNoticeManager()
+                                .sendVersionPreReleaseNotice(
+                                        sender, latestVersion
+                                )
+                );
+                return;
+            }
+
+            // 4. No newer release is available, but the installed version
+            // is experimental.
+            if (currentExperimental) {
+                plugin.getSchedulerManager().runSync(
+                        () -> plugin.getNoticeManager()
+                                .sendExperimentalNotice(
+                                        sender, latestStableVersion
+                                )
+                );
+                return;
+            }
+
+            // 5. No update notice is needed.
+            plugin.getSchedulerManager().runSync(
+                    () -> plugin.getNoticeManager().sendLatestVersionNotice(sender)
+            );
+
         } catch (IllegalArgumentException e) {
             plugin.getLogger().warning(
                     "Cannot compare version numbers: current="
@@ -136,76 +203,28 @@ public class UpdateChecker {
             plugin.getSchedulerManager().runSync(
                     () -> plugin.getNoticeManager().sendUpdateCheckError()
             );
+        }
+    }
+
+
+    private void sendStableVersionUpdateNotice(
+            CommandSender sender,
+            String current,
+            String latestStableVersion
+    ) {
+        int coreComparison = VersionComparator.compareCore(
+                latestStableVersion, current
+        );
+
+        // The caller should invoke this only when a stable update exists.
+        if (coreComparison <= 0) {
             return;
         }
 
-        boolean isCurrentExperimental = current.contains("-");
-        boolean isLatestExperimental = latestVersion.contains("-");
-        boolean isLatestPreRelease = latest.isPrerelease() || isLatestExperimental;
-
-        if (versionComparison == 0) {
-            plugin.getSchedulerManager().runSync(() -> {
-                if (isCurrentExperimental) {
-                    plugin.getNoticeManager()
-                            .sendExperimentalNotice(sender, latestStableVersion);
-                } else {
-                    plugin.getNoticeManager().sendVersionOk(sender);
-                }
-            });
-            return;
-        }
-
-        if (isCurrentExperimental) {
-            plugin.getSchedulerManager().runSync(
-                    () -> plugin.getNoticeManager()
-                            .sendExperimentalNotice(sender, latestStableVersion)
-            );
-        }
-
-        if (isLatestPreRelease && coreComparison == 0) {
-            if (!isCurrentExperimental) {
-                plugin.getSchedulerManager().runSync(
-                        () -> plugin.getNoticeManager()
-                                .sendVersionDevNotice(sender, latestStableVersion)
-                );
-                return;
-            }
-
-            int currentBuild = VersionComparator.extractBuildNumber(current);
-            int latestBuild = VersionComparator.extractBuildNumber(latestVersion);
-
-            if (latestBuild > currentBuild) {
-                plugin.getSchedulerManager().runSync(
-                        () -> plugin.getNoticeManager()
-                                .sendVersionPreReleaseNotice(sender, latestVersion)
-                );
-            } else if (currentBuild > latestBuild) {
-                plugin.getSchedulerManager().runSync(
-                        () -> plugin.getNoticeManager()
-                                .sendVersionDevNotice(sender, latestStableVersion)
-                );
-            }
-            return;
-        }
-
-        if (coreComparison < 0) {
-            plugin.getSchedulerManager().runSync(
-                    () -> plugin.getNoticeManager()
-                            .sendVersionDevNotice(sender, latestStableVersion)
-            );
-            return;
-        }
-
-        if (isLatestPreRelease) {
-            plugin.getSchedulerManager().runSync(
-                    () -> plugin.getNoticeManager()
-                            .sendVersionPreReleaseNotice(sender, latestVersion)
-            );
-            return;
-        }
-
-        String cleanCurrent = current.split("-")[0].replaceFirst("^[vV]", "");
-        String cleanLatest = latestVersion.split("-")[0].replaceFirst("^[vV]", "");
+        String cleanCurrent = current.split("-")[0]
+                .replaceFirst("^[vV]", "");
+        String cleanLatest = latestStableVersion.split("-")[0]
+                .replaceFirst("^[vV]", "");
 
         String[] currentParts = cleanCurrent.split("\\.");
         String[] latestParts = cleanLatest.split("\\.");
@@ -224,17 +243,20 @@ public class UpdateChecker {
 
         plugin.getSchedulerManager().runSync(() -> {
             if (latestMajor > currentMajor) {
-                plugin.getNoticeManager().sendMajorUpdateNotice(sender, latestVersion);
+                plugin.getNoticeManager().sendMajorUpdateNotice(
+                        sender, latestStableVersion
+                );
             } else if (latestMinor > currentMinor) {
-                plugin.getNoticeManager().sendMinorUpdateNotice(sender, latestVersion);
+                plugin.getNoticeManager().sendMinorUpdateNotice(
+                        sender, latestStableVersion
+                );
             } else if (latestPatch > currentPatch) {
-                plugin.getNoticeManager().sendPatchUpdateNotice(sender, latestVersion);
-            } else {
-                plugin.getNoticeManager().sendVersionOk(sender);
+                plugin.getNoticeManager().sendPatchUpdateNotice(
+                        sender, latestStableVersion
+                );
             }
         });
     }
-
 
     private static class ModrinthVersion {
         private String version_number;

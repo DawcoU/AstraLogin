@@ -811,21 +811,21 @@ public class NoticeManager {
 
     // --- METODY POWIADOMIEŃ WERSJI I AKTUALIZACJI ---
 
-    public void sendVersionOk(CommandSender target) {
+    public void sendLatestVersionNotice(CommandSender target) {
         String prefix = getPrefix(target);
         String msg;
         switch (getLang().toLowerCase()) {
             case "pl":
-                msg = "§aAstraLogin jest aktualny §f(§ev" + plugin.getDescription().getVersion() + "§f)";
+                msg = "§aAstraLogin jest w najnowszej wersji §f(§ev" + plugin.getDescription().getVersion() + "§f)";
                 break;
             case "de":
-                msg = "§aAstraLogin ist auf dem neuesten Stand §f(§ev" + plugin.getDescription().getVersion() + "§f)";
+                msg = "§aAstraLogin ist in der neuesten Version enthalten §f(§ev" + plugin.getDescription().getVersion() + "§f)";
                 break;
             case "es":
-                msg = "§aAstraLogin está actualizado §f(§ev" + plugin.getDescription().getVersion() + "§f)";
+                msg = "§aAstraLogin está en la última versión §f(§ev" + plugin.getDescription().getVersion() + "§f)";
                 break;
             default:
-                msg = "§aAstraLogin is up to date §f(§ev" + plugin.getDescription().getVersion() + "§f)";
+                msg = "§aAstraLogin is in the latest version §f(§ev" + plugin.getDescription().getVersion() + "§f)";
                 break;
         }
 
@@ -918,32 +918,38 @@ public class NoticeManager {
         target.sendMessage("");
     }
 
-    public void sendVersionDevNotice(CommandSender target, String latestStable) {
+    public void sendVersionDevNotice(
+            CommandSender target,
+            String latestPublicVersion
+    ) {
         String lang = getLang().toLowerCase();
         String devTitle;
-        String stableInfo;
-        String warning;
+        String publicInfo;
+        String download;
 
         switch (lang) {
             case "pl":
-                devTitle = "§bUżywasz nowszej wersji niepublicznej: §fv";
-                stableInfo = "§eNajnowsza publiczna wersja AstraLogin to: §fv";
-                warning = "§cUważaj na błędy, kod jest w fazie rozwoju!";
+                devTitle = "§bUżywasz nowszej wersji: §fv";
+                publicInfo = "§eNajnowsza publiczna wersja AstraLogin to: §fv";
+                download = "§aPobierz: ";
                 break;
+
             case "de":
-                devTitle = "§bDu verwendest eine neuere, nicht öffentliche Version: §fv";
-                stableInfo = "§eDie neueste öffentliche Version von AstraLogin ist: §fv";
-                warning = "§cAchte auf Fehler, der Code befindet sich in der Entwicklung!";
+                devTitle = "§bSie verwenden eine neuere Version: §fv";
+                publicInfo = "§eDie neueste öffentliche Version von AstraLogin ist: §fv";
+                download = "§aHerunterladen: ";
                 break;
+
             case "es":
-                devTitle = "§bEstás usando una versión no pública más reciente: §fv";
-                stableInfo = "§aLa última versión pública de AstraLogin es: §fv";
-                warning = "§c¡Cuidado con los errores, el código está en desarrollo!";
+                devTitle = "§bEstás utilizando una versión más reciente: §fv";
+                publicInfo = "§eLa última versión pública de AstraLogin es: §fv";
+                download = "§aDescargar: ";
                 break;
+
             default:
-                devTitle = "§bYou are using a newer, non-public version: §fv";
-                stableInfo = "§eThe latest public version of AstraLogin is: §fv";
-                warning = "§cWatch out for bugs, the code is in development!";
+                devTitle = "§bYou are using a newer version: §fv";
+                publicInfo = "§eThe latest public version of AstraLogin is: §fv";
+                download = "§aDownload: ";
                 break;
         }
 
@@ -951,9 +957,56 @@ public class NoticeManager {
 
         target.sendMessage("");
         target.sendMessage("§7------------ " + prefix + " §7------------");
-        target.sendMessage(devTitle + plugin.getDescription().getVersion());
-        target.sendMessage(stableInfo + latestStable);
-        target.sendMessage(warning);
+        target.sendMessage(
+                devTitle + plugin.getDescription().getVersion()
+        );
+        target.sendMessage(publicInfo + latestPublicVersion);
+        target.sendMessage(download + "§f§nhttps://modrinth.com/plugin/astralogin/version/" + latestPublicVersion);
+        target.sendMessage("§7-------------------------------------------");
+        target.sendMessage("");
+    }
+
+    public void sendStableReleaseNotice(
+            CommandSender target,
+            String version
+    ) {
+        String lang = getLang().toLowerCase();
+        String title;
+        String info;
+        String download;
+
+        switch (lang) {
+            case "pl":
+                title = "§aDostępna jest stabilna wersja AstraLogin: §f";
+                info = "§7Zalecana aktualizacja z wersji testowej.";
+                download = "§aPobierz: ";
+                break;
+            case "de":
+                title = "§aEine stabile AstraLogin-Version ist verfügbar: §f";
+                info = "§7Ein Update von der Testversion wird empfohlen.";
+                download = "§aHerunterladen: ";
+                break;
+            case "es":
+                title = "§aYa está disponible una versión estable de AstraLogin: §f";
+                info = "§7Se recomienda actualizar desde la versión de prueba.";
+                download = "§aDescargar: ";
+                break;
+            default:
+                title = "§aA stable AstraLogin release is available: §f";
+                info = "§7Updating from the test version is recommended.";
+                download = "§aDownload: ";
+                break;
+        }
+
+        String prefix = getPrefix(target);
+
+        target.sendMessage("");
+        target.sendMessage("§7------------ " + prefix + " §7------------");
+        target.sendMessage(title + version);
+        target.sendMessage(info);
+        target.sendMessage(download
+                + "§f§nhttps://modrinth.com/plugin/astralogin/version/"
+                + version);
         target.sendMessage("§7-------------------------------------------");
         target.sendMessage("");
     }
