@@ -15,6 +15,7 @@ messages:
     no-permission: "&cDazu hast du keine Berechtigung!"
     reload-success: "&aKonfiguration erfolgreich neu geladen!"
     blocked-action: "&cDu kannst diese Aktion erst ausführen, wenn du dich angemeldet hast!"
+    player-not-found: "&cDer Spieler &6%target% &cexistiert nicht in der Serverdatenbank!"
 
 
   # --- Anmeldung ---
@@ -286,7 +287,6 @@ messages:
   # --- Konto löschen (/resetaccount) ---
   purge-account:
     usage: "&cKorrekte Verwendung: &e/purgeaccount <spieler>"
-    not-found: "&cSpieler &6%target% &cnicht in der Serverdatenbank gefunden"
     admin-success: "&aAlle Kontodaten für Spieler &e%player% &aerfolgreich gelöscht"
 
     player-kick: "&cDein Konto wurde von einem Administrator vollständig aus der Serverdatenbank entfernt"

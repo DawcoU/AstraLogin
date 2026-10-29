@@ -46,11 +46,12 @@ public class IPResetCommand implements CommandExecutor {
                 return true;
             }
 
-            String targetName = args[0];
-            UUID targetUuid = plugin.getAccountManager().getUuidByUsername(targetName);
+            String inputName = args[0];
+            UUID targetUuid = plugin.getAccountManager().getUuidByUsername(inputName);
 
             if (targetUuid == null) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found")
+                        .replace("%target%", inputName));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 }
@@ -67,14 +68,14 @@ public class IPResetCommand implements CommandExecutor {
 
             ipManager.deleteIP(targetUuid);
 
-            Player onlineTarget = Bukkit.getPlayerExact(targetName);
+            Player onlineTarget = Bukkit.getPlayerExact(inputName);
             if (onlineTarget != null) {
                 String kickReason = plugin.getLanguageManager().getMessage("reset-ip.player-kick");
                 onlineTarget.kickPlayer(kickReason);
             }
 
             String successMsg = plugin.getLanguageManager().getWithPrefix("reset-ip.admin-success")
-                    .replace("%player%", targetName);
+                    .replace("%player%", inputName);
 
             sender.sendMessage(successMsg);
             if (p != null) {
@@ -82,7 +83,7 @@ public class IPResetCommand implements CommandExecutor {
             }
 
             String adminName = sender.getName();
-            plugin.getLogManager().log("Admin " + adminName + " reset IP for player " + targetName);
+            plugin.getLogManager().log("Admin " + adminName + " reset IP for player " + inputName);
             return true;
         }
         return false;

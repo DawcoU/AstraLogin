@@ -53,21 +53,21 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            String targetInput = args[0];
-            UUID targetUUID = plugin.getAccountManager().getUuidByUsername(targetInput);
+            String inputName = args[0];
+            UUID targetUUID = plugin.getAccountManager().getUuidByUsername(inputName);
 
             if (targetUUID == null) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found")
-                        .replace("%target%", targetInput));
+                        .replace("%target%", inputName));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 }
                 return true;
             }
 
-            String targetName = plugin.getAccountManager().getRegisteredNameIgnoreCase(targetInput);
+            String targetName = plugin.getAccountManager().getRegisteredNameIgnoreCase(inputName);
             if (targetName == null) {
-                targetName = targetInput;
+                targetName = inputName;
             }
 
             if (twoFactorManager.isSetupActive(targetUUID)) {
@@ -131,7 +131,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
         // SETUP
         if (args[0].equalsIgnoreCase("setup")) {
-            if (plugin.getPlayerDataManager().getBoolean(uuid, "account.2fa-enabled", false)) {
+            if (plugin.getTwoFactorManager().has2FA(uuid)) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.already-enabled"));
                 plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 return true;
@@ -181,16 +181,18 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                 }
 
                 // 2. Jeśli gracz pomyślnie ukończył setup (aktywował 2FA w danych gracza) – anulujemy cicho!
-                if (plugin.getPlayerDataManager().getBoolean(uuid, "account.2fa-enabled", false)) {
+                if (plugin.getTwoFactorManager().has2FA(uuid)) {
                     task.cancel();
                     return;
                 }
 
                 // 3. Jeśli czas minął w managerze (I gracz nie ukończył setupu)
                 if (!twoFactorManager.isSetupActive(uuid)) {
-                    p.sendMessage(expiredMessage);
-                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
-                    plugin.getLogManager().log("Player " + p.getName() + " didn't have time to configure 2FA");
+                    if (!twoFactorManager.has2FA(uuid)) {
+                        p.sendMessage(expiredMessage);
+                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                        plugin.getLogManager().log("Player " + p.getName() + " didn't have time to configure 2FA");
+                    }
                     task.cancel();
                     return;
                 }

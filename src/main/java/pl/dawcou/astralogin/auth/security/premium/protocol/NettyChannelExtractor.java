@@ -19,8 +19,7 @@ public class NettyChannelExtractor {
     }
 
     /**
-     * Wstrzykuje szyfrowanie AES (CipherDecoder i CipherEncoder) do potoku Netty.
-     * Metoda jest w 100% niezależna od ProtocolLib/PacketEvents (czyste Netty).
+     * Wstrzykuje szyfrowanie AES (CipherDecoder i CipherEncoder) do potoku Netty
      */
     public void enableEncryptionOnChannel(Channel channel, SecretKey sharedSecret, Runnable afterEncryption) {
         plugin.getPremiumManager().debug("DEBUG [NETTY] 🔧 Preparing Netty channel for encryption injection...");
@@ -76,10 +75,8 @@ public class NettyChannelExtractor {
                     afterEncryption.run();
                 }
             } catch (Exception e) {
-                plugin.getPremiumManager().debugSevere("DEBUG [NETTY-ERR] ❌ Failed to enable encryption on Netty channel: " + e.getClass().getName() + ": " + e.getMessage());
-                if (plugin.isDebugEnabled()) {
-                    e.printStackTrace();
-                }
+                plugin.getLogger().severe("DEBUG [NETTY-ERR] ❌ Failed to enable encryption on Netty channel: " + e.getClass().getName() + ": " + e.getMessage());
+                e.printStackTrace();
             }
         });
     }

@@ -14,7 +14,6 @@ import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.security.premium.api.MojangApiService;
 import pl.dawcou.astralogin.auth.security.premium.protocol.LoginCompleter;
-import pl.dawcou.astralogin.auth.security.premium.protocol.reflections.NMSReflection;
 import pl.dawcou.astralogin.auth.security.premium.protocol.NettyChannelExtractor;
 import pl.dawcou.astralogin.auth.security.premium.protocol.cipher.EncryptionUtils;
 import pl.dawcou.astralogin.auth.security.premium.protocol.reflections.ProfilesReflection;
@@ -95,42 +94,35 @@ public class ProtocolLibListener implements Listener {
 
                 ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [1.3] 🔌 Netty channel extracted: " + channel);
 
-                UUID playerUuid = ProtocolLibListener.this.plugin.getAccountManager().getUuidByUsername(username);
-
-                // Jeśli gracz nie istnieje jeszcze w usermap, wyliczamy tymczasowe Offline UUID
-                if (playerUuid == null) {
-                    playerUuid = UUID.nameUUIDFromBytes(
-                            ("OfflinePlayer:" + username)
-                                    .getBytes(java.nio.charset.StandardCharsets.UTF_8)
-                    );
-                }
-
-                boolean isRegistered = ProtocolLibListener.this.plugin.getPasswordManager().isRegistered(playerUuid);
-
-                if (isRegistered) {
-                    // ZAREJESTROWANY: Ustawiamy flagę na true (aktywujemy bypass dla znanego gracza)
-                    ProtocolLibListener.this.plugin.getPremiumManager().debugWarning("DEBUG [1.4] 🔒 Player " + username + " is registered. Enabling premium bypass flag.");
-                    ProtocolLibListener.this.plugin.getPremiumManager().markPendingBypass(playerUuid, true);
-                } else {
-                    // NIEZAREJESTROWANY: Ustawiamy flagę na false (brak gotowej autoryzacji)
-                    ProtocolLibListener.this.plugin.getPremiumManager().debugWarning("DEBUG [1.4] ℹ️ Player " + username + " is not registered. Setting bypass flag to false.");
-                    ProtocolLibListener.this.plugin.getPremiumManager().markPendingBypass(playerUuid, false);
-                }
-
-                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [1.5] 🛑 Cancelling original START packet for premium verification.");
-
                 event.setCancelled(true);
-                final PacketContainer startPacket = event.getPacket();
 
+                String finalUsername = username;
                 ProtocolLibListener.this.plugin.getSchedulerManager().runAsync(() -> {
                     boolean isAccountPremium = ProtocolLibListener.this.plugin.getPremiumManager().isUsernamePremium(playerName);
 
                     if (!isAccountPremium) {
-                        try {
-                            protocolManager.receiveClientPacket(player, startPacket, false);
-                        } catch (Exception e) {
-                            e.printStackTrace();
+                        ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [1.6] ⏭️ Player is not premium or check failed. Checking database fallback.");
+
+                        // Szukamy istniejącego UUID gracza w bazie po nicku (ratuje weteranów przy awarii Mojanga)
+                        UUID playerUuid = ProtocolLibListener.this.plugin.getAccountManager().getUuidByUsername(finalUsername);
+
+                        if (playerUuid != null) {
+                            ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [1.6.1] 🛡️ Fallback: Found existing UUID for " + finalUsername + " in database!");
+                        } else {
+                            // Jeśli gracz jest całkowicie nowy, generujemy standardowy offline UUID
+                            playerUuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + finalUsername).getBytes(StandardCharsets.UTF_8));
+                            ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [1.6.2] 🆕 New non-premium player. Generated offline UUID.");
                         }
+
+                        // Ustawiamy stan na DENIED (musi się zalogować zwykłym /login)
+                        ProtocolLibListener.this.plugin.getPremiumManager().setAuthenticated(playerUuid, false);
+
+                        // Wyciągamy adres IP do eventu
+                        InetAddress address = player.getAddress() != null ? player.getAddress().getAddress() : null;
+
+                        // Obsługa logowania offline
+                        final UUID finalOfflineUuid = playerUuid;
+                        ProtocolLibListener.this.plugin.getSchedulerManager().runSync(() -> handleOfflineLogin(channel, address, finalOfflineUuid, playerName));
                         return;
                     }
 
@@ -400,51 +392,22 @@ public class ProtocolLibListener implements Listener {
 
                             sessionManager.removeSession(channel);
 
-                            // Generate standard offline profile (v3 UUID)
-                            UUID offlineUuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(StandardCharsets.UTF_8));
-                            GameProfile offlineNmsProfile = new GameProfile(offlineUuid, username);
+                            // Szukamy istniejącego UUID w bazie lub generujemy nowy offline UUID
+                            UUID playerUuid = ProtocolLibListener.this.plugin.getAccountManager().getUuidByUsername(username);
 
-                            // Mark as non-premium so AstraLogin forces password check
-                            ProtocolLibListener.this.plugin.getPremiumManager().setAuthenticated(offlineUuid, false);
+                            if (playerUuid != null) {
+                                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [7.2.1] 🛡️ Fallback: Found existing UUID for " + username + " in database!");
+                            } else {
+                                playerUuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(StandardCharsets.UTF_8));
+                                ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [7.2.2] 🆕 Fallback: New player, generated offline UUID.");
+                            }
 
-                            ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [7.3] 🔐 Enabling AES encryption on offline channel.");
+                            InetAddress address = socketAddress != null ? socketAddress.getAddress() : null;
 
-                            // CRITICAL: We MUST enable AES encryption on Netty pipeline, because client already enabled it!
+                            // Kluczowe: Najpierw włączamy szyfrowanie AES na kanale (bo klient je włączył)
+                            UUID finalPlayerUuid = playerUuid;
                             nettyExtractor.enableEncryptionOnChannel(channel, sharedSecret, () -> {
-                                try {
-                                    InetAddress address = ((java.net.InetSocketAddress) channel.remoteAddress()).getAddress();
-
-                                    // Odpalamy AsyncPlayerPreLoginEvent dla profilu OFFLINE
-                                    AsyncPlayerPreLoginEvent preLoginEvent = new AsyncPlayerPreLoginEvent(
-                                            username,
-                                            address,
-                                            offlineUuid
-                                    );
-
-                                    Bukkit.getPluginManager().callEvent(preLoginEvent);
-
-                                    if (preLoginEvent.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED) {
-                                        ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [7.3b] ❌ Pre-login event denied offline connection: " + preLoginEvent.getKickMessage());
-                                        if (channel.isOpen()) {
-                                            channel.close();
-                                        }
-                                        return;
-                                    }
-
-                                    // Dokończenie logowania synchronicznie
-                                    ProtocolLibListener.this.plugin.getSchedulerManager().runSync(() -> new LoginCompleter(ProtocolLibListener.this.plugin)
-                                            .complete(channel, offlineUuid, offlineNmsProfile));
-
-                                    ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [7.4] 🔓 Encryption injected and offline login completed for " + username);
-
-                                } catch (Exception e) {
-                                    plugin.getLogger().severe("[7.ERR] ❌ Error during offline AsyncPlayerPreLoginEvent execution: "
-                                            + e.getClass().getName() + ": " + e.getMessage());
-                                    e.printStackTrace();
-                                    if (channel.isOpen()) {
-                                        channel.close();
-                                    }
-                                }
+                                handleOfflineLogin(channel, address, finalPlayerUuid, username);
                             });
                             return;
                         }
@@ -509,7 +472,7 @@ public class ProtocolLibListener implements Listener {
         });
     }
 
-    private Channel extractChannelFromEvent(com.comphenix.protocol.events.PacketEvent event) {
+    private Channel extractChannelFromEvent(PacketEvent event) {
         try {
             org.bukkit.entity.Player player = event.getPlayer();
             if (player == null) return null;
@@ -527,6 +490,33 @@ public class ProtocolLibListener implements Listener {
                 e.printStackTrace();
             }
             return null;
+        }
+    }
+
+    /**
+     * Obsługa logowania graczy non-premium po wykryciu braku konta premium w API Mojanga
+     */
+    private void handleOfflineLogin(Channel channel, InetAddress address, UUID uuid, String username) {
+        try {
+            GameProfile offlineProfile = new GameProfile(uuid, username);
+            plugin.getPremiumManager().setAuthenticated(uuid, false);
+
+            AsyncPlayerPreLoginEvent preLoginEvent = new AsyncPlayerPreLoginEvent(username, address, uuid);
+            Bukkit.getPluginManager().callEvent(preLoginEvent);
+
+            if (preLoginEvent.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED) {
+                if (channel != null && channel.isOpen()) {
+                    channel.close();
+                }
+                return;
+            }
+
+            plugin.getSchedulerManager().runSync(() -> new LoginCompleter(plugin).complete(channel, uuid, offlineProfile));
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (channel != null && channel.isOpen()) {
+                channel.close();
+            }
         }
     }
 }

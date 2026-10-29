@@ -15,6 +15,7 @@ messages:
     no-permission: "&c¡No tienes permisos!"
     reload-success: "&a¡Configuración recargada con éxito!"
     blocked-action: "&c¡No puedes realizar esta acción hasta que inicies sesión!"
+    player-not-found: "&c¡El jugador &6%target% &cno existe en la base de datos del servidor!"
 
 
   # --- Inicio de sesión ---
@@ -286,7 +287,6 @@ messages:
   # --- Purgar cuenta (/resetaccount) ---
   purge-account:
     usage: "&cUso correcto: &e/purgeaccount <jugador>"
-    not-found: "&cJugador &6%target% &cno encontrado en la base de datos del servidor"
     admin-success: "&aSe han purgado con éxito TODOS los datos de la cuenta del jugador &e%player%"
 
     player-kick: "&cTu cuenta ha sido eliminada por completo de la base de datos del servidor por un administrador"

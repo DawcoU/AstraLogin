@@ -47,20 +47,21 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            String targetInput = args[0];
-            UUID targetUUID = plugin.getAccountManager().getUuidByUsername(targetInput);
+            String inputName = args[0];
+            UUID targetUUID = plugin.getAccountManager().getUuidByUsername(inputName);
 
             if (targetUUID == null) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found")
+                        .replace("%target%", inputName));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 }
                 return true;
             }
 
-            String targetName = plugin.getAccountManager().getRegisteredNameIgnoreCase(targetInput);
+            String targetName = plugin.getAccountManager().getRegisteredNameIgnoreCase(inputName);
             if (targetName == null) {
-                targetName = targetInput;
+                targetName = inputName;
             }
 
             if (!plugin.getPasswordManager().isRegistered(targetUUID)) {

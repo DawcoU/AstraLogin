@@ -74,32 +74,31 @@ public class PacketEventsListener extends PacketListenerAbstract implements List
             // Natychmiastowe anulowanie pakietu startowego przed jakimkolwiek zapytaniem do sieci
             event.setCancelled(true);
 
-            UUID playerUuid = plugin.getAccountManager().getUuidByUsername(username);
-            if (playerUuid == null) {
-                playerUuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(StandardCharsets.UTF_8));
-            }
-
-            boolean isRegistered = plugin.getPasswordManager().isRegistered(playerUuid);
-            if (isRegistered) {
-                plugin.getPremiumManager().debugWarning("DEBUG [1.4] 🔒 Player " + username + " is registered. Enabling premium bypass flag.");
-                plugin.getPremiumManager().markPendingBypass(playerUuid, true);
-            } else {
-                plugin.getPremiumManager().debugWarning("DEBUG [1.4] ℹ️ Player " + username + " is not registered. Setting bypass flag to false.");
-                plugin.getPremiumManager().markPendingBypass(playerUuid, false);
-            }
-
             // Asynchroniczna weryfikacja statusu konta premium przez API Mojanga
-            UUID finalPlayerUuid = playerUuid;
             InetAddress address = event.getUser().getAddress().getAddress();
 
             plugin.getSchedulerManager().runAsync(() -> {
                 boolean isAccountPremium = plugin.getPremiumManager().isUsernamePremium(playerName);
 
                 if (!isAccountPremium) {
-                    plugin.getPremiumManager().debug("DEBUG [1.6] ⏭️ Player is not premium. Processing as offline login.");
+                    plugin.getPremiumManager().debug("DEBUG [1.6] ⏭️ Player is not premium or check failed. Checking database fallback.");
 
-                    // Obsługa gracza non-premium za pomocą osobnej metody, zachowując natychmiastowe anulowanie
-                    handleOfflineLogin(channel, address, finalPlayerUuid, playerName);
+                    // Szukamy istniejącego UUID gracza w bazie po nicku (ratuje weteranów przy awarii Mojanga)
+                    UUID playerUuid = plugin.getAccountManager().getUuidByUsername(username);
+
+                    if (playerUuid != null) {
+                        plugin.getPremiumManager().debug("DEBUG [1.6.1] 🛡️ Fallback: Found existing UUID for " + username + " in database!");
+                    } else {
+                        // Jeśli gracz jest całkowicie nowy, generujemy standardowy offline UUID
+                        playerUuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(StandardCharsets.UTF_8));
+                        plugin.getPremiumManager().debug("DEBUG [1.6.2] 🆕 New non-premium player. Generated offline UUID.");
+                    }
+
+                    // Ustawiamy stan na DENIED (musi się zalogować zwykłym /login)
+                    plugin.getPremiumManager().setAuthenticated(playerUuid, false);
+
+                    // Obsługa logowania offline z prawidłowym (starym lub nowym) UUID
+                    handleOfflineLogin(channel, address, playerUuid, playerName);
                     return;
                 }
 

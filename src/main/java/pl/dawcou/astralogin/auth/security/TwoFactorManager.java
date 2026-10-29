@@ -11,9 +11,6 @@ import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-//--------------------------------------------------
-// Menedżer dwuetapowej weryfikacji (2FA) oparty na PlayerDataManager
-//--------------------------------------------------
 public class TwoFactorManager {
 
     private final AstraLogin plugin;
@@ -24,6 +21,7 @@ public class TwoFactorManager {
 
     // Mapa przechowująca tymczasowe klucze graczy podczas konfiguracji (UUID -> Secret Key)
     private final Map<UUID, String> pendingSetups = new ConcurrentHashMap<>();
+
     // Mapa przechowująca czas wygaśnięcia sesji konfiguracji (UUID -> Timestamp w milisekundach)
     private final Map<UUID, Long> setupExpirations = new ConcurrentHashMap<>();
 
@@ -202,9 +200,7 @@ public class TwoFactorManager {
     }
 
     public void delete2FA(UUID uuid) {
-        playerDataManager.remove(uuid, "2fa.enabled");
-        playerDataManager.remove(uuid, "2fa.secret");
-        playerDataManager.remove(uuid, "2fa.backup-codes");
+        playerDataManager.remove(uuid, "2fa");
 
         // Czyścimy ewentualne sesje
         invalidateSetup(uuid);
@@ -231,7 +227,7 @@ public class TwoFactorManager {
         return part1 + "-" + part2;
     }
 
-    // Helpery do zapisu/odczytu listy kodów z PlayerDataManager
+    // Helpery do zapisu/odczytu listy kodów
     private List<String> getSavedBackupCodes(UUID uuid) {
         List<String> list = new ArrayList<>();
         String raw = playerDataManager.getString(uuid, "2fa.backup-codes");

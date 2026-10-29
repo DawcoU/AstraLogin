@@ -18,9 +18,8 @@ public class PremiumManager {
 
     // --- ENUM STANÓW BYPASSU ---
     public enum BypassState {
-        ALLOWED,       // Ustalono na START: Gracz zarejestrowany, czeka na weryfikację pakietową Mojang
-        DENIED,        // Ustalono na START: Brak zarejestrowania lub wymuszone hasło (OSTATECZNE - NIE DO NADPISANIA)
-        AUTHENTICATED  // Ustalono na SUCCESS: Przeszedł pomyślnie szyfrowanie Mojang i ma pełny bypass
+        DENIED,        // Brak uwierzytelnienia / gracz non-premium / zablokowany bypass
+        AUTHENTICATED  // Przeszedł pomyślnie szyfrowanie Mojang i ma pełny bypass
     }
 
     private static class StateEntry {
@@ -34,17 +33,15 @@ public class PremiumManager {
     }
 
     private final AstraLogin plugin;
-
     private final HttpClient httpClient = HttpClient.newHttpClient();
-    private final Map<UUID, Boolean> premiumCache = new ConcurrentHashMap<>();
-    private final Map<UUID, Long> premiumCacheTime = new ConcurrentHashMap<>();
+
+    private final Map<String, Boolean> usernameCache = new ConcurrentHashMap<>();
+    private final Map<String, Long> usernameCacheTime = new ConcurrentHashMap<>();
 
     // Jedna główna mapa zarządzająca stanem gracza
     private final Map<UUID, StateEntry> playerStates = new ConcurrentHashMap<>();
 
-    public Map<UUID, Boolean> getPremiumCache() {
-        return Collections.unmodifiableMap(premiumCache);
-    }
+    public Map<String, Boolean> getUsernameCache() { return Collections.unmodifiableMap(usernameCache); }
 
     public PremiumManager(AstraLogin plugin) {
         this.plugin = plugin;
@@ -81,40 +78,23 @@ public class PremiumManager {
             return false;
         }
 
+        // Pełne logowanie premium
         if ("FULL".equalsIgnoreCase(mode)) {
             return isAuthenticated(uuid);
         }
 
-        Boolean cached = checkCache(uuid);
+
+        return isUsernamePremium(p.getName());
+    }
+
+    public boolean isUsernamePremium(String username) {
+        String lowerName = username.toLowerCase(java.util.Locale.ROOT);
+
+        Boolean cached = checkUsernameCache(lowerName);
         if (cached != null) {
             return cached;
         }
 
-        try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api.mojang.com/users/profiles/minecraft/" + p.getName()))
-                    .timeout(Duration.ofSeconds(5))
-                    .header("Accept", "application/json")
-                    .header("User-Agent", "AstraLogin/" + plugin.getDescription().getVersion())
-                    .GET()
-                    .build();
-
-            HttpResponse<Void> response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
-
-            boolean premium = response.statusCode() == 200;
-
-            premiumCache.put(uuid, premium);
-            premiumCacheTime.put(uuid, System.currentTimeMillis());
-
-            return premium;
-
-        } catch (Exception e) {
-            plugin.getNoticeManager().sendPremiumCheckError(p.getName(), e);
-            return false;
-        }
-    }
-
-    public boolean isUsernamePremium(String username) {
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.mojang.com/users/profiles/minecraft/" + username))
@@ -125,46 +105,41 @@ public class PremiumManager {
                     .build();
 
             HttpResponse<Void> response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
+            boolean premium = response.statusCode() == 200;
 
-            int statusCode = response.statusCode();
+            usernameCache.put(lowerName, premium);
+            usernameCacheTime.put(lowerName, System.currentTimeMillis());
 
-            if (plugin.isDebugEnabled()) {
-                plugin.getLogger().info("HTTP status for " + username + " = " + statusCode);
-            }
-
-            return statusCode == 200;
+            return premium;
         } catch (Exception e) {
             plugin.getNoticeManager().sendPremiumCheckError(username, e);
             return false;
         }
     }
 
-    public Boolean checkCache(UUID uuid) {
-        Boolean cached = premiumCache.get(uuid);
-        Long cacheTime = premiumCacheTime.get(uuid);
+    public Boolean checkUsernameCache(String lowerName) {
+        Boolean cached = usernameCache.get(lowerName);
+        Long cacheTime = usernameCacheTime.get(lowerName);
 
         if (cached != null && cacheTime != null) {
             long cacheAge = System.currentTimeMillis() - cacheTime;
 
-            if (cacheAge < 12 * 60 * 60 * 1000) {
+            if (cacheAge < 12L * 60 * 60 * 1000L) {
                 return cached;
             }
-
-            premiumCache.remove(uuid);
-            premiumCacheTime.remove(uuid);
+            usernameCache.remove(lowerName);
+            usernameCacheTime.remove(lowerName);
         }
-
         return null;
     }
 
     public void cleanCache() {
         long now = System.currentTimeMillis();
-        long expireTime = 12 * 60 * 60 * 1000;
 
-        premiumCacheTime.forEach((uuid, time) -> {
-            if (now - time >= expireTime) {
-                premiumCache.remove(uuid);
-                premiumCacheTime.remove(uuid);
+        usernameCacheTime.forEach((name, time) -> {
+            if (now - time >= 12L * 60 * 60 * 1000) {
+                usernameCache.remove(name);
+                usernameCacheTime.remove(name);
             }
         });
 
@@ -182,7 +157,6 @@ public class PremiumManager {
         }
 
         if (mode.equalsIgnoreCase("FULL")) {
-            // Sprawdzamy faktycznie aktywny backend na serwerze (uwzględniający fallback)
             if ("PACKETEVENTS".equalsIgnoreCase(plugin.getBackendManager().getActiveBackend())) {
                 return plugin.getServer().getPluginManager().getPlugin("packetevents") != null;
             } else {
@@ -197,16 +171,6 @@ public class PremiumManager {
         return false;
     }
 
-    /**
-     * Ustawia stan na pakiecie START. Jest to decyzja nadrzędna.
-     */
-    public void markPendingBypass(UUID uuid, boolean status) {
-        playerStates.put(uuid, new StateEntry(status ? BypassState.ALLOWED : BypassState.DENIED));
-    }
-
-    /**
-     * Zmienia stan na AUTHENTICATED po SUCCESS, ale TYLKO jeśli na START gracz nie dostał DENIED.
-     */
     public void setAuthenticated(UUID uuid, boolean authenticated) {
         if (!authenticated) {
             playerStates.put(uuid, new StateEntry(BypassState.DENIED));
@@ -214,7 +178,6 @@ public class PremiumManager {
         }
 
         StateEntry current = playerStates.get(uuid);
-        // Jeśli na starcie zabroniono bypassu (DENIED), to żaden późniejszy kod tego NIE NADPIŚE
         if (current != null && current.state == BypassState.DENIED) {
             return;
         }

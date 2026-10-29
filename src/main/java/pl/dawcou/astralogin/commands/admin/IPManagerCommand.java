@@ -48,11 +48,12 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        String targetName = args[1];
-        UUID targetUuid = plugin.getAccountManager().getUuidByUsername(targetName);
+        String inputName = args[1];
+        UUID targetUuid = plugin.getAccountManager().getUuidByUsername(inputName);
 
         if (targetUuid == null) {
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found"));
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found")
+                    .replace("%target%", inputName));
             if (p != null) {
                 plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
             }
@@ -69,7 +70,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
             case "info":
                 if (playerIp == null) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.no-ip")
-                            .replace("%player%", targetName));
+                            .replace("%player%", inputName));
                     if (p != null) {
                         plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     }
@@ -78,13 +79,13 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
                 if (!banManager.isIPBanned(playerIp)) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.info-not-banned")
-                            .replace("%player%", targetName)
+                            .replace("%player%", inputName)
                             .replace("%ip%", playerIp));
                 } else {
                     long timeLeft = banManager.getIPBanTimeLeft(playerIp);
                     String reason = banManager.getBanReason(playerIp);
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.info-banned")
-                            .replace("%player%", targetName)
+                            .replace("%player%", inputName)
                             .replace("%ip%", playerIp)
                             .replace("%time%", String.valueOf(timeLeft))
                             .replace("%reason%", reason));
@@ -97,7 +98,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
             case "unban":
                 if (playerIp == null) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.no-ip")
-                            .replace("%player%", targetName));
+                            .replace("%player%", inputName));
                     if (p != null) {
                         plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     }
@@ -106,7 +107,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
                 if (!banManager.isIPBanned(playerIp)) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.not-banned")
-                            .replace("%player%", targetName));
+                            .replace("%player%", inputName));
                     if (p != null) {
                         plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     }
@@ -114,10 +115,10 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
                 }
 
                 banManager.unbanIP(playerIp);
-                plugin.getLogManager().log("IP ban was removed for player " + targetName + " (IP: " + playerIp + ") by " + sender.getName());
+                plugin.getLogManager().log("IP ban was removed for player " + inputName + " (IP: " + playerIp + ") by " + sender.getName());
 
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.unban-success")
-                        .replace("%player%", targetName)
+                        .replace("%player%", inputName)
                         .replace("%ip%", playerIp));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
@@ -127,7 +128,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
             case "bypass":
                 if (banManager.hasBypass(uuid)) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass-active")
-                            .replace("%player%", targetName));
+                            .replace("%player%", inputName));
                     if (p != null) {
                         plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     }
@@ -135,10 +136,10 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
                 }
 
                 banManager.setBypass(uuid, true);
-                plugin.getLogManager().log("IP bypass was enabled for player " + targetName + " by " + sender.getName());
+                plugin.getLogManager().log("IP bypass was enabled for player " + inputName + " by " + sender.getName());
 
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass-enabled")
-                        .replace("%player%", targetName));
+                        .replace("%player%", inputName));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
                 }
@@ -147,7 +148,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
             case "unbypass":
                 if (!banManager.hasBypass(uuid)) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass-not-active")
-                            .replace("%player%", targetName));
+                            .replace("%player%", inputName));
                     if (p != null) {
                         plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     }
@@ -156,16 +157,16 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
                 // 1. Zdejmujemy bypass
                 banManager.setBypass(uuid, false);
-                plugin.getLogManager().log("IP bypass was disabled for player " + targetName + " by " + sender.getName());
+                plugin.getLogManager().log("IP bypass was disabled for player " + inputName + " by " + sender.getName());
 
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass-disabled")
-                        .replace("%player%", targetName));
+                        .replace("%player%", inputName));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
                 }
 
                 // 2. Pobieramy gracza online (jeśli gracz jest offline, getPlayerExact zwróci null)
-                Player onlineTarget = Bukkit.getPlayerExact(targetName);
+                Player onlineTarget = Bukkit.getPlayerExact(inputName);
                 String savedIP = ipManager.getIP(targetUuid);
 
                 if (plugin.getConfig().getBoolean("security.ip-security.enabled", true) && onlineTarget != null) {
@@ -173,7 +174,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
                     if (savedIP != null && !ipManager.checkIP(targetUuid, savedIP, currentIp)) {
 
-                        plugin.getLogManager().log("Player " + targetName + " was detected with an IP mismatch after unbypass. Current IP: " + currentIp + ", Saved IP: " + savedIP);
+                        plugin.getLogManager().log("Player " + inputName + " was detected with an IP mismatch after unbypass. Current IP: " + currentIp + ", Saved IP: " + savedIP);
                         plugin.getIpTrustManager().addTrustScore(
                                 currentIp,
                                 plugin.getIpTrustManager().getUnknownIpLoginPoints()

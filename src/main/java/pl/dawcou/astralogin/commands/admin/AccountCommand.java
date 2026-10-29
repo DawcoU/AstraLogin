@@ -51,7 +51,6 @@ public class AccountCommand implements CommandExecutor {
             }
 
             String inputName = args[0];
-
             String targetName = plugin.getAccountManager().getRegisteredNameIgnoreCase(inputName);
             UUID targetUUID = plugin.getAccountManager().getUuidByUsername(inputName);
 
@@ -388,7 +387,7 @@ public class AccountCommand implements CommandExecutor {
                 return true;
             }
 
-            // Weryfikacja potwerdzenia
+            // Weryfikacja potwierdzenia
             if (p != null) {
                 boolean confirmed = (args.length > 2 && args[2].equalsIgnoreCase("confirm"));
 
@@ -446,12 +445,14 @@ public class AccountCommand implements CommandExecutor {
                     // 5. Wywołanie pełnego reloadu z głównej klasy (działa spójnie dla wszystkich menedżerów)
                     plugin.reload();
 
-                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.success")
-                            .replace("%old%", finalOldNickname)
-                            .replace("%new%", newNickname));
-                    if (p != null) {
-                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
-                    }
+                    plugin.getSchedulerManager().runSync(() -> {
+                        sender.sendMessage(plugin.getLanguageManager().getWithPrefix("account-move.success")
+                                .replace("%old%", finalOldNickname)
+                                .replace("%new%", newNickname));
+                        if (p != null) {
+                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
+                        }
+                    });
 
                     String adminName = sender.getName();
                     plugin.getLogManager().log("Player " + finalOldNickname + " has been successfully migrated to " + newNickname + " by " + adminName);

@@ -15,6 +15,7 @@ messages:
     no-permission: "&cYou do not have permission!"
     reload-success: "&aConfiguration reloaded successfully!"
     blocked-action: "&cYou cannot perform this action until you log in!"
+    player-not-found: "&cPlayer &6%target% &cdoes not exist in the server database!"
 
 
   # --- Login ---
@@ -286,7 +287,6 @@ messages:
   # --- Purge Account (/resetaccount) ---
   purge-account:
     usage: "&cCorrect usage: &e/purgeaccount <player>"
-    not-found: "&cPlayer &6%target% &cnot found in server database"
     admin-success: "&aSuccessfully purged ALL account data for player &e%player%"
 
     player-kick: "&cYour account has been completely removed from the server database by an administrator"

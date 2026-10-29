@@ -50,7 +50,8 @@ public class PINCommand implements CommandExecutor, TabCompleter {
             UUID targetUUID = plugin.getAccountManager().getUuidByUsername(inputName);
 
             if (targetUUID == null) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found"));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found")
+                        .replace("%target%", inputName));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 }
