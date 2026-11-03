@@ -26,7 +26,7 @@ Paper or its forks are strongly recommended for the best experience.
 # 🔑 Login Screen
 
 <p align="center">
-  <img src="https://cdn.modrinth.com/data/cached_images/f53ab0ac8905f37fa35081639c1874b68b1713fc.png" alt="Login screen" width="75%" />
+  <img src="https://cdn.modrinth.com/data/cached_images/f53ab0ac8905f37fa35081639c1874b68b1713fc.png" alt="Login Screen" width="75%" />
 </p>
 
 <br>
@@ -53,6 +53,14 @@ Paper or its forks are strongly recommended for the best experience.
   <img src="https://cdn.modrinth.com/data/cached_images/3f11a17e798e73510b568b6c17041876c0aa7e2c.png" alt="Config" width="75%" />
 </p>
 
+<br>
+
+# 🤖🛡️ Captcha
+
+<p align="center">
+  <img src="https://cdn.modrinth.com/data/cached_images/5eb8702e42735cddcc6ee9f47d5e5be7c581ade0.png" alt="Captcha" width="75%" />
+</p>
+
 ---
 
 ### 🚀 Key Features
@@ -66,6 +74,13 @@ Paper or its forks are strongly recommended for the best experience.
   * **Margin of Error:** Configure extra "mercy" chances (margin) before a final action is taken. ⏳🛡️
   * **Temporary IP Bans:** If the limit is reached, the user's IP is banned to prevent further attacks without bloating your database. 🚫🛡️🌐🔒
 
+
+* **Multi-Mode Captcha Protection:** Advanced defense mechanism against automated bot attacks and malicious scripts, featuring three distinct, highly customizable verification modes: 🤖🧩🛡️
+  - **MAP Mode:** Generates and renders a custom map held in the player's hand displaying a distorted image containing a unique alphanumeric code which the player must type into the chat to verify. Requires PacketEvents to function properly as it directly dispatches custom map payload packets to the client. 🗺️🔤
+  - **GUI Mode:** Presents an inventory puzzle filled with noise items where only specific choices are valid. Players must analyze the prompt question and click the correct item to pass. 🎒🖱️
+  - **CHAT Mode:** The fastest verification mode requiring players to solve a dynamic mathematical riddle (e.g., `(2 + 6) * 5`) and type the correct numerical result directly into the chat. 🔢💬
+
+* **Player Suspicion Levels:** Dynamic security tracking system featuring four tiers (**NONE**, **LOW**, **MEDIUM**, and **HIGH**) that increase or decrease based on suspicious and sensitive player behaviors. For players flagged with high suspicion, convenient features such as premium auto-login and automatic sessions are automatically restricted. 📈🔍🛡️
 
 * **Two-Factor Authentication (2FA):** Next-level account security! Players can link their accounts to authenticator apps to protect themselves from hackers. 📱🔐📲🛡️
 * **Account Management & Statistics:** Comprehensive tracking of player data, including registration/last login dates, 2FA status, UUIDs, and more! 📊🔍📈👤

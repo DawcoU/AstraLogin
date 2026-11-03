@@ -1,4 +1,3 @@
-
 package pl.dawcou.astralogin.system.utils;
 
 import java.util.regex.Matcher;
@@ -12,8 +11,7 @@ public final class VersionComparator {
 
     private static final Pattern NUMBER_PATTERN = Pattern.compile("\\d+");
 
-    private VersionComparator() {
-    }
+    private VersionComparator() {}
 
     public static int compare(String first, String second) {
         Version a = parse(first);

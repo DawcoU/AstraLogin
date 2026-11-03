@@ -87,7 +87,7 @@ messages:
   security:
     timeout: "&c¡El tiempo para iniciar sesión ha expirado!"
     max-attempts: "&c¡Demasiados intentos fallidos! Intentos restantes: &6%remaining%"
-    max-attempts-ban: "&c¡Demasiados intentos fallidos! Has sido baneado por &6%time%"
+    max-attempts-ban: "&c¡Demasiados intentos de inicio de sesión fallidos! Has sido baneado durante &6%time%"
     multiaccount: "&c¡Se ha alcanzado el límite de cuentas para esta dirección IP!"
     ip-spam: "&c¡Demasiados intentos de conexión desde tu dirección IP! Estás bloqueado por &6%time%"
     suspicious-ip-alert: "&c¡Actividad sospechosa detectada! El jugador &4%target% &centró desde una dirección IP desconocida: &6%ip%"
@@ -110,6 +110,43 @@ messages:
         - "&fTienes 2FA activado, pero no has establecido un PIN de recuperación"
         - "&fEstablécelo usando &a/pin <setup>&f para poder recuperar el acceso a tu cuenta"
         - "&e----------------------------------------"
+
+
+  # --- Captcha (Protección contra bots) ---
+  captcha:
+    success: "&a✔ ¡Captcha completado con éxito!"
+    failed: "&c✖ ¡Elección incorrecta! Intento &6%attempts%&c/&6%max% &cInténtalo de nuevo"
+    required: "&c¡Primero debes resolver el captcha antes de iniciar sesión!"
+    max-attempts: "&c¡Demasiados intentos fallidos de captcha! Intentos restantes: &6%remaining%"
+    max-attempts-ban: "&c¡Demasiados intentos fallidos de captcha! Has sido baneado por &6%time%"
+    timer: "&e¡Resuelve el captcha en &6%time%&e!"
+    timeout: "&c¡El tiempo para resolver el captcha ha expirado!"
+    gui:
+      title: "&6Captcha"
+      prompts:
+        edible: "&8- &eHaz clic en Comestible"
+        red: "&8- &eHaz clic en Rojo"
+        blue: "&8- &eHaz clic en Azul"
+        green: "&8- &eHaz clic en Verde"
+        yellow: "&8- &eHaz clic en Amarillo"
+        wood: "&8- &eHaz clic en Madera"
+        bow_ammo: "&8- &eHaz clic en Munición de Arco"
+        chicken_drop: "&8- &eHaz clic en Botín de Gallina"
+        redstone: "&8- &eHaz clic en Redstone"
+        ore: "&8- &eHaz clic en Mineral"
+        helmet: "&8- &eHaz clic en Casco"
+        netherite: "&8- &eHaz clic en Netherita"
+        potion: "&8- &eHaz clic en Poción"
+        music_disc: "&8- &eHaz clic en Disco de Música"
+        boat: "&8- &eHaz clic en Barco"
+        tool: "&8- &eHaz clic en Herramienta"
+    map:
+      instruction: "&e¡Escribe en el chat el código que ves en la mapa de tu mano!"
+      item-name: "&6Mapa Captcha"
+      wrong-code: "&c✖ ¡Código incorrecto! Intento &6%attempts%&c/&6%max% &cInténtalo de nuevo"
+    chat:
+      instruction: "&eResuelve el acertijo matemático: &6%equation%"
+      wrong-answer: "&c✖ ¡Resultado incorrecto! Intento &6%attempts%&c/&6%max% &cInténtalo de nuevo"
 
 
   # --- Confianza de IP ---

@@ -77,6 +77,15 @@ public class GlobalDataManager {
         return defaultValue;
     }
 
+    public int getInt(String key, int defaultValue) {
+        JsonObject root = getOrLoad();
+        JsonElement element = getElementByPath(root, key);
+        if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
+            return element.getAsInt();
+        }
+        return defaultValue;
+    }
+
     public long getLong(String key, long defaultValue) {
         JsonObject root = getOrLoad();
         JsonElement element = getElementByPath(root, key);

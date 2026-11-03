@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.auth.security.attempt.AttemptType;
 import pl.dawcou.astralogin.data.GlobalDataManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 
@@ -20,7 +21,7 @@ public class IPBanManager {
     private final Map<String, Long> ipAttemptWindows = new ConcurrentHashMap<>();
 
     private final Map<String, Long> ipBans = new ConcurrentHashMap<>();
-    private final Map<String, String> banReasons = new ConcurrentHashMap<>();
+    private final Map<String, AttemptType> banReasons = new ConcurrentHashMap<>();
     private final Map<String, String> ipBannedUuid = new ConcurrentHashMap<>();
 
     private final Set<String> ipBypassUuids = ConcurrentHashMap.newKeySet();
@@ -40,11 +41,11 @@ public class IPBanManager {
         return true;
     }
 
-    public String getBanReason(String ip) {
-        return banReasons.getOrDefault(ip, "UNKNOWN");
+    public AttemptType getBanReason(String ip) {
+        return banReasons.getOrDefault(ip, AttemptType.UNKNOWN);
     }
 
-    public void banIPWithMillis(String ip, long durationMillis, String reason, String uuid) {
+    public void banIPWithMillis(String ip, long durationMillis, AttemptType reason, String uuid) {
         ipBans.put(ip, System.currentTimeMillis() + durationMillis);
         banReasons.put(ip, reason);
         if (uuid != null) {
@@ -95,12 +96,12 @@ public class IPBanManager {
         if (current >= max) {
             long banMillis = TimeUtils.parseTime(timeStr, 600000L);
 
-            banIPWithMillis(ip, banMillis, "SPAM", uuid);
+            banIPWithMillis(ip, banMillis, AttemptType.SPAM, uuid);
 
             ipAttempts.remove(ip);
             ipAttemptWindows.remove(ip);
 
-            plugin.getIpTrustManager().addTrustScore(
+            plugin.getIpTrustManager().changeTrustScore(
                     ip,
                     plugin.getIpTrustManager().getIpSpamPoints()
             );
@@ -140,9 +141,9 @@ public class IPBanManager {
 
             if (expireTime > now) {
                 JsonObject banData = new JsonObject();
-                banData.addProperty("ip", ip);
                 banData.addProperty("expire", expireTime);
-                banData.addProperty("reason", banReasons.getOrDefault(ip, "UNKNOWN"));
+                AttemptType reason = banReasons.getOrDefault(ip, AttemptType.UNKNOWN);
+                banData.addProperty("reason", reason.name());
                 banData.addProperty("uuid", ipBannedUuid.getOrDefault(ip, "UNKNOWN"));
 
                 bansJson.add(ip, banData);
@@ -165,7 +166,6 @@ public class IPBanManager {
         ipBannedUuid.clear();
         ipBypassUuids.clear();
 
-        // Pobieramy JsonElement za pomocą getElementExplicit, żeby ominąć kropki
         JsonElement bansElement = globalDataManager.getElementExplicit("ip_bans");
         if (bansElement != null && bansElement.isJsonObject()) {
             JsonObject bansJson = bansElement.getAsJsonObject();
@@ -174,9 +174,14 @@ public class IPBanManager {
             for (Map.Entry<String, JsonElement> entry : bansJson.entrySet()) {
                 if (entry.getValue().isJsonObject()) {
                     JsonObject banData = entry.getValue().getAsJsonObject();
-                    String ip = banData.has("ip") ? banData.get("ip").getAsString() : entry.getKey();
+                    String ip = entry.getKey(); // Klucz to bezpośrednio IP
                     long expire = banData.has("expire") ? banData.get("expire").getAsLong() : 0;
-                    String reason = banData.has("reason") ? banData.get("reason").getAsString() : "UNKNOWN";
+                    AttemptType reason = AttemptType.UNKNOWN;
+                    if (banData.has("reason")) {
+                        try {
+                            reason = AttemptType.valueOf(banData.get("reason").getAsString());
+                        } catch (IllegalArgumentException ignored) {}
+                    }
                     String uuid = banData.has("uuid") ? banData.get("uuid").getAsString() : "UNKNOWN";
 
                     if (ip != null && expire > now) {

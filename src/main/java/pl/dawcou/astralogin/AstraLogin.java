@@ -12,6 +12,11 @@ import pl.dawcou.astralogin.api.AstraLoginAPI;
 import pl.dawcou.astralogin.api.AstraLoginAPIImpl;
 import pl.dawcou.astralogin.auth.LoginSystem;
 import pl.dawcou.astralogin.auth.security.BackendManager;
+import pl.dawcou.astralogin.auth.security.captcha.mode.chat.ChatCaptchaListeners;
+import pl.dawcou.astralogin.auth.security.captcha.mode.gui.GuiCaptchaListeners;
+import pl.dawcou.astralogin.auth.security.captcha.CaptchaManager;
+import pl.dawcou.astralogin.auth.security.captcha.mode.map.MapCaptchaListeners;
+import pl.dawcou.astralogin.auth.security.suspicious.SuspiciousManager;
 import pl.dawcou.astralogin.auth.sessions.SessionManager;
 import pl.dawcou.astralogin.auth.manage.*;
 import pl.dawcou.astralogin.auth.AccountManager;
@@ -20,10 +25,14 @@ import pl.dawcou.astralogin.auth.passwords.PINManager;
 import pl.dawcou.astralogin.auth.passwords.PasswordManager;
 import pl.dawcou.astralogin.auth.security.premium.PremiumManager;
 import pl.dawcou.astralogin.auth.security.ip.IPTrustManager;
+import pl.dawcou.astralogin.commands.account.AccountCommand;
 import pl.dawcou.astralogin.commands.admin.*;
-import pl.dawcou.astralogin.commands.player.PINCommand;
-import pl.dawcou.astralogin.commands.player.PasswordsCommand;
-import pl.dawcou.astralogin.commands.player.TwoFactorCommand;
+import pl.dawcou.astralogin.commands.ip.IPManagerCommand;
+import pl.dawcou.astralogin.commands.ip.IPResetCommand;
+import pl.dawcou.astralogin.commands.ip.IPTrustCommand;
+import pl.dawcou.astralogin.commands.account.PINCommand;
+import pl.dawcou.astralogin.commands.account.PasswordsCommand;
+import pl.dawcou.astralogin.commands.account.TwoFactorCommand;
 import pl.dawcou.astralogin.data.GlobalDataManager;
 import pl.dawcou.astralogin.data.PlayerDataManager;
 import pl.dawcou.astralogin.file.BackupManager;
@@ -33,7 +42,7 @@ import pl.dawcou.astralogin.listeners.LoginListeners;
 import pl.dawcou.astralogin.listeners.TechnicalListeners;
 import pl.dawcou.astralogin.logging.LogFilter;
 import pl.dawcou.astralogin.logging.LogManager;
-import pl.dawcou.astralogin.auth.security.AttemptManager;
+import pl.dawcou.astralogin.auth.security.attempt.AttemptManager;
 import pl.dawcou.astralogin.auth.security.ip.IPManager;
 import pl.dawcou.astralogin.system.LanguageManager;
 import pl.dawcou.astralogin.system.NoticeManager;
@@ -100,9 +109,10 @@ public class AstraLogin extends JavaPlugin implements Listener {
     private PremiumManager premiumManager;
     private IPManager ipManager;
     private IPTrustManager ipTrustManager;
+    private CaptchaManager captchaManager;
 
     // ----------------------------------------------------------------------------------------------------
-    // MEHANIKI ROZGRYWKI I INTERFEJS
+    // MECHANIKI ROZGRYWKI I INTERFEJS
     // ----------------------------------------------------------------------------------------------------
 
     private SpawnManager spawnManager;
@@ -111,6 +121,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
     private SecurityReminderTask securityReminderTask;
 
     private SeasonalEventManager seasonalEventManager;
+    private SuspiciousManager suspiciousManager;
 
     // ----------------------------------------------------------------------------------------------------
     // PROTOKOLY, NASLUCHIWACZE I KOMENDY
@@ -142,6 +153,8 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
     public BackendManager getBackendManager() { return backendManager; }
 
+    public LoginListeners getLoginListeners() { return loginListeners; }
+
     public SchedulerManager getSchedulerManager() { return schedulerManager; }
     public SoundManager getSoundManager() { return soundManager; }
     public BackupManager getBackupManager() { return backupManager; }
@@ -164,6 +177,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
     public PremiumManager getPremiumManager() { return premiumManager; }
     public IPManager getIPManager() { return ipManager; }
     public IPTrustManager getIpTrustManager() { return ipTrustManager; }
+    public CaptchaManager getCaptchaManager() { return captchaManager; }
 
     // ----------------------------------------------------------------------------------------------------
     // GETTERY - MECHANIKI I INTERFEJS
@@ -173,6 +187,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
     public InventoryManager getInventoryManager() { return inventoryManager; }
     public NoticeManager getNoticeManager() { return noticeManager; }
     public SeasonalEventManager getSeasonalEventManager() { return seasonalEventManager; }
+    public SuspiciousManager getSuspicionManager() { return suspiciousManager; }
 
     // TODO: implement ultra advanced quantum potato engine with 9000% more binary and RTX ray tracing
     // Security is more important than backdoors or worms, so you, the reader, move on and don't worry about it.
@@ -266,8 +281,12 @@ public class AstraLogin extends JavaPlugin implements Listener {
         sessionManager = new SessionManager(this, playerDataManager);
         attemptManager = new AttemptManager(this);
         premiumManager = new PremiumManager(this);
+        captchaManager = new CaptchaManager(this);
+
         securityReminderTask = new SecurityReminderTask(this);
         securityReminderTask.start();
+
+        suspiciousManager = new SuspiciousManager(this);
 
         try {
             // Generujemy parę kluczy RSA (1024-bit) dla autoryzacji Premium
@@ -301,6 +320,10 @@ public class AstraLogin extends JavaPlugin implements Listener {
         // --- REJESTRACJA EVENTÓW I KOMEND ---
         getServer().getPluginManager().registerEvents(loginListeners, this);
         getServer().getPluginManager().registerEvents(technicalListeners, this);
+
+        getServer().getPluginManager().registerEvents(new GuiCaptchaListeners(this), this);
+        getServer().getPluginManager().registerEvents(new MapCaptchaListeners(this), this);
+        getServer().getPluginManager().registerEvents(new ChatCaptchaListeners(this), this);
 
         // Ten zajmuje się blokowaniem niszczenia bloków, ruchu itp. dla niezalogowanych
         getServer().getPluginManager().registerEvents(new LoginBlocks(this), this);
@@ -366,8 +389,6 @@ public class AstraLogin extends JavaPlugin implements Listener {
         // Sprawdzanie aktualizacji
         if (getConfig().getBoolean("settings.update.check-updates", true)) {
             updateChecker.checkForUpdates(Bukkit.getConsoleSender());
-        } else {
-            noticeManager.sendLatestVersionNotice(getServer().getConsoleSender());
         }
 
         // Uruchamianie API

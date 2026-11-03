@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.commands.player;
+package pl.dawcou.astralogin.commands.account;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;

@@ -5,6 +5,7 @@ import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.mojang.authlib.GameProfile;
 import io.netty.channel.Channel;
 import org.bukkit.Bukkit;
@@ -122,7 +123,7 @@ public class ProtocolLibListener implements Listener {
 
                         // Obsługa logowania offline
                         final UUID finalOfflineUuid = playerUuid;
-                        ProtocolLibListener.this.plugin.getSchedulerManager().runSync(() -> handleOfflineLogin(channel, address, finalOfflineUuid, playerName));
+                        handleOfflineLogin(player, channel, address, finalOfflineUuid, playerName);
                         return;
                     }
 
@@ -407,7 +408,7 @@ public class ProtocolLibListener implements Listener {
                             // Kluczowe: Najpierw włączamy szyfrowanie AES na kanale (bo klient je włączył)
                             UUID finalPlayerUuid = playerUuid;
                             nettyExtractor.enableEncryptionOnChannel(channel, sharedSecret, () -> {
-                                handleOfflineLogin(channel, address, finalPlayerUuid, username);
+                                handleOfflineLogin(player, channel, address, finalPlayerUuid, username);
                             });
                             return;
                         }
@@ -439,9 +440,7 @@ public class ProtocolLibListener implements Listener {
 
                                 if (preLoginEvent.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED) {
                                     ProtocolLibListener.this.plugin.getPremiumManager().debug("DEBUG [7.2] ❌ Pre-login event denied connection: " + preLoginEvent.getKickMessage());
-                                    if (channel.isOpen()) {
-                                        channel.close();
-                                    }
+                                    sendLoginKick(player, channel, preLoginEvent.getKickMessage());
                                     return;
                                 }
 
@@ -496,7 +495,7 @@ public class ProtocolLibListener implements Listener {
     /**
      * Obsługa logowania graczy non-premium po wykryciu braku konta premium w API Mojanga
      */
-    private void handleOfflineLogin(Channel channel, InetAddress address, UUID uuid, String username) {
+    private void handleOfflineLogin(Player player, Channel channel, InetAddress address, UUID uuid, String username) {
         try {
             GameProfile offlineProfile = new GameProfile(uuid, username);
             plugin.getPremiumManager().setAuthenticated(uuid, false);
@@ -505,13 +504,40 @@ public class ProtocolLibListener implements Listener {
             Bukkit.getPluginManager().callEvent(preLoginEvent);
 
             if (preLoginEvent.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED) {
-                if (channel != null && channel.isOpen()) {
-                    channel.close();
-                }
+                sendLoginKick(player, channel, preLoginEvent.getKickMessage());
                 return;
             }
 
             plugin.getSchedulerManager().runSync(() -> new LoginCompleter(plugin).complete(channel, uuid, offlineProfile));
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (channel != null && channel.isOpen()) {
+                channel.close();
+            }
+        }
+    }
+
+    private void sendLoginKick(Player player, Channel channel, String reason) {
+        try {
+            String message = reason != null ? reason : "Disconnected";
+
+            // Tworzymy pakiet rozłączenia logowania przez ProtocolLib
+            PacketContainer disconnectPacket = protocolManager.createPacket(PacketType.Login.Server.DISCONNECT);
+
+            // ProtocolLib posiada wbudowany wrapper na komponenty chatu
+            WrappedChatComponent chatComponent =
+                    WrappedChatComponent.fromText(message);
+
+            disconnectPacket.getChatComponents().write(0, chatComponent);
+
+            if (player != null) {
+                protocolManager.sendServerPacket(player, disconnectPacket);
+            }
+
+            if (channel != null && channel.isOpen()) {
+                channel.flush();
+                channel.close();
+            }
         } catch (Exception e) {
             e.printStackTrace();
             if (channel != null && channel.isOpen()) {

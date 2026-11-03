@@ -12,6 +12,7 @@ import pl.dawcou.astralogin.api.events.PlayerPremiumLoginEvent;
 import pl.dawcou.astralogin.auth.LoginSystem;
 import pl.dawcou.astralogin.auth.manage.spawn.SpawnType;
 import pl.dawcou.astralogin.auth.security.ip.IPTrustManager;
+import pl.dawcou.astralogin.auth.security.suspicious.SuspicionLevel;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -30,10 +31,40 @@ public class JoinHandler {
     }
 
     public void handleJoin(PlayerJoinEvent e) {
-        LoginSystem loginSystem = plugin.getLoginSystem();
         Player p = e.getPlayer();
         UUID uuid = p.getUniqueId();
         String ip = Objects.requireNonNull(p.getAddress()).getAddress().getHostAddress();
+
+        // Sprawdzenie wymagania Captchy na samym starcie
+        if (plugin.getCaptchaManager().needsCaptcha(uuid)) {
+            applyUnauthenticatedRestrictions(p);
+            plugin.getCaptchaManager().startCaptcha(p);
+            timerHandler.startCaptchaTimer(p);
+        } else {
+            continueLoginFlow(p, uuid, ip);
+        }
+    }
+
+    /**
+     * Wspólna metoda nakładająca restrykcje na niezweryfikowanego gracza
+     */
+    private void applyUnauthenticatedRestrictions(Player p) {
+        if (plugin.getConfig().getBoolean("visuals.hide-unlogged-players")) {
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                plugin.getSchedulerManager().runForEntity(online, () -> online.hidePlayer(plugin, p));
+            }
+        }
+
+        plugin.getInventoryManager().save(p);
+        plugin.getSpawnManager().teleport(p, SpawnType.BEFORE_LOGIN);
+
+        if (plugin.getConfig().getBoolean("visuals.use-blindness")) {
+            p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, Integer.MAX_VALUE, 0, false, false));
+        }
+    }
+
+    public void continueLoginFlow(Player p, UUID uuid, String ip) {
+        LoginSystem loginSystem = plugin.getLoginSystem();
 
         // Update Checker
         if (plugin.getConfig().getBoolean("settings.update.check-updates", true)
@@ -47,8 +78,8 @@ public class JoinHandler {
 
             plugin.getSchedulerManager().runForEntity(p, () -> {
                 IPTrustManager.TrustLevel level = plugin.getIpTrustManager().getTrustLevel(ip);
-                if (premium && (level != IPTrustManager.TrustLevel.FATAL && !plugin.getPlayerDataManager().getBoolean(uuid, "account.suspicious", false))) {
-                    PlayerPremiumLoginEvent event = new PlayerPremiumLoginEvent(p,ip);
+                if (premium && (level != IPTrustManager.TrustLevel.FATAL && !plugin.getSuspicionManager().hasAtLeast(uuid, SuspicionLevel.MEDIUM))) {
+                    PlayerPremiumLoginEvent event = new PlayerPremiumLoginEvent(p, ip);
                     Bukkit.getPluginManager().callEvent(event);
                     if (event.isCancelled()) {
                         return;
@@ -57,6 +88,7 @@ public class JoinHandler {
                     p.sendMessage(plugin.getLanguageManager().getWithPrefix("premium.success"));
                     plugin.getLogManager().log("Premium account detected for player " + p.getName());
 
+                    plugin.getSuspicionManager().clearSuspicion(uuid);
                     loginSystem.finishSession(p);
                     return;
                 }
@@ -64,19 +96,12 @@ public class JoinHandler {
                 boolean passwordBypassedBySession = sessionHandler.handleSession(p, uuid, level, loginSystem);
 
                 // Jeśli sesja przywróciła gracza całkowicie (hasło + 2FA lub samo hasło bez 2FA), przerwij
-                if (plugin.getLoginSystem().getLoggedIn().contains(uuid) && !plugin.getLoginSystem().isWaitingFor2FA(uuid)) {
+                if (loginSystem.getLoggedIn().contains(uuid) && !loginSystem.isWaitingFor2FA(uuid)) {
                     return;
                 }
 
                 // --- LOGIKA POZA SESJĄ LUB DLA BLOKADY 2FA ---
-                if (plugin.getConfig().getBoolean("visuals.hide-unlogged-players")) {
-                    for (Player online : Bukkit.getOnlinePlayers()) {
-                        plugin.getSchedulerManager().runForEntity(online, () -> online.hidePlayer(plugin, p));
-                    }
-                }
-
-                plugin.getInventoryManager().save(p);
-                plugin.getSpawnManager().teleport(p, SpawnType.BEFORE_LOGIN);
+                applyUnauthenticatedRestrictions(p);
 
                 // Jeśli hasło NIE zostało przywrócone przez sesję, standardowo wyrzucamy z zalogowanych
                 if (!passwordBypassedBySession) {
@@ -86,16 +111,12 @@ public class JoinHandler {
                     loginSystem.getLoggedIn().add(uuid);
                 }
 
-                if (plugin.getConfig().getBoolean("visuals.use-blindness")) {
-                    p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, Integer.MAX_VALUE, 0, false, false));
-                }
-
                 // Dostosowanie przypomnienia w zależności od statusu
                 if (passwordBypassedBySession) {
                     p.sendMessage(plugin.getLanguageManager().getWithPrefix("session.twofactor-expired"));
                     Title title2fa = Title.title(
-                            Component.text(plugin.getLanguageManager().getMessage("title.twofactor")), // Główny tytuł
-                            Component.text(plugin.getLanguageManager().getMessage("twofactor.required")), // Podtytuł
+                            Component.text(plugin.getLanguageManager().getMessage("title.twofactor")),
+                            Component.text(plugin.getLanguageManager().getMessage("twofactor.required")),
                             Title.Times.times(Duration.ofMillis(500), Duration.ofHours(1), Duration.ofMillis(500))
                     );
                     plugin.getAdventure().player(p).showTitle(title2fa);
@@ -103,27 +124,25 @@ public class JoinHandler {
                     if (plugin.getPasswordManager().isRegistered(uuid)) {
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.reminder"));
 
-                        // WYSYŁANIE SAMEGO SUBTYTUŁU DLA LOGOWANIA:
                         Title titleLogin = Title.title(
-                                Component.empty(), // Czysty, pusty komponent jako główny tytuł
-                                Component.text(plugin.getLanguageManager().getMessage("login.reminder")), // Wiadomość ląduje w podtytule
+                                Component.empty(),
+                                Component.text(plugin.getLanguageManager().getMessage("login.reminder")),
                                 Title.Times.times(Duration.ofMillis(500), Duration.ofHours(1), Duration.ofMillis(500))
                         );
                         plugin.getAdventure().player(p).showTitle(titleLogin);
                     } else {
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("register.reminder"));
 
-                        // WYSYŁANIE SAMEGO SUBTYTUŁU DLA REJESTRACJI:
                         Title titleRegister = Title.title(
-                                Component.empty(), // Czysty, pusty komponent jako główny tytuł
-                                Component.text(plugin.getLanguageManager().getMessage("register.reminder")), // Wiadomość ląduje w podtytule
+                                Component.empty(),
+                                Component.text(plugin.getLanguageManager().getMessage("register.reminder")),
                                 Title.Times.times(Duration.ofMillis(500), Duration.ofHours(1), Duration.ofMillis(500))
                         );
                         plugin.getAdventure().player(p).showTitle(titleRegister);
                     }
                 }
 
-                // Timer logowania / wpisania kodu 2FA wyekstrahowany do osobnej klasy
+                // Timer logowania / wpisania kodu 2FA
                 timerHandler.startLoginTimer(p, uuid, loginSystem);
             });
         });

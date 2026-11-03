@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.auth.security.attempt.AttemptType;
 import pl.dawcou.astralogin.auth.security.ip.IPManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 
@@ -47,7 +48,7 @@ public class PreLoginHandler {
 
             e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, kickReason);
             plugin.getLogManager().log("Someone tried to join the account of an active player (" + playerName + ") with IP (" + currentIP + ")");
-            plugin.getIpTrustManager().addTrustScore(
+            plugin.getIpTrustManager().changeTrustScore(
                     currentIP,
                     plugin.getIpTrustManager().getActiveAccountAttemptPoints()
             );
@@ -70,21 +71,23 @@ public class PreLoginHandler {
             }
         }
 
-        // JEDYNE SPRAWDZENIE BANA
+        // Sprawdzenie bana
         if (ipManager.isIPBanned(currentIP)) {
             long totalSeconds = ipManager.getIPBanTimeLeft(currentIP);
 
-            // Teraz używamy klasy narzędziowej:
             String timeFormatted = TimeUtils.formatTime(totalSeconds);
-            String reason = ipManager.getBanReason(currentIP);
-            if (reason == null) reason = "UNKNOWN";
+            AttemptType reason = ipManager.getBanReason(currentIP);
+            if (reason == null) reason = AttemptType.UNKNOWN;
 
             String msg;
-            if ("SPAM".equals(reason)) {
+            if (reason == AttemptType.SPAM ) {
                 msg = plugin.getLanguageManager().getMessage("security.ip-spam")
                         .replace("%time%", timeFormatted);
+            } else if (reason == AttemptType.CAPTCHA_GUI || reason == AttemptType.CAPTCHA_MAP || reason == AttemptType.CAPTCHA_CHAT) {
+                msg = plugin.getLanguageManager().getMessage("captcha.max-attempts-ban")
+                        .replace("%time%", timeFormatted);
             } else {
-                // Domyślnie traktujemy to jako ban za hasła (PASSWORD)
+                // Domyślnie traktujemy to jako ban za błędne próby hasła (PASSWORD)
                 msg = plugin.getLanguageManager().getMessage("security.max-attempts-ban")
                         .replace("%time%", timeFormatted);
             }
@@ -92,19 +95,20 @@ public class PreLoginHandler {
             // Ktoś z banem na IP próbuje wbić
             plugin.getLogManager().log("Player " + playerName + " (" + currentIP + ") tried to connect but is IP banned. Reason: " + reason);
 
-            e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, (msg));
+            e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, (msg));
             return;
         }
 
         // Sprawdzenie Zmiany IP
         if (plugin.getConfig().getBoolean("security.ip-security.enabled", true) && savedIP != null && !plugin.getIPManager().checkIP(uuid, savedIP, currentIP)) {
             plugin.getLogManager().log("Player " + playerName + " was detected with an IP mismatch. Current IP: " + currentIP + ", Saved IP: " + savedIP);
-            plugin.getIpTrustManager().addTrustScore(
+            plugin.getIpTrustManager().changeTrustScore(
                     currentIP,
                     plugin.getIpTrustManager().getUnknownIpLoginPoints()
             );
 
-            plugin.getPlayerDataManager().set(uuid, "account.suspicious", true);
+            plugin.getSuspicionManager().incrementSuspicion(uuid);
+            plugin.getCaptchaManager().flagForCaptcha(uuid);
 
             // Wysyłanie alertu do adminów
             for (Player p : Bukkit.getOnlinePlayers()) {
@@ -125,12 +129,12 @@ public class PreLoginHandler {
             if (accountCount >= limit) {
                 // Przekroczenie limitu kont na jednym IP
                 plugin.getLogManager().log("Player " + playerName + " (" + currentIP + ") was blocked by Anti-MultiAccount. Limit: " + limit + ", Current: " + accountCount);
-                plugin.getIpTrustManager().addTrustScore(
+                plugin.getIpTrustManager().changeTrustScore(
                         currentIP,
                         plugin.getIpTrustManager().getMultiIpPoints()
                 );
 
-                e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_BANNED, (plugin.getLanguageManager().getMessage("security.multiaccount")));
+                e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, (plugin.getLanguageManager().getMessage("security.multiaccount")));
                 return;
             }
         }

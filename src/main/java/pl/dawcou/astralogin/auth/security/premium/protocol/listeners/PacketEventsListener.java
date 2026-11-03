@@ -5,6 +5,8 @@ import com.github.retrooper.packetevents.event.PacketListenerAbstract;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
+import com.github.retrooper.packetevents.protocol.player.User;
+import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import com.github.retrooper.packetevents.wrapper.login.client.WrapperLoginClientEncryptionResponse;
 import com.github.retrooper.packetevents.wrapper.login.client.WrapperLoginClientLoginStart;
 import com.github.retrooper.packetevents.wrapper.login.server.WrapperLoginServerEncryptionRequest;
@@ -98,7 +100,7 @@ public class PacketEventsListener extends PacketListenerAbstract implements List
                     plugin.getPremiumManager().setAuthenticated(playerUuid, false);
 
                     // Obsługa logowania offline z prawidłowym (starym lub nowym) UUID
-                    handleOfflineLogin(channel, address, playerUuid, playerName);
+                    handleOfflineLogin(event.getUser(), channel, address, playerUuid, playerName);
                     return;
                 }
 
@@ -207,7 +209,7 @@ public class PacketEventsListener extends PacketListenerAbstract implements List
                                 Bukkit.getPluginManager().callEvent(preLoginEvent);
 
                                 if (preLoginEvent.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED) {
-                                    if (channel.isOpen()) channel.close();
+                                    sendLoginKick(event.getUser(), channel, preLoginEvent.getKickMessage());
                                     return;
                                 }
 
@@ -234,7 +236,7 @@ public class PacketEventsListener extends PacketListenerAbstract implements List
                             Bukkit.getPluginManager().callEvent(preLoginEvent);
 
                             if (preLoginEvent.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED) {
-                                if (channel.isOpen()) channel.close();
+                                sendLoginKick(event.getUser(), channel, preLoginEvent.getKickMessage());
                                 return;
                             }
 
@@ -260,7 +262,7 @@ public class PacketEventsListener extends PacketListenerAbstract implements List
     /**
      * Obsługa logowania graczy non-premium po wykryciu braku konta premium w API Mojanga
      */
-    private void handleOfflineLogin(Channel channel, InetAddress address, UUID uuid, String username) {
+    private void handleOfflineLogin(com.github.retrooper.packetevents.protocol.player.User user, Channel channel, InetAddress address, UUID uuid, String username) {
         try {
             GameProfile offlineProfile = new GameProfile(uuid, username);
             plugin.getPremiumManager().setAuthenticated(uuid, false);
@@ -270,9 +272,7 @@ public class PacketEventsListener extends PacketListenerAbstract implements List
             Bukkit.getPluginManager().callEvent(preLoginEvent);
 
             if (preLoginEvent.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED) {
-                plugin.getSchedulerManager().runSync(() -> {
-                    if (channel.isOpen()) channel.close();
-                });
+                sendLoginKick(user, channel, preLoginEvent.getKickMessage());
                 return;
             }
 
@@ -283,6 +283,48 @@ public class PacketEventsListener extends PacketListenerAbstract implements List
             plugin.getSchedulerManager().runSync(() -> {
                 if (channel.isOpen()) channel.close();
             });
+        }
+    }
+
+    private void sendLoginKick(User user, Channel channel, String reason) {
+        try {
+            String message = reason != null ? reason : "Disconnected";
+
+            Class<?> disconnectClass = Class.forName("com.github.retrooper.packetevents.wrapper.login.server.WrapperLoginServerDisconnect");
+            Object disconnectPacket = null;
+
+            for (java.lang.reflect.Constructor<?> constructor : disconnectClass.getConstructors()) {
+                if (constructor.getParameterCount() == 1) {
+                    Class<?> paramType = constructor.getParameterTypes()[0];
+                    try {
+                        if (paramType.equals(String.class)) {
+                            disconnectPacket = constructor.newInstance(message);
+                            break;
+                        } else if (paramType.getName().contains("Component")) {
+                            Class<?> compClass = Class.forName(paramType.getName());
+                            Object comp = compClass.getMethod("text", String.class).invoke(null, message);
+                            disconnectPacket = constructor.newInstance(comp);
+                            break;
+                        }
+                    } catch (Throwable ignored) {}
+                }
+            }
+
+            if (user != null && disconnectPacket instanceof PacketWrapper) {
+                // Wysłanie pakietu i natychmiastowe zamknięcie kanału Netty po dostarczeniu do bufora sieciowego
+                user.sendPacket((PacketWrapper<?>) disconnectPacket);
+                if (channel != null && channel.isOpen()) {
+                    channel.flush();
+                    channel.close();
+                }
+            } else if (channel != null && channel.isOpen()) {
+                channel.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (channel != null && channel.isOpen()) {
+                channel.close();
+            }
         }
     }
 }

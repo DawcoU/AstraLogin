@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.commands.admin;
+package pl.dawcou.astralogin.commands.ip;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -8,6 +8,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.jspecify.annotations.NonNull;
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.auth.security.attempt.AttemptType;
 import pl.dawcou.astralogin.auth.security.ip.IPBanManager;
 import pl.dawcou.astralogin.auth.security.ip.IPManager;
 import pl.dawcou.astralogin.system.SoundManager;
@@ -83,12 +84,12 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
                             .replace("%ip%", playerIp));
                 } else {
                     long timeLeft = banManager.getIPBanTimeLeft(playerIp);
-                    String reason = banManager.getBanReason(playerIp);
+                    AttemptType reason = banManager.getBanReason(playerIp);
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.info-banned")
                             .replace("%player%", inputName)
                             .replace("%ip%", playerIp)
                             .replace("%time%", String.valueOf(timeLeft))
-                            .replace("%reason%", reason));
+                            .replace("%reason%", reason.name()));
                 }
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
@@ -175,12 +176,12 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
                     if (savedIP != null && !ipManager.checkIP(targetUuid, savedIP, currentIp)) {
 
                         plugin.getLogManager().log("Player " + inputName + " was detected with an IP mismatch after unbypass. Current IP: " + currentIp + ", Saved IP: " + savedIP);
-                        plugin.getIpTrustManager().addTrustScore(
+                        plugin.getIpTrustManager().changeTrustScore(
                                 currentIp,
                                 plugin.getIpTrustManager().getUnknownIpLoginPoints()
                         );
 
-                        plugin.getPlayerDataManager().set(targetUuid, "account.suspicious", true);
+                        plugin.getSuspicionManager().incrementSuspicion(targetUuid);
                     }
                 }
                 break;

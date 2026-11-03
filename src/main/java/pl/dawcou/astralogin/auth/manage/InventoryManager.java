@@ -17,9 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-//--------------------------------------------------
-// Menedżer ekwipunku graczy oparty na PlayerDataManager
-//--------------------------------------------------
 public class InventoryManager {
 
     private final AstraLogin plugin;
@@ -33,11 +30,8 @@ public class InventoryManager {
     public void save(Player p) {
         UUID uuid = p.getUniqueId();
 
-        // Czyszczenie tymczasowego EQ, gdy zapis dla gracza juz istnieje
-        if (playerDataManager.has(uuid, "inventory.contents")) {
-            p.getInventory().clear();
-            p.getInventory().setArmorContents(null);
-            p.setGameMode(GameMode.SURVIVAL);
+        // Jeśli ekwipunek jest już zapisany w cache, nie ruszamy go, żeby nie nadpisać puste/nowe stany
+        if (hasSavedInventory(p)) {
             return;
         }
 
@@ -70,7 +64,10 @@ public class InventoryManager {
     public void restore(Player p) {
         UUID uuid = p.getUniqueId();
 
-        if (!playerDataManager.has(uuid, "inventory.contents")) return;
+        // Jeśli nie ma nic do przywrócenia, nie ruszamy
+        if (!hasSavedInventory(p)) {
+            return;
+        }
 
         // Zbieramy przedmioty zdobyte przed zalogowaniem
         List<ItemStack> newItems = new ArrayList<>();
@@ -121,6 +118,10 @@ public class InventoryManager {
         }
 
         deleteInventoryCache(uuid);
+    }
+
+    private boolean hasSavedInventory(Player p) {
+        return playerDataManager.has(p.getUniqueId(), "inventory");
     }
 
     public void deleteInventoryCache(UUID uuid) {

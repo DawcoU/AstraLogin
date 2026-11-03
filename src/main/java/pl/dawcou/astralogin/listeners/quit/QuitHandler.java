@@ -6,6 +6,9 @@ import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.LoginSystem;
 import pl.dawcou.astralogin.auth.manage.InventoryManager;
 import pl.dawcou.astralogin.auth.manage.spawn.SpawnManager;
+import pl.dawcou.astralogin.auth.security.captcha.mode.chat.ChatCaptchaHandler;
+import pl.dawcou.astralogin.auth.security.captcha.mode.gui.GuiCaptchaHandler;
+import pl.dawcou.astralogin.auth.security.captcha.mode.map.MapCaptchaHandler;
 import pl.dawcou.astralogin.auth.sessions.SessionManager;
 import pl.dawcou.astralogin.auth.security.TwoFactorManager;
 
@@ -28,6 +31,11 @@ public class QuitHandler {
         SessionManager sessionManager = plugin.getSessionManager();
         InventoryManager inventoryManager = plugin.getInventoryManager();
         TwoFactorManager twoFactorManager = plugin.getTwoFactorManager();
+
+        // Czyszczenie sesji CAPTCHA
+        GuiCaptchaHandler.removeSession(p);
+        MapCaptchaHandler.removeSession(p, plugin);
+        ChatCaptchaHandler.removeSession(p);
 
         if (loginSystem != null && loginSystem.getLoggedIn() != null) {
 

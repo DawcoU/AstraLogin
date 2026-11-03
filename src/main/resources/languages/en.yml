@@ -87,7 +87,7 @@ messages:
   security:
     timeout: "&cLogin time has expired!"
     max-attempts: "&cToo many failed login attempts! Remaining attempts: &6%remaining%"
-    max-attempts-ban: "&cToo many failed attempts! You have been banned for &6%time%"
+    max-attempts-ban: "&cToo many failed login attempts! You have been banned for &6%time%"
     multiaccount: "&cAccount limit for this IP address has been reached!"
     ip-spam: "&cToo many connection attempts from your IP address! You are blocked on &6%time%"
     suspicious-ip-alert: "&cSuspicious activity detected! Player &4%target% &cjoined from an unknown IP address: &6%ip%"
@@ -130,6 +130,43 @@ messages:
     rate-neutral: "&7Neutral"
     rate-good: "&aGood"
     rate-ideal: "&bIdeal"
+
+
+  # --- Captcha (Bot Protection) ---
+  captcha:
+    success: "&a✔ Captcha completed successfully!"
+    failed: "&c✖ Incorrect choice! Attempt &6%attempts%&c/&6%max% &cTry again"
+    required: "&cYou must complete the captcha before logging in!"
+    max-attempts: "&cToo many failed captcha attempts! Remaining attempts: &6%remaining%"
+    max-attempts-ban: "&cToo many failed captcha attempts! You have been banned for &6%time%"
+    timer: "&eSolve the captcha within &6%time%&e!"
+    timeout: "&cTime to solve the captcha has expired!"
+    gui:
+      title: "&6Captcha"
+      prompts:
+        edible: "&8- &eClick Edible"
+        red: "&8- &eClick Red"
+        blue: "&8- &eClick Blue"
+        green: "&8- &eClick Green"
+        yellow: "&8- &eClick Yellow"
+        wood: "&8- &eClick Wood"
+        bow_ammo: "&8- &eClick Bow Ammo"
+        chicken_drop: "&8- &eClick Chicken Drop"
+        redstone: "&8- &eClick Redstone"
+        ore: "&8- &eClick Ore"
+        helmet: "&8- &eClick Helmet"
+        netherite: "&8- &eClick Netherite"
+        potion: "&8- &eClick Potion"
+        music_disc: "&8- &eClick Music Disc"
+        boat: "&8- &eClick Boat"
+        tool: "&8- &eClick Tool"
+    map:
+      instruction: "&eType the code shown on the map in your hand into the chat!"
+      item-name: "&6Captcha Map"
+      wrong-code: "&c✖ Incorrect code! Attempt &6%attempts%&c/&6%max% &cTry again"
+    chat:
+      instruction: "&eSolve the math puzzle: &6%equation%"
+      wrong-answer: "&c✖ Incorrect answer! Attempt &6%attempts%&c/&6%max% &cTry again"
 
 
   # --- IP Management and Bans /ipmanager ---

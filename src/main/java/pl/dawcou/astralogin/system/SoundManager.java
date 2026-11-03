@@ -82,7 +82,6 @@ public class SoundManager {
             soundSource = "config path '" + path + ".sound'";
         }
 
-
         // Safe bounds enforcement
         float volume = (float) Math.max(0.0, Math.min(2.0, rawVolume));
         float pitch = (float) Math.max(0.5, Math.min(2.0, rawPitch));

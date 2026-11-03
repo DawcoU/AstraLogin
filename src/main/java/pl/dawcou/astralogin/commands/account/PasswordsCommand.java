@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.commands.player;
+package pl.dawcou.astralogin.commands.account;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -10,6 +10,7 @@ import org.jspecify.annotations.NonNull;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.passwords.PasswordHasher;
 import pl.dawcou.astralogin.auth.passwords.PasswordValidator;
+import pl.dawcou.astralogin.auth.security.attempt.AttemptType;
 import pl.dawcou.astralogin.system.SoundManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 
@@ -139,8 +140,8 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("forgot-password.wrong-pin"));
                             plugin.getSoundManager().playSound(p, SoundManager.SoundType.WRONG_PASSWORD);
 
-                            plugin.getIpTrustManager().addTrustScore(ip, plugin.getIpTrustManager().getFailedPasswordPoints());
-                            plugin.getAttemptManager().checkCrime(p, "PIN");
+                            plugin.getIpTrustManager().changeTrustScore(ip, plugin.getIpTrustManager().getFailedPasswordPoints());
+                            plugin.getAttemptManager().checkCrime(p, AttemptType.PIN);
                         });
                         break;
 
@@ -312,9 +313,9 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                         plugin.getSchedulerManager().runSync(() -> {
                             p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.wrong-old"));
                             plugin.getSoundManager().playSound(p, SoundManager.SoundType.WRONG_PASSWORD);
-                            plugin.getIpTrustManager().addTrustScore(ip, plugin.getIpTrustManager().getFailedPasswordPoints());
+                            plugin.getIpTrustManager().changeTrustScore(ip, plugin.getIpTrustManager().getFailedPasswordPoints());
 
-                            plugin.getAttemptManager().checkCrime(p, "Password");
+                            plugin.getAttemptManager().checkCrime(p, AttemptType.PASSWORD);
                         });
                         break;
 

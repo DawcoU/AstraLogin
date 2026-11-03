@@ -87,7 +87,7 @@ messages:
   security:
     timeout: "&cDie Anmeldezeit ist abgelaufen!"
     max-attempts: "&cZu viele fehlgeschlagene Anmeldeversuche! Verbleibende Versuche: &6%remaining%"
-    max-attempts-ban: "&cZu viele fehlgeschlagene Versuche! Du wurdest für &6%time% &cgesperrt"
+    max-attempts-ban: "&cZu viele fehlgeschlagene Anmeldeversuche! Du wurdest für &6%time% &cgesperrt"
     multiaccount: "&cKontolimit für diese IP-Adresse erreicht!"
     ip-spam: "&cZu viele Verbindungsversuche von deiner IP-Adresse! Du bist gesperrt für &6%time%"
     suspicious-ip-alert: "&cVerdächtige Aktivität erkannt! Spieler &4%target% &chat sich von einer unbekannten IP-Adresse angemeldet: &6%ip%"
@@ -110,6 +110,43 @@ messages:
         - "&fDu hast 2FA aktiviert, aber keine Wiederherstellungs-PIN festgelegt"
         - "&fSetze sie mit &a/pin <setup>&f, um den Zugriff auf dein Konto wiederherstellen zu können"
         - "&e----------------------------------------"
+
+
+  # --- Captcha (Bot-Schutz) ---
+  captcha:
+    success: "&a✔ Captcha erfolgreich abgeschlossen!"
+    failed: "&c✖ Falsche Auswahl! Versuch &6%attempts%&c/&6%max% &cVersuche es erneut"
+    required: "&cDu musst zuerst das Captcha lösen, bevor du dich einloggst!"
+    max-attempts: "&cZu viele fehlgeschlagene Captcha-Versuche! Verbleibende Versuche: &6%remaining%"
+    max-attempts-ban: "&cZu viele fehlgeschlagene Captcha-Versuche! Du wurdest für &6%time% &cgebannt"
+    timer: "&eLöse das Captcha innerhalb von &6%time%&e!"
+    timeout: "&cDie Zeit zum Lösen des Captchas ist abgelaufen!"
+    gui:
+      title: "&6Captcha"
+      prompts:
+        edible: "&8- &eKlicke Essbares"
+        red: "&8- &eKlicke Rot"
+        blue: "&8- &eKlicke Blau"
+        green: "&8- &eKlicke Grün"
+        yellow: "&8- &eKlicke Gelb"
+        wood: "&8- &eKlicke Holz"
+        bow_ammo: "&8- &eKlicke Bogenmunition"
+        chicken_drop: "&8- &eKlicke Hühner-Drop"
+        redstone: "&8- &eKlicke Redstone"
+        ore: "&8- &eKlicke Erz"
+        helmet: "&8- &eKlicke Helm"
+        netherite: "&8- &eKlicke Netherit"
+        potion: "&8- &eKlicke Trank"
+        music_disc: "&8- &eKlicke Schallplatte"
+        boat: "&8- &eKlicke Boot"
+        tool: "&8- &eKlicke Werkzeug"
+    map:
+      instruction: "&eGib den Code von der Karte in deiner Hand in den Chat ein!"
+      item-name: "&6Captcha-Karte"
+      wrong-code: "&c✖ Falscher Code! Versuch &6%attempts%&c/&6%max% &cVersuche es erneut"
+    chat:
+      instruction: "&eLöse die Matheaufgabe: &6%equation%"
+      wrong-answer: "&c✖ Falsches Ergebnis! Versuch &6%attempts%&c/&6%max% &cVersuche es erneut"
 
 
   # --- IP-Vertrauen ---

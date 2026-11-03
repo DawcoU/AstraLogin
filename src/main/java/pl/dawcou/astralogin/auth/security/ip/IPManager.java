@@ -3,6 +3,7 @@ package pl.dawcou.astralogin.auth.security.ip;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.auth.security.attempt.AttemptType;
 import pl.dawcou.astralogin.data.GlobalDataManager;
 import pl.dawcou.astralogin.data.PlayerDataManager;
 
@@ -159,12 +160,12 @@ public class IPManager {
         return ipBanManager.isIPBanned(ip);
     }
 
-    public String getBanReason(String ip) {
+    public AttemptType getBanReason(String ip) {
         return ipBanManager.getBanReason(ip);
     }
 
-    public void banIPWithMillis(String ip, long durationMillis, String reason) {
-        ipBanManager.banIPWithMillis(ip, durationMillis, reason, null);
+    public void banIPWithMillis(String ip, long durationMillis, AttemptType reason, UUID uuid) {
+        ipBanManager.banIPWithMillis(ip, durationMillis, reason, uuid != null ? uuid.toString() : null);
     }
 
     public void addIPAttempt(String ip) {

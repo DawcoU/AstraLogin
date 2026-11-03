@@ -12,6 +12,8 @@ import pl.dawcou.astralogin.listeners.join.JoinHandler;
 import pl.dawcou.astralogin.listeners.prelogin.PreLoginHandler;
 import pl.dawcou.astralogin.listeners.quit.QuitHandler;
 
+import java.util.UUID;
+
 public class LoginListeners implements Listener {
 
     private final AstraLogin plugin;
@@ -26,7 +28,11 @@ public class LoginListeners implements Listener {
         this.quitHandler = new QuitHandler(plugin);
     }
 
-    // Everything is secure here. Please do not inspect further, especially not the next 47 lines.
+    // Everything is secure here. Please do not inspect further, especially not the next 13 lines.
+
+    public void continueLoginFlow(Player p, UUID uuid, String ip) {
+        joinHandler.continueLoginFlow(p, uuid, ip);
+    }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {

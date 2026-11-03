@@ -4,6 +4,8 @@ import org.bukkit.entity.Player;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.auth.security.suspicious.SuspicionLevel;
+
 import java.util.UUID;
 
 public class AstraLoginAPIImpl implements AstraLoginAPI {
@@ -13,6 +15,10 @@ public class AstraLoginAPIImpl implements AstraLoginAPI {
     public AstraLoginAPIImpl(AstraLogin plugin) {
         this.plugin = plugin;
     }
+
+    // ----------------------------------------------------------------------------------------------------
+    // STANY GRACZA
+    // ----------------------------------------------------------------------------------------------------
 
     @Override
     public boolean isRegistered(@NonNull UUID uuid) {
@@ -43,17 +49,32 @@ public class AstraLoginAPIImpl implements AstraLoginAPI {
     }
 
     @Override
-    public void forceLogin(@NonNull Player p) {
-        if (plugin.getLoginSystem() != null) {
-            plugin.getLoginSystem().finishLogin(p);
+    public int getTrustScore(@NonNull String ip) {
+        if (plugin.getIpTrustManager() == null) {
+            return 0;
         }
+        return plugin.getIpTrustManager().getTrustScore(ip);
     }
 
     @Override
-    public void forceLogout(@NonNull Player p) {
-        if (plugin.getLoginSystem() != null) {
-            plugin.getLoginSystem().logout(p);
+    public @NonNull SuspicionLevel getSuspicionLevel(@NonNull UUID uuid) {
+        if (plugin.getSuspicionManager() == null) {
+            return SuspicionLevel.NONE;
         }
+        return plugin.getSuspicionManager().getSuspicionLevel(uuid);
+    }
+
+    @Override
+    public boolean isSuspicious(@NonNull UUID uuid) {
+        if (plugin.getSuspicionManager() == null) {
+            return false;
+        }
+        return plugin.getSuspicionManager().isSuspicious(uuid);
+    }
+
+    @Override
+    public boolean hasActiveCaptcha(@NonNull Player p) {
+        return plugin.getCaptchaManager().hasCaptcha(p);
     }
 
     @Override
@@ -72,10 +93,42 @@ public class AstraLoginAPIImpl implements AstraLoginAPI {
         return plugin.getSessionManager().getTwoFactorSessionManager().hasActive2FASession(uuid, currentIp);
     }
 
+    // ----------------------------------------------------------------------------------------------------
+    // AKCJE GRACZA
+    // ----------------------------------------------------------------------------------------------------
+
+    @Override
+    public void forceLogin(@NonNull Player p) {
+        if (plugin.getLoginSystem() != null) {
+            plugin.getLoginSystem().finishLogin(p);
+        }
+    }
+
+    @Override
+    public void forceLogout(@NonNull Player p) {
+        if (plugin.getLoginSystem() != null) {
+            plugin.getLoginSystem().logout(p);
+        }
+    }
+
     @Override
     public void unregister(@NonNull UUID uuid) {
         if (plugin.getPasswordManager() != null) {
             plugin.getPasswordManager().deletePassword(uuid);
+        }
+    }
+
+    @Override
+    public void setTrustScore(@NonNull String ip, int score) {
+        if (plugin.getIpTrustManager() != null) {
+            plugin.getIpTrustManager().setTrustScore(ip, score);
+        }
+    }
+
+    @Override
+    public void setSuspicionLevel(@NonNull UUID uuid, @NonNull SuspicionLevel level) {
+        if (plugin.getSuspicionManager() != null) {
+            plugin.getSuspicionManager().setSuspicionLevel(uuid, level);
         }
     }
 }

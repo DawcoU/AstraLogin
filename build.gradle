@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'pl.dawcou'
-version = '4.6.0'
+version = '4.7.0-beta1'
 
 repositories {
     mavenCentral()
@@ -71,7 +71,7 @@ tasks.named('processResources', ProcessResources).configure {
 }
 
 shadowJar {
-    archiveFileName = "${project.name}-${project.version}.jar"
+    archiveFileName = "${project.name}.jar"
 
     // Relokacje bibliotek
     relocate 'com.warrenstrange.googleauth', 'pl.dawcou.astralogin.libs.googleauth'

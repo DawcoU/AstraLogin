@@ -202,18 +202,6 @@ public class AutoUpdater {
                     );
                 }
 
-                File currentJar = new File(
-                        AstraLogin.class.getProtectionDomain()
-                                .getCodeSource()
-                                .getLocation()
-                                .toURI()
-                );
-
-                if (!currentJar.getName().equals(filename)) {
-                    // Automatyczne zlecenie usunięcia starego pliku przez JVM przy zamknięciu serwera
-                    currentJar.deleteOnExit();
-                }
-
                 plugin.getLogger().info(
                         "Successfully downloaded AstraLogin version "
                                 + versionName + " to the update directory"

@@ -10,6 +10,9 @@ public class BackendManager {
     private final AstraLogin plugin;
     private String activeBackend = "PROTOCOLLIB";
 
+    private boolean packetEventsLoaded = false;
+    private boolean protocolLibLoaded = false;
+
     public BackendManager(AstraLogin plugin) {
         this.plugin = plugin;
         initializeBackend();
@@ -28,13 +31,17 @@ public class BackendManager {
             new PacketEventsListener(plugin);
             activeBackend = "PACKETEVENTS";
             plugin.getLogger().info("✅ Successfully loaded PacketEvents backend for premium login.");
+
             loaded = true;
+            packetEventsLoaded = true;
         } else if ("PROTOCOLLIB".equals(firstChoice) && hasProtocolLib) {
             ProtocolManager protocolManager = com.comphenix.protocol.ProtocolLibrary.getProtocolManager();
             new ProtocolLibListener(plugin, protocolManager);
             activeBackend = "PROTOCOLLIB";
             plugin.getLogger().info("✅ Successfully loaded ProtocolLib backend for premium login.");
+
             loaded = true;
+            protocolLibLoaded = true;
         } else {
             plugin.getLogger().warning("⚠️ Preferred backend (" + firstChoice + ") is missing! Attempting fallback...");
 
@@ -42,13 +49,17 @@ public class BackendManager {
                 new PacketEventsListener(plugin);
                 activeBackend = "PACKETEVENTS";
                 plugin.getLogger().info("✅ Successfully switched and loaded PacketEvents backend.");
+
                 loaded = true;
+                packetEventsLoaded = true;
             } else if ("PROTOCOLLIB".equals(secondChoice) && hasProtocolLib) {
                 ProtocolManager protocolManager = com.comphenix.protocol.ProtocolLibrary.getProtocolManager();
                 new ProtocolLibListener(plugin, protocolManager);
                 activeBackend = "PROTOCOLLIB";
                 plugin.getLogger().info("✅ Successfully switched and loaded ProtocolLib backend.");
+
                 loaded = true;
+                protocolLibLoaded = true;
             }
         }
 
@@ -59,5 +70,13 @@ public class BackendManager {
 
     public String getActiveBackend() {
         return activeBackend;
+    }
+
+    public boolean isPacketEventsAvailable() {
+        return packetEventsLoaded || plugin.getServer().getPluginManager().getPlugin("packetevents") != null;
+    }
+
+    public boolean isProtocolLibLoaded() {
+        return protocolLibLoaded || plugin.getServer().getPluginManager().getPlugin("ProtocolLib") != null;
     }
 }

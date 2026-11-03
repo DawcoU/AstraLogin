@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.commands.admin;
+package pl.dawcou.astralogin.commands.account;
 
 import com.google.gson.JsonObject;
 import net.kyori.adventure.text.Component;
@@ -170,7 +170,8 @@ public class AccountCommand implements CommandExecutor {
 
             plugin.getPlayerDataManager().deletePlayerData(targetUUID);
 
-            plugin.getAttemptManager().unregisterCache(targetUUID);
+            plugin.getAttemptManager().clearAttempts(targetUUID);
+            plugin.getAttemptManager().clearCaptchaAttempts(targetUUID);
             plugin.getTwoFactorManager().invalidateSetup(targetUUID);
 
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("purge-account.admin-success").replace("%player%", targetName));

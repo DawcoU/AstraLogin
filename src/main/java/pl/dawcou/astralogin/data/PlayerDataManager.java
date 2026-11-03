@@ -80,6 +80,17 @@ public class PlayerDataManager {
         return defaultValue;
     }
 
+    public int getInt(UUID uuid, String key, int defaultValue) {
+        JsonObject root = getOrLoad(uuid);
+        JsonElement element = getElementByPath(root, key);
+
+        if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
+            return element.getAsInt();
+        }
+
+        return defaultValue;
+    }
+
     public long getLong(UUID uuid, String key, long defaultValue) {
         JsonObject root = getOrLoad(uuid);
         JsonElement element = getElementByPath(root, key);

@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.commands.admin;
+package pl.dawcou.astralogin.commands.ip;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;

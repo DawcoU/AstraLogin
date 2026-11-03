@@ -1,5 +1,7 @@
+
 package pl.dawcou.astralogin.auth.manage;
 
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -8,10 +10,14 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.*;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.LoginSystem;
+import pl.dawcou.astralogin.auth.security.captcha.mode.chat.ChatCaptchaHandler;
+import pl.dawcou.astralogin.auth.security.captcha.mode.gui.GuiCaptchaHandler;
+import pl.dawcou.astralogin.auth.security.captcha.mode.map.MapCaptchaHandler;
 
 import java.util.UUID;
 
@@ -27,9 +33,9 @@ public class LoginBlocks implements Listener {
 
     // Please remain calm. The code is secure, the binaries are innocent, and the potato is under control.
 
-    // Helper ułatwiający czytelność i optymalizację
-    private boolean isNotAuthenticated(UUID uuid) {
-        return !loginSystem.getLoggedIn().contains(uuid) || loginSystem.isWaitingFor2FA(uuid);
+    private boolean isAuthenticated(UUID uuid) {
+        return loginSystem.getLoggedIn().contains(uuid)
+                && !loginSystem.isWaitingFor2FA(uuid);
     }
 
     private void sendBlockedMessage(Player p, UUID uuid) {
@@ -40,13 +46,24 @@ public class LoginBlocks implements Listener {
 
     /*
      * ==========================================
-     * 1. KOMENDY (HIGHEST - Priorytet dla bezpieczeństwa)
+     * 1. KOMENDY
      * ==========================================
      */
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onCommand(PlayerCommandPreprocessEvent e) {
-        UUID uuid = e.getPlayer().getUniqueId();
-        if (!isNotAuthenticated(uuid)) return;
+        Player p = e.getPlayer();
+        UUID uuid = p.getUniqueId();
+        if (isAuthenticated(uuid)) return;
+
+        // Aktywna CAPTCHA blokuje wszystkie komendy
+        if (plugin.getCaptchaManager().hasCaptcha(p)) {
+
+            e.setCancelled(true);
+            p.sendMessage(
+                    plugin.getLanguageManager().getWithPrefix("captcha.required")
+            );
+            return;
+        }
 
         String message = e.getMessage().toLowerCase().trim();
         String cmd = message.split(" ")[0];
@@ -64,7 +81,7 @@ public class LoginBlocks implements Listener {
                 return;
             }
             e.setCancelled(true);
-            e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.required"));
+            p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.required"));
             return;
         }
 
@@ -84,127 +101,142 @@ public class LoginBlocks implements Listener {
         }
 
         e.setCancelled(true);
-        e.getPlayer().sendMessage(plugin.getLanguageManager().getWithPrefix("general.blocked-action"));
+        p.sendMessage(plugin.getLanguageManager().getWithPrefix("general.blocked-action"));
     }
 
     /*
      * ==========================================
-     * 2. CZAT, RUCH I PORTALE (LOWEST)
+     * 2. CZAT, RUCH I PORTALE
      * ==========================================
      */
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onChat(AsyncPlayerChatEvent e) {
         Player p = e.getPlayer();
         UUID uuid = p.getUniqueId();
-        if (isNotAuthenticated(uuid)) {
+
+        if (!isAuthenticated(uuid)
+                && !MapCaptchaHandler.hasActiveCaptcha(p)
+                && !ChatCaptchaHandler.hasActiveCaptcha(p)) {
             e.setCancelled(true);
             sendBlockedMessage(p, uuid);
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onMove(PlayerMoveEvent e) {
-        if (e.getFrom().getX() == e.getTo().getX() &&
-                e.getFrom().getY() == e.getTo().getY() &&
-                e.getFrom().getZ() == e.getTo().getZ()) {
-            return; // Obracanie głową dozwolone
-        }
+        if (isAuthenticated(e.getPlayer().getUniqueId())) return;
 
-        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
-            e.setCancelled(true);
+        Location from = e.getFrom();
+        Location to = e.getTo();
+
+        if (from.getX() != to.getX()
+                || from.getY() != to.getY()
+                || from.getZ() != to.getZ()) {
+
+            to.setX(from.getX());
+            to.setY(from.getY());
+            to.setZ(from.getZ());
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onPortal(PlayerPortalEvent e) {
-        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+        if (!isAuthenticated(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
         }
     }
 
     /*
      * ==========================================
-     * 3. BLOKI I INTERAKCJE (LOWEST)
+     * 3. BLOKI I INTERAKCJE
      * ==========================================
      */
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onBreak(BlockBreakEvent e) {
         Player p = e.getPlayer();
-        if (isNotAuthenticated(p.getUniqueId())) {
+        UUID uuid = p.getUniqueId();
+
+        if (!isAuthenticated(uuid)) {
             e.setCancelled(true);
-            sendBlockedMessage(p, p.getUniqueId());
+            sendBlockedMessage(p, uuid);
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlace(BlockPlaceEvent e) {
         Player p = e.getPlayer();
-        if (isNotAuthenticated(p.getUniqueId())) {
+        UUID uuid = p.getUniqueId();
+
+        if (!isAuthenticated(uuid)) {
             e.setCancelled(true);
-            sendBlockedMessage(p, p.getUniqueId());
+            sendBlockedMessage(p, uuid);
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onInteract(PlayerInteractEvent e) {
         Player p = e.getPlayer();
-        if (isNotAuthenticated(p.getUniqueId())) {
+        UUID uuid = p.getUniqueId();
+
+        if (!isAuthenticated(uuid)) {
             e.setCancelled(true);
-            sendBlockedMessage(p, p.getUniqueId());
+            sendBlockedMessage(p, uuid);
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onInteractAtEntity(PlayerInteractAtEntityEvent e) {
-        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+        if (!isAuthenticated(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onInteractEntity(PlayerInteractEntityEvent e) {
-        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+        if (!isAuthenticated(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
         }
     }
 
     /*
      * ==========================================
-     * 4. WALKA, OBRAŻENIA I PROJECTILE (LOWEST)
+     * 4. WALKA, OBRAŻENIA I PROJECTILE
      * ==========================================
      */
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onDamage(EntityDamageEvent e) {
-        if (e.getEntity() instanceof Player) {
-            if (isNotAuthenticated(e.getEntity().getUniqueId())) {
+        if (e.getEntity() instanceof Player p) {
+            if (!isAuthenticated(p.getUniqueId())) {
                 e.setCancelled(true);
             }
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onAttack(EntityDamageByEntityEvent e) {
         if (e.getDamager() instanceof Player p) {
-            if (isNotAuthenticated(p.getUniqueId())) {
+            UUID uuid = p.getUniqueId();
+
+            if (!isAuthenticated(uuid)) {
                 e.setCancelled(true);
-                sendBlockedMessage(p, p.getUniqueId());
+                sendBlockedMessage(p, uuid);
             }
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onMobTarget(EntityTargetLivingEntityEvent e) {
-        if (e.getTarget() instanceof Player) {
-            if (isNotAuthenticated(e.getTarget().getUniqueId())) {
+        if (e.getTarget() instanceof Player p) {
+            if (!isAuthenticated(p.getUniqueId())) {
                 e.setCancelled(true);
             }
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onProjectileLaunch(ProjectileLaunchEvent e) {
         if (e.getEntity().getShooter() instanceof Player p) {
-            if (isNotAuthenticated(p.getUniqueId())) {
+            if (!isAuthenticated(p.getUniqueId())) {
                 e.setCancelled(true);
             }
         }
@@ -212,86 +244,107 @@ public class LoginBlocks implements Listener {
 
     /*
      * ==========================================
-     * 5. EKWIPUNEK I PRZEDMIOTY (LOWEST)
+     * 5. EKWIPUNEK I PRZEDMIOTY
      * ==========================================
      */
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryClick(InventoryClickEvent e) {
-        if (isNotAuthenticated(e.getWhoClicked().getUniqueId())) {
+        if (!(e.getWhoClicked() instanceof Player player)) return;
+
+        UUID uuid = player.getUniqueId();
+
+        if (!isAuthenticated(uuid) && !GuiCaptchaHandler.hasActiveCaptcha(player)) {
             e.setCancelled(true);
-            sendBlockedMessage((Player) e.getWhoClicked(), e.getWhoClicked().getUniqueId());
+            sendBlockedMessage(player, uuid);
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onInventoryDrag(InventoryDragEvent e) {
+        if (!(e.getWhoClicked() instanceof Player player)) return;
+
+        UUID uuid = player.getUniqueId();
+
+        if (!isAuthenticated(uuid)) {
+            e.setCancelled(true);
+            sendBlockedMessage(player, uuid);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryOpen(InventoryOpenEvent e) {
-        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+        Player player = (Player) e.getPlayer();
+        UUID uuid = player.getUniqueId();
+
+        if (!isAuthenticated(uuid) && !GuiCaptchaHandler.hasActiveCaptcha(player)) {
             e.setCancelled(true);
-            sendBlockedMessage((Player) e.getPlayer(), e.getPlayer().getUniqueId());
+            sendBlockedMessage(player, uuid);
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onDrop(PlayerDropItemEvent e) {
         Player p = e.getPlayer();
-        if (isNotAuthenticated(p.getUniqueId())) {
+        UUID uuid = p.getUniqueId();
+
+        if (!isAuthenticated(uuid)) {
             e.setCancelled(true);
-            sendBlockedMessage(p, p.getUniqueId());
+            sendBlockedMessage(p, uuid);
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onPickup(EntityPickupItemEvent e) {
         if (e.getEntity() instanceof Player p) {
-            if (isNotAuthenticated(p.getUniqueId())) {
+            if (!isAuthenticated(p.getUniqueId())) {
                 e.setCancelled(true);
             }
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onSwapHand(PlayerSwapHandItemsEvent e) {
-        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+        if (!isAuthenticated(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onItemHeld(PlayerItemHeldEvent e) {
-        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+        if (!isAuthenticated(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onConsume(PlayerItemConsumeEvent e) {
-        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+        if (!isAuthenticated(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
         }
     }
 
     /*
      * ==========================================
-     * 6. FIZJOLOGIA I STANY GRACZA (LOWEST)
+     * 6. FIZJOLOGIA I STANY GRACZA
      * ==========================================
      */
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onSneak(PlayerToggleSneakEvent e) {
-        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+        if (!isAuthenticated(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onSprint(PlayerToggleSprintEvent e) {
-        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+        if (!isAuthenticated(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
         }
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onBedEnter(PlayerBedEnterEvent e) {
-        if (isNotAuthenticated(e.getPlayer().getUniqueId())) {
+        if (!isAuthenticated(e.getPlayer().getUniqueId())) {
             e.setCancelled(true);
         }
     }

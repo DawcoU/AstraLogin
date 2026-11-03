@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.commands.player;
+package pl.dawcou.astralogin.commands.account;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -10,6 +10,7 @@ import org.jspecify.annotations.NonNull;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.LoginSystem;
 import pl.dawcou.astralogin.auth.security.TwoFactorManager;
+import pl.dawcou.astralogin.auth.security.attempt.AttemptType;
 import pl.dawcou.astralogin.system.SoundManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 
@@ -79,7 +80,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            boolean is2faEnabled = plugin.getTwoFactorManager().has2FA(targetUUID);
+            boolean is2faEnabled = twoFactorManager.has2FA(targetUUID);
             if (!is2faEnabled) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.not-found").replace("%target%", targetName));
                 if (p != null) {
@@ -131,7 +132,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
         // SETUP
         if (args[0].equalsIgnoreCase("setup")) {
-            if (plugin.getTwoFactorManager().has2FA(uuid)) {
+            if (twoFactorManager.has2FA(uuid)) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.already-enabled"));
                 plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 return true;
@@ -181,7 +182,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
                 }
 
                 // 2. Jeśli gracz pomyślnie ukończył setup (aktywował 2FA w danych gracza) – anulujemy cicho!
-                if (plugin.getTwoFactorManager().has2FA(uuid)) {
+                if (twoFactorManager.has2FA(uuid)) {
                     task.cancel();
                     return;
                 }
@@ -225,37 +226,11 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             if (inputCode.contains("-")) {
                 twoFactorManager.useBackupCode(uuid, inputCode, result -> {
                     switch (result.status()) {
-                        case SUCCESS -> {
-                            loginSystem.removeWaitingFor2FA(uuid);
-
-                            if (!loginSystem.getLoggedIn().contains(uuid)) {
-                                loginSystem.finishLogin(p);
-                            }
-
-                            twoFactorManager.delete2FA(uuid);
-                            plugin.getLogManager().log("Player " + p.getName() + " removed 2FA protection using a backup code");
-                            p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.removed-success"));
-                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
-                        }
-                        case INVALID_PASSWORD -> {
-                            plugin.getAttemptManager().checkCrime(p, "2FA");
-                            plugin.getIpTrustManager().addTrustScore(ip, plugin.getIpTrustManager().getTwofaFailedPoints());
-                            p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.wrong-code"));
-                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.WRONG_PASSWORD);
-                        }
-                        case RATE_LIMITED_SERVER -> {
-                            p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.server-busy"));
-                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.RATE_LIMITED);
-                        }
-                        case RATE_LIMITED_PLAYER -> {
-                            p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.rate-limit")
-                                    .replace("%time%", TimeUtils.formatTime(result.remainingSeconds())));
-                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.RATE_LIMITED);
-                        }
-                        default -> {
-                            p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.error"));
-                            plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
-                        }
+                        case SUCCESS -> completeTwoFactorRemoval(p, uuid, true);
+                        case INVALID_PASSWORD -> handleInvalidTwoFactorCode(p, ip);
+                        case RATE_LIMITED_SERVER -> sendServerBusy(p);
+                        case RATE_LIMITED_PLAYER -> sendRateLimit(p, result.remainingSeconds());
+                        default -> sendVerificationError(p);
                     }
                 });
                 return true;
@@ -272,21 +247,9 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             try {
                 int code = Integer.parseInt(inputCode);
                 if (twoFactorManager.verifyCode(secret, code)) {
-                    loginSystem.removeWaitingFor2FA(uuid);
-
-                    if (!loginSystem.getLoggedIn().contains(uuid)) {
-                        loginSystem.finishLogin(p);
-                    }
-
-                    twoFactorManager.delete2FA(uuid);
-                    plugin.getLogManager().log("Player " + p.getName() + " removed 2FA protection from his account");
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.removed-success"));
-                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
+                    completeTwoFactorRemoval(p, uuid, false);
                 } else {
-                    plugin.getAttemptManager().checkCrime(p, "2FA");
-                    plugin.getIpTrustManager().addTrustScore(ip, plugin.getIpTrustManager().getTwofaFailedPoints());
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.wrong-code"));
-                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.WRONG_PASSWORD);
+                    handleInvalidTwoFactorCode(p, ip);
                 }
             } catch (NumberFormatException e) {
                 p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.wrong-code"));
@@ -302,41 +265,11 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
         if (loginSystem.isWaitingFor2FA(uuid) && rawInput.contains("-")) {
             twoFactorManager.useBackupCode(uuid, rawInput, result -> {
                 switch (result.status()) {
-                    case SUCCESS -> {
-                        loginSystem.removeWaitingFor2FA(uuid);
-                        loginSystem.finishLogin(p);
-                        if (plugin.getConfig().getBoolean("security.2fa.session.enabled")) {
-                            plugin.getSessionManager().getTwoFactorSessionManager().saveSession2FA(uuid, ip);
-                        }
-                        plugin.getLogManager().log("Player " + p.getName() + " entered a valid backup code and was logged in");
-                        plugin.getIpTrustManager().addTrustScore(ip, plugin.getIpTrustManager().getTwofaSuccessPoints());
-                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.success"));
-                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.LOGIN);
-                        p.sendTitle(
-                                plugin.getLanguageManager().getMessage("title.login"),
-                                plugin.getLanguageManager().getMessage("title.login-subtitle"),
-                                10, 40, 10
-                        );
-                    }
-                    case INVALID_PASSWORD -> {
-                        plugin.getAttemptManager().checkCrime(p, "2FA");
-                        plugin.getIpTrustManager().addTrustScore(ip, plugin.getIpTrustManager().getTwofaFailedPoints());
-                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.wrong-code"));
-                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.WRONG_PASSWORD);
-                    }
-                    case RATE_LIMITED_SERVER -> {
-                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.server-busy"));
-                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.RATE_LIMITED);
-                    }
-                    case RATE_LIMITED_PLAYER -> {
-                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.rate-limit")
-                                .replace("%time%", TimeUtils.formatTime(result.remainingSeconds())));
-                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.RATE_LIMITED);
-                    }
-                    default -> {
-                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.error"));
-                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
-                    }
+                    case SUCCESS -> loginSystem.completeTwoFactorLogin(p, ip, true);
+                    case INVALID_PASSWORD -> handleInvalidTwoFactorCode(p, ip);
+                    case RATE_LIMITED_SERVER -> sendServerBusy(p);
+                    case RATE_LIMITED_PLAYER -> sendRateLimit(p, result.remainingSeconds());
+                    default -> sendVerificationError(p);
                 }
             });
             return true;
@@ -382,38 +315,63 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             String secret = twoFactorManager.getSavedSecret(uuid);
 
             if (secret != null && twoFactorManager.verifyCode(secret, code)) {
-                loginSystem.removeWaitingFor2FA(uuid);
-                loginSystem.finishLogin(p);
-                if (plugin.getConfig().getBoolean("security.2fa.session.enabled")) {
-                    plugin.getSessionManager().getTwoFactorSessionManager().saveSession2FA(uuid, ip);
-                }
-                plugin.getLogManager().log("Player " + p.getName() + " entered the correct 2FA code and was logged in");
-                plugin.getIpTrustManager().addTrustScore(
-                        ip,
-                        plugin.getIpTrustManager().getTwofaSuccessPoints()
-                );
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.success"));
-                plugin.getSoundManager().playSound(p, SoundManager.SoundType.LOGIN);
-                p.sendTitle(
-                        plugin.getLanguageManager().getMessage("title.login"),
-                        plugin.getLanguageManager().getMessage("title.login-subtitle"),
-                        10, 40, 10
-                );
+                loginSystem.completeTwoFactorLogin(p, ip, false);
             } else {
-                plugin.getAttemptManager().checkCrime(p, "2FA");
-
-                plugin.getIpTrustManager().addTrustScore(
-                        ip,
-                        plugin.getIpTrustManager().getTwofaFailedPoints()
-                );
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.wrong-code"));
-                plugin.getSoundManager().playSound(p, SoundManager.SoundType.WRONG_PASSWORD);
+                handleInvalidTwoFactorCode(p, ip);
             }
             return true;
         }
         p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.not-needed"));
         plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
         return true;
+    }
+
+    private void completeTwoFactorRemoval(Player p, UUID uuid, boolean backupCode) {
+        loginSystem.removeWaitingFor2FA(uuid);
+
+        if (!loginSystem.getLoggedIn().contains(uuid)) {
+            loginSystem.finishLogin(p);
+        }
+
+        twoFactorManager.delete2FA(uuid);
+
+        plugin.getLogManager().log(
+                backupCode
+                        ? "Player " + p.getName() + " removed 2FA protection using a backup code"
+                        : "Player " + p.getName() + " removed 2FA protection from his account"
+        );
+
+        p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.removed-success"));
+        plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
+    }
+
+    private void handleInvalidTwoFactorCode(Player p, String ip) {
+        plugin.getAttemptManager().checkCrime(p, AttemptType.TWOFACTOR);
+
+        plugin.getIpTrustManager().changeTrustScore(
+                ip,
+                plugin.getIpTrustManager().getTwofaFailedPoints()
+        );
+
+        p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.wrong-code"));
+        plugin.getSoundManager().playSound(p, SoundManager.SoundType.WRONG_PASSWORD);
+    }
+
+    private void sendServerBusy(Player p) {
+        p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.server-busy"));
+        plugin.getSoundManager().playSound(p, SoundManager.SoundType.RATE_LIMITED);
+    }
+
+    private void sendRateLimit(Player p, long remainingSeconds) {
+        p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.rate-limit")
+                .replace("%time%", TimeUtils.formatTime(remainingSeconds)));
+
+        plugin.getSoundManager().playSound(p, SoundManager.SoundType.RATE_LIMITED);
+    }
+
+    private void sendVerificationError(Player p) {
+        p.sendMessage(plugin.getLanguageManager().getWithPrefix("password.error"));
+        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
     }
 
     @Override

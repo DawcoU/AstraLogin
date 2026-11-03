@@ -23,12 +23,20 @@ public class IPTrustManager {
     // Punkty za zdarzenia
     private int loginSuccessPoints;
     private int failedPasswordPoints;
+
     private int twofaSuccessPoints;
     private int twofaFailedPoints;
+
     private int activeAccountAttemptPoints;
     private int unknownIpLoginPoints;
     private int ipSpamPoints;
     private int multiIpPoints;
+
+    private int captchaSuccessPoints;
+    private int captchaFailedPoints;
+
+    private int loginTimeoutPoints;
+    private int captchaTimeoutPoints;
 
     public enum TrustLevel {
         FATAL,
@@ -41,7 +49,6 @@ public class IPTrustManager {
     public int getLoginSuccessPoints() {
         return loginSuccessPoints;
     }
-
     public int getFailedPasswordPoints() {
         return failedPasswordPoints;
     }
@@ -49,7 +56,6 @@ public class IPTrustManager {
     public int getTwofaSuccessPoints() {
         return twofaSuccessPoints;
     }
-
     public int getTwofaFailedPoints() {
         return twofaFailedPoints;
     }
@@ -69,6 +75,17 @@ public class IPTrustManager {
     public int getMultiIpPoints() {
         return multiIpPoints;
     }
+
+    public int getCaptchaSuccessPoints() {
+        return captchaSuccessPoints;
+    }
+    public int getCaptchaFailedPoints() {
+        return captchaFailedPoints;
+    }
+
+    public int getLoginTimeoutPoints() { return loginTimeoutPoints; }
+
+    public int getCaptchaTimeoutPoints() { return captchaTimeoutPoints; }
 
     public IPTrustManager(AstraLogin plugin, GlobalDataManager globalDataManager) {
         this.plugin = plugin;
@@ -145,6 +162,26 @@ public class IPTrustManager {
 
         ipSpamPoints = getTrustPoints(
                 "security.ip-trust.points.security.ip-spam",
+                false
+        );
+
+        captchaSuccessPoints = getTrustPoints(
+                "security.ip-trust.points.security.captcha.success",
+                true
+        );
+
+        captchaFailedPoints = getTrustPoints(
+                "security.ip-trust.points.security.captcha.failed",
+                false
+        );
+
+        loginTimeoutPoints = getTrustPoints(
+                "security.ip-trust.points.login.timeout",
+                false
+        );
+
+        captchaTimeoutPoints = getTrustPoints(
+                "security.ip-trust.points.captcha.timeout",
                 false
         );
     }
@@ -246,7 +283,7 @@ public class IPTrustManager {
         globalDataManager.setExplicit(newScore, "ip_trust", ip, "score");
     }
 
-    public void addTrustScore(String ip, int score) {
+    public void changeTrustScore(String ip, int score) {
         if (!plugin.getConfig().getBoolean("security.ip-trust.enabled", true) || ip == null) {
             return;
         }

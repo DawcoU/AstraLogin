@@ -87,7 +87,7 @@ messages:
   security:
     timeout: "&cCzas na zalogowanie minął!"
     max-attempts: "&cZbyt wiele nieudanych prób logowania! Pozostałe próby: &6%remaining%"
-    max-attempts-ban: "&cZbyt wiele nieudanych prób! Zostałeś zbanowany na &6%time%"
+    max-attempts-ban: "&cZbyt wiele nieudanych prób logowania! Zostałeś zbanowany na &6%time%"
     multiaccount: "&cOsiągnięto limit kont dla tego adresu IP!"
     ip-spam: "&cWykryto zbyt dużo prób połączenia z Twojego adresu IP! Jesteś zablokowany na &6%time%"
     suspicious-ip-alert: "&cWykryto podejrzaną aktywność! Gracz &4%target% &cwszedł z nieznanego adresu IP: &6%ip%"
@@ -110,6 +110,43 @@ messages:
         - "&fMasz włączone 2FA, ale nie masz ustawionego PIN-u odzyskiwania"
         - "&fUstaw go przez &a/pin <setup>&f, aby móc odzyskać dostęp do konta"
         - "&e----------------------------------------"
+
+
+  # --- Captcha (Ochrona przed botami) ---
+  captcha:
+    success: "&a✔ Pomyślnie ukończono captchę!"
+    failed: "&c✖ Błędny wybór! Próba &6%attempts%&c/&6%max% &cSpróbuj ponownie"
+    required: "&cNajpierw musisz rozwiązać captchę, przed zalogowaniem!"
+    max-attempts: "&cZbyt wiele nieudanych prób weryfikacji captcha! Pozostałe próby: &6%remaining%"
+    max-attempts-ban: "&cZbyt wiele nieudanych prób weryfikacji captcha! Zostałeś zbanowany na &6%time%"
+    timer: "&eRozwiąż captchę w ciągu &6%time%&e!"
+    timeout: "&cCzas na rozwiązanie captchy minął!"
+    gui:
+      title: "&6Captcha"
+      prompts:
+        edible: "&8- &eKliknij Jadalny"
+        red: "&8- &eKliknij Czerwony"
+        blue: "&8- &eKliknij Niebieski"
+        green: "&8- &eKliknij Zielony"
+        yellow: "&8- &eKliknij Żółty"
+        wood: "&8- &eKliknij Drewno"
+        bow_ammo: "&8- &eKliknij Amunicję do Łuku"
+        chicken_drop: "&8- &eKliknij od Kury"
+        redstone: "&8- &eKliknij Redstone"
+        ore: "&8- &eKliknij Rudę"
+        helmet: "&8- &eKliknij Hełm"
+        netherite: "&8- &eKliknij netheryt"
+        potion: "&8- &eKliknij Miksturę"
+        music_disc: "&8- &eKliknij Płytę Muzyczną"
+        boat: "&8- &eKliknij Łódkę"
+        tool: "&8- &eKliknij Narzędzie"
+    map:
+      instruction: "&ePrzepisz kod widoczny na mapie w trzymanej ręce na czat!"
+      item-name: "&6Mapa captcha"
+      wrong-code: "&c✖ Błędny kod! Próba &6%attempts%&c/&6%max% &cSpróbuj ponownie"
+    chat:
+      instruction: "&eRozwiąż zagadkę matematyczną: &6%equation%"
+      wrong-answer: "&c✖ Błędny wynik! Próba &6%attempts%&c/&6%max% &cSpróbuj ponownie"
 
 
   # --- Zaufanie IP ---
