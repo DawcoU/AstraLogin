@@ -36,17 +36,18 @@ public class ChatCaptchaListeners implements Listener {
         plugin.getSchedulerManager().runForEntity(player, () -> {
             if (ChatCaptchaHandler.verifyAnswer(player, message)) {
                 ChatCaptchaHandler.removeSession(player);
-                plugin.getAttemptManager().clearCaptchaAttempts(player.getUniqueId());
-                plugin.getCaptchaManager().handleCaptchaSuccess(player);
 
-                plugin.getSoundManager().playSound(player, SoundManager.SoundType.SUCCESS);
-                player.sendMessage(plugin.getLanguageManager().getWithPrefix(player, "captcha.success"));
+                plugin.getCaptchaManager().handleCaptchaSuccess(player);
             } else {
                 PlayerFailedCaptchaEvent captchaEvent = new PlayerFailedCaptchaEvent(player, ip);
                 Bukkit.getPluginManager().callEvent(captchaEvent);
                 if (captchaEvent.isCancelled()) {
                     return;
                 }
+
+                plugin.getLogManager().log(
+                        "Player " + player.getName() + " (" + ip + ") failed CHAT CAPTCHA: incorrect answer."
+                );
 
                 plugin.getSoundManager().playSound(player, SoundManager.SoundType.FAIL);
                 plugin.getAttemptManager().addCaptchaTrial(player, AttemptType.CAPTCHA_CHAT);

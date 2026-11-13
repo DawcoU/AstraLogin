@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.auth.passwords;
+package pl.dawcou.astralogin.auth.password;
 
 import org.bukkit.configuration.file.FileConfiguration;
 

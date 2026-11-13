@@ -91,7 +91,7 @@ public class JoinTimerHandler {
 
         String ip = Objects.requireNonNull(p.getAddress()).getAddress().getHostAddress();
 
-        String rawTime = plugin.getConfig().getString("security.captcha.timer.time-limit", "30 seconds");
+        String rawTime = plugin.getConfig().getString("security.captcha.timer.time-limit", "60 seconds");
         long parsedMillis = TimeUtils.parseTime(rawTime, 30000L);
         long clampedMillis = Math.max(10000L, Math.min(300000L, parsedMillis));
 

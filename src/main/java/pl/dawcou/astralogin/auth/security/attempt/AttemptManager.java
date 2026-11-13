@@ -43,7 +43,7 @@ public class AttemptManager {
             plugin.getSuspicionManager().incrementSuspicion(p.getUniqueId());
             plugin.getLogManager().log("Player " + p.getName() + " (" + ip + ") was IP banned. Reason: Too many failed " + type + " attempts");
 
-            String msg = plugin.getLanguageManager().getMessage("security.max-attempts-ban")
+            String msg = plugin.getLanguageManager().getMessage("security.attempts.ban")
                     .replace("%time%", timeStr);
             p.kickPlayer(msg);
             return;
@@ -53,7 +53,7 @@ public class AttemptManager {
             int remaining = threshold - current;
             plugin.getLogManager().log("Player " + p.getName() + " (" + ip + ") was kicked for incorrect " + type + ". Attempts: " + current + "/" + threshold);
 
-            String msg = plugin.getLanguageManager().getMessage("security.max-attempts")
+            String msg = plugin.getLanguageManager().getMessage("security.attempts.exceeded")
                     .replace("%remaining%", String.valueOf(remaining));
             p.kickPlayer(msg);
             return;
@@ -64,7 +64,7 @@ public class AttemptManager {
         UUID uuid = p.getUniqueId();
 
         boolean bansEnabled = plugin.getConfig().getBoolean("security.captcha.attempts.ban-enabled", true);
-        int maxFails = Math.min(Math.max(plugin.getConfig().getInt("security.captcha.max-attempts", 2), 1), 5);
+        int maxFails = Math.min(Math.max(plugin.getConfig().getInt("security.captcha.attempts.exceeded", 2), 1), 5);
         int margin = plugin.getConfig().getInt("security.captcha.attempts.margin", 2);
         int threshold = maxFails + margin;
 
@@ -81,7 +81,7 @@ public class AttemptManager {
             long banMillis = TimeUtils.parseTime(timeStr, 900000L);
             plugin.getIPManager().banIPWithMillis(ip, banMillis, type, p.getUniqueId());
 
-            String banMsg = plugin.getLanguageManager().getMessage("captcha.max-attempts-ban")
+            String banMsg = plugin.getLanguageManager().getMessage("captcha.attempts.ban")
                     .replace("%time%", timeStr)
                     .replace("%attempts%", String.valueOf(current))
                     .replace("%max%", String.valueOf(threshold));
@@ -102,7 +102,7 @@ public class AttemptManager {
             GuiCaptchaHandler.removeSession(p);
 
             int remaining = threshold - current;
-            String kickMsg = plugin.getLanguageManager().getMessage("captcha.max-attempts")
+            String kickMsg = plugin.getLanguageManager().getMessage("captcha.attempts.exceeded")
                     .replace("%remaining%", String.valueOf(remaining))
                     .replace("%attempts%", String.valueOf(current))
                     .replace("%max%", String.valueOf(maxFails));
@@ -117,15 +117,15 @@ public class AttemptManager {
         } else {
             // Wiadomość o błędnej próbie na chacie
             if (type == AttemptType.CAPTCHA_GUI) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix(p, "captcha.failed")
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix(p, "captcha.modes.gui.wrong-choice")
                         .replace("%attempts%", String.valueOf(current))
                         .replace("%max%", String.valueOf(maxFails)));
             } else if (type == AttemptType.CAPTCHA_MAP) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix(p, "captcha.map.wrong-code")
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix(p, "captcha.modes.map.wrong-code")
                         .replace("%attempts%", String.valueOf(current))
                         .replace("%max%", String.valueOf(maxFails)));
             } else if (type == AttemptType.CAPTCHA_CHAT) {
-                p.sendMessage(plugin.getLanguageManager().getWithPrefix(p, "captcha.chat.wrong-answer")
+                p.sendMessage(plugin.getLanguageManager().getWithPrefix(p, "captcha.modes.chat.wrong-answer")
                         .replace("%attempts%", String.valueOf(current))
                         .replace("%max%", String.valueOf(maxFails)));
             }

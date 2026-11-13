@@ -79,13 +79,13 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
                 }
 
                 if (!banManager.isIPBanned(playerIp)) {
-                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.info-not-banned")
+                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.info.unban.not-banned")
                             .replace("%player%", inputName)
                             .replace("%ip%", playerIp));
                 } else {
                     long timeLeft = banManager.getIPBanTimeLeft(playerIp);
                     AttemptType reason = banManager.getBanReason(playerIp);
-                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.info-banned")
+                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.info.banned")
                             .replace("%player%", inputName)
                             .replace("%ip%", playerIp)
                             .replace("%time%", String.valueOf(timeLeft))
@@ -107,7 +107,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
                 }
 
                 if (!banManager.isIPBanned(playerIp)) {
-                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.not-banned")
+                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.unban.not-banned")
                             .replace("%player%", inputName));
                     if (p != null) {
                         plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
@@ -118,7 +118,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
                 banManager.unbanIP(playerIp);
                 plugin.getLogManager().log("IP ban was removed for player " + inputName + " (IP: " + playerIp + ") by " + sender.getName());
 
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.unban-success")
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.unban.success")
                         .replace("%player%", inputName)
                         .replace("%ip%", playerIp));
                 if (p != null) {
@@ -128,7 +128,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
             case "bypass":
                 if (banManager.hasBypass(uuid)) {
-                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass-active")
+                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass.already-enabled")
                             .replace("%player%", inputName));
                     if (p != null) {
                         plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
@@ -139,7 +139,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
                 banManager.setBypass(uuid, true);
                 plugin.getLogManager().log("IP bypass was enabled for player " + inputName + " by " + sender.getName());
 
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass-enabled")
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass.enabled")
                         .replace("%player%", inputName));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
@@ -148,7 +148,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
             case "unbypass":
                 if (!banManager.hasBypass(uuid)) {
-                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass-not-active")
+                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass.already-disabled")
                             .replace("%player%", inputName));
                     if (p != null) {
                         plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
@@ -160,7 +160,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
                 banManager.setBypass(uuid, false);
                 plugin.getLogManager().log("IP bypass was disabled for player " + inputName + " by " + sender.getName());
 
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass-disabled")
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass.disabled")
                         .replace("%player%", inputName));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);

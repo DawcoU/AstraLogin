@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.auth.passwords;
+package pl.dawcou.astralogin.auth.password;
 
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.data.PlayerDataManager;

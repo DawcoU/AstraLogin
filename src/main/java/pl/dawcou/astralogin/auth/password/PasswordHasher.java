@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.auth.passwords;
+package pl.dawcou.astralogin.auth.password;
 
 import org.bouncycastle.crypto.generators.Argon2BytesGenerator;
 import org.bouncycastle.crypto.params.Argon2Parameters;

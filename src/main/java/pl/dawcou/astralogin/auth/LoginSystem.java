@@ -15,7 +15,7 @@ import pl.dawcou.astralogin.api.events.PlayerFailedLoginEvent;
 import pl.dawcou.astralogin.api.events.PlayerLoginEvent;
 import pl.dawcou.astralogin.api.events.PlayerRegisterEvent;
 import pl.dawcou.astralogin.auth.manage.spawn.SpawnType;
-import pl.dawcou.astralogin.auth.passwords.PasswordValidator;
+import pl.dawcou.astralogin.auth.password.PasswordValidator;
 import pl.dawcou.astralogin.auth.security.attempt.AttemptType;
 import pl.dawcou.astralogin.system.SoundManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;

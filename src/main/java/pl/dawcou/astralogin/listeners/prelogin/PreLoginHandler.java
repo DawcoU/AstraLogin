@@ -84,11 +84,11 @@ public class PreLoginHandler {
                 msg = plugin.getLanguageManager().getMessage("security.ip-spam")
                         .replace("%time%", timeFormatted);
             } else if (reason == AttemptType.CAPTCHA_GUI || reason == AttemptType.CAPTCHA_MAP || reason == AttemptType.CAPTCHA_CHAT) {
-                msg = plugin.getLanguageManager().getMessage("captcha.max-attempts-ban")
+                msg = plugin.getLanguageManager().getMessage("captcha.attempts.ban")
                         .replace("%time%", timeFormatted);
             } else {
                 // Domyślnie traktujemy to jako ban za błędne próby hasła (PASSWORD)
-                msg = plugin.getLanguageManager().getMessage("security.max-attempts-ban")
+                msg = plugin.getLanguageManager().getMessage("security.attempts.ban")
                         .replace("%time%", timeFormatted);
             }
 

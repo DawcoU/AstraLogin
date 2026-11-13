@@ -32,7 +32,7 @@ public class GuiCaptchaListeners implements Listener {
             return;
         }
 
-        String rawTitle = plugin.getLanguageManager().getMessage("captcha.gui.title");
+        String rawTitle = plugin.getLanguageManager().getMessage("captcha.modes.gui.title");
 
         if (event.getView().getTitle().startsWith(rawTitle)) {
             event.setCancelled(true);
@@ -41,16 +41,17 @@ public class GuiCaptchaListeners implements Listener {
                 return;
             }
 
+            if (event.getClickedInventory() != event.getView().getTopInventory()) {
+                return;
+            }
+
             String ip = Objects.requireNonNull(player.getAddress()).getAddress().getHostAddress();
 
             if (GuiCaptchaHandler.verifyClick(player, event.getCurrentItem())) {
                 GuiCaptchaHandler.removeSession(player);
-                plugin.getAttemptManager().clearCaptchaAttempts(player.getUniqueId());
-                plugin.getCaptchaManager().handleCaptchaSuccess(player);
                 player.closeInventory();
 
-                plugin.getSoundManager().playSound(player, SoundManager.SoundType.SUCCESS);
-                player.sendMessage(plugin.getLanguageManager().getWithPrefix(player, "captcha.success"));
+                plugin.getCaptchaManager().handleCaptchaSuccess(player);
             } else {
                 PlayerFailedCaptchaEvent captchaEvent = new PlayerFailedCaptchaEvent(player, ip);
                 Bukkit.getPluginManager().callEvent(captchaEvent);
@@ -58,9 +59,11 @@ public class GuiCaptchaListeners implements Listener {
                     return;
                 }
 
-                plugin.getSoundManager().playSound(player, SoundManager.SoundType.FAIL);
+                plugin.getLogManager().log(
+                        "Player " + player.getName() + " (" + ip + ") failed GUI CAPTCHA: incorrect selection."
+                );
 
-                // Cała logika zliczania, wiadomości oraz wykopania gracza dzieje się w AttemptManager
+                plugin.getSoundManager().playSound(player, SoundManager.SoundType.FAIL);
                 plugin.getAttemptManager().addCaptchaTrial(player, AttemptType.CAPTCHA_GUI);
             }
         }

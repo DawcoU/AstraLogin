@@ -70,11 +70,11 @@ public class IPResetCommand implements CommandExecutor {
 
             Player onlineTarget = Bukkit.getPlayerExact(inputName);
             if (onlineTarget != null) {
-                String kickReason = plugin.getLanguageManager().getMessage("reset-ip.player-kick");
+                String kickReason = plugin.getLanguageManager().getMessage("reset-ip.player.kick");
                 onlineTarget.kickPlayer(kickReason);
             }
 
-            String successMsg = plugin.getLanguageManager().getWithPrefix("reset-ip.admin-success")
+            String successMsg = plugin.getLanguageManager().getWithPrefix("reset-ip.admin.success")
                     .replace("%player%", inputName);
 
             sender.sendMessage(successMsg);

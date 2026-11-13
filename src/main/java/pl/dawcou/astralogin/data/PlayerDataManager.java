@@ -1,18 +1,15 @@
 package pl.dawcou.astralogin.data;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.system.utils.JsonHelper;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -27,6 +24,8 @@ public class PlayerDataManager {
     private final Gson gson;
 
     private final Map<UUID, JsonObject> cache = new ConcurrentHashMap<>();
+    private final Set<UUID> blockedSaves = ConcurrentHashMap.newKeySet();
+
     private final Map<UUID, SaveState> saveStates = new ConcurrentHashMap<>();
 
     private static class SaveState {
@@ -49,64 +48,26 @@ public class PlayerDataManager {
     }
 
     //--------------------------------------------------
-    // Pomocnicze metody do obsługi ścieżek z kropkami
-    //--------------------------------------------------
-    private JsonElement getElementByPath(JsonObject root, String path) {
-        return JsonHelper.getElementByPath(root, path);
-    }
-
-    //--------------------------------------------------
     // Metody odczytu danych z pliku JSON
     //--------------------------------------------------
     public String getString(UUID uuid, String key) {
-        JsonObject root = getOrLoad(uuid);
-        JsonElement element = getElementByPath(root, key);
-
-        if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
-            return element.getAsString();
-        }
-
-        return null;
+        return JsonHelper.getString(getOrLoad(uuid), key);
     }
 
     public boolean getBoolean(UUID uuid, String key, boolean defaultValue) {
-        JsonObject root = getOrLoad(uuid);
-        JsonElement element = getElementByPath(root, key);
-
-        if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
-            return element.getAsBoolean();
-        }
-
-        return defaultValue;
+        return JsonHelper.getBoolean(getOrLoad(uuid), key, defaultValue);
     }
 
     public int getInt(UUID uuid, String key, int defaultValue) {
-        JsonObject root = getOrLoad(uuid);
-        JsonElement element = getElementByPath(root, key);
-
-        if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
-            return element.getAsInt();
-        }
-
-        return defaultValue;
+        return JsonHelper.getInt(getOrLoad(uuid), key, defaultValue);
     }
 
     public long getLong(UUID uuid, String key, long defaultValue) {
-        JsonObject root = getOrLoad(uuid);
-        JsonElement element = getElementByPath(root, key);
-
-        if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
-            return element.getAsLong();
-        }
-
-        return defaultValue;
+        return JsonHelper.getLong(getOrLoad(uuid), key, defaultValue);
     }
 
     public boolean has(UUID uuid, String key) {
-        JsonObject root = getOrLoad(uuid);
-        JsonElement element = getElementByPath(root, key);
-
-        return element != null && !element.isJsonNull();
+        return JsonHelper.has(getOrLoad(uuid), key);
     }
 
     //--------------------------------------------------
@@ -140,13 +101,32 @@ public class PlayerDataManager {
     }
 
     public void set(UUID uuid, String key, JsonElement value) {
-        JsonObject root = getOrLoad(uuid);
+        SaveState state = getSaveState(uuid);
 
-        if (value == null) {
-            remove(uuid, key);
-            return;
+        synchronized (state.lock) {
+            JsonObject root = cache.computeIfAbsent(uuid, this::loadFromFile);
+
+            if (value == null) {
+                removeInternal(root, key);
+            } else {
+                putInternal(root, key, value);
+            }
+
+            saveAsyncInternal(uuid, root, state);
         }
+    }
 
+    public void remove(UUID uuid, String key) {
+        SaveState state = getSaveState(uuid);
+
+        synchronized (state.lock) {
+            JsonObject root = cache.computeIfAbsent(uuid, this::loadFromFile);
+            removeInternal(root, key);
+            saveAsyncInternal(uuid, root, state);
+        }
+    }
+
+    private void putInternal(JsonObject root, String key, JsonElement value) {
         if (!key.contains(".")) {
             root.add(key, value);
         } else {
@@ -155,33 +135,54 @@ public class PlayerDataManager {
             JsonObject parent = JsonHelper.getTargetObject(root, parentPath, true);
             parent.add(finalKey, value);
         }
-
-        saveAsync(uuid, root);
     }
 
-    public void remove(UUID uuid, String key) {
-        JsonObject root = getOrLoad(uuid);
-
+    private void removeInternal(JsonObject root, String key) {
         if (!key.contains(".")) {
             root.remove(key);
         } else {
             String parentPath = key.substring(0, key.lastIndexOf('.'));
             String finalKey = key.substring(key.lastIndexOf('.') + 1);
             JsonObject parent = JsonHelper.getTargetObject(root, parentPath, false);
-
             if (parent != null) {
                 parent.remove(finalKey);
             }
         }
+    }
 
-        saveAsync(uuid, root);
+    private void saveAsyncInternal(UUID uuid, JsonObject root, SaveState state) {
+        JsonObject copy = root.deepCopy();
+        long version = state.version.incrementAndGet();
+
+        if (!plugin.isEnabled()) {
+            if (state.version.get() == version) {
+                saveToFile(uuid, copy);
+            }
+            return;
+        }
+
+        plugin.getSchedulerManager().runAsync(() -> {
+            synchronized (state.lock) {
+                if (state.version.get() != version) {
+                    return;
+                }
+                if (!cache.containsKey(uuid)) {
+                    return;
+                }
+                saveToFile(uuid, copy);
+            }
+        });
     }
 
     //--------------------------------------------------
     // Wewnętrzna obsługa cache i I/O
     //--------------------------------------------------
     private JsonObject getOrLoad(UUID uuid) {
-        return cache.computeIfAbsent(uuid, this::loadFromFile);
+        SaveState state = getSaveState(uuid);
+
+        synchronized (state.lock) {
+            return cache.computeIfAbsent(uuid, this::loadFromFile);
+        }
     }
 
     private SaveState getSaveState(UUID uuid) {
@@ -189,32 +190,72 @@ public class PlayerDataManager {
     }
 
     private JsonObject loadFromFile(UUID uuid) {
-        File file = new File(playersFolder, uuid.toString() + ".json");
+        return loadFromFile(uuid, null);
+    }
+
+    private JsonObject loadFromFile(UUID uuid, JsonObject cachedData) {
+        File file = new File(playersFolder, uuid + ".json");
 
         if (!file.exists()) {
+            blockedSaves.remove(uuid);
             return new JsonObject();
         }
 
-        try (FileReader reader = new FileReader(file)) {
+        try (BufferedReader reader = Files.newBufferedReader(file.toPath(), StandardCharsets.UTF_8)) {
             JsonElement element = JsonParser.parseReader(reader);
 
             if (element != null && element.isJsonObject()) {
+                blockedSaves.remove(uuid);
                 return element.getAsJsonObject();
             }
-        } catch (IOException e) {
-            plugin.getLogger().severe("Could not load player data for " + uuid + ": " + e.getMessage());
-        }
 
-        return new JsonObject();
+            plugin.getLogger().severe(
+                    "File '" + file.getName()
+                            + "' does not contain a valid JSON Object!"
+            );
+
+            return recoverCorruptedFile(uuid, file, cachedData);
+
+        } catch (JsonParseException e) {
+            JsonHelper.logFormattedJsonError(
+                    plugin,
+                    file.getName(),
+                    e
+            );
+
+            return recoverCorruptedFile(uuid, file, cachedData);
+
+        } catch (IOException e) {
+            blockedSaves.add(uuid);
+
+            plugin.getLogger().severe(
+                    "Could not read '"
+                            + file.getName() + "': " + e.getMessage()
+            );
+
+            return cachedData != null
+                    ? cachedData.deepCopy()
+                    : new JsonObject();
+        }
     }
 
     private synchronized void saveToFile(UUID uuid, JsonObject json) {
+        if (blockedSaves.contains(uuid)) {
+            plugin.getLogger().warning(
+                    "Save skipped for " + uuid
+                            + "! Player data file is corrupted or could not be loaded."
+            );
+            return;
+        }
+
         File file = new File(playersFolder, uuid + ".json");
 
-        try (FileWriter writer = new FileWriter(file)) {
+        try (BufferedWriter writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
             gson.toJson(json, writer);
         } catch (IOException e) {
-            plugin.getLogger().severe("Could not save player data for " + uuid + ": " + e.getMessage());
+            plugin.getLogger().severe(
+                    "Could not save player data for " + uuid + ": " + e.getMessage()
+            );
         }
     }
 
@@ -264,7 +305,24 @@ public class PlayerDataManager {
     }
 
     public void reloadAll() {
-        cache.clear();
+        for (Map.Entry<UUID, JsonObject> entry : cache.entrySet()) {
+            UUID uuid = entry.getKey();
+            SaveState state = getSaveState(uuid);
+
+            synchronized (state.lock) {
+                // Invalidate pending asynchronous saves.
+                state.version.incrementAndGet();
+
+                // Preserve the current data before reloading.
+                JsonObject cachedData = entry.getValue().deepCopy();
+
+                // Reload the file, using cache as a recovery source.
+                JsonObject reloadedData = loadFromFile(uuid, cachedData);
+
+                // Replace the cached entry with the reloaded data.
+                cache.put(uuid, reloadedData);
+            }
+        }
     }
 
     public void unloadPlayer(UUID uuid) {
@@ -273,6 +331,7 @@ public class PlayerDataManager {
         synchronized (state.lock) {
             state.version.incrementAndGet();
             cache.remove(uuid);
+            saveStates.remove(uuid);
         }
     }
 
@@ -295,30 +354,146 @@ public class PlayerDataManager {
 
             try {
                 uuids.add(UUID.fromString(uuidStr));
-            } catch (IllegalArgumentException ignored) {
-            }
+            } catch (IllegalArgumentException ignored) {}
         }
 
         return uuids;
     }
 
     public void deletePlayerData(UUID uuid) {
-        // 1. Najpierw czyścimy powiązane dane w AccountManagerze
+        // 1. Remove related account data.
         plugin.getAccountManager().purgeAccountData(uuid);
 
-        // 2. Wyrzucamy z cache, aby żaden późniejszy odczyt nie przywrócił obiektu
-        unloadPlayer(uuid);
+        SaveState state = getSaveState(uuid);
 
-        // 3. Fizycznie kasujemy plik
-        File file = new File(playersFolder, uuid + ".json");
+        synchronized (state.lock) {
+            // Invalidate pending saves.
+            state.version.incrementAndGet();
 
-        if (file.exists()) {
+            // Remove cached data and save protection state.
+            cache.remove(uuid);
+            blockedSaves.remove(uuid);
+
+            // 2. Delete the main player data file.
+            File file = new File(playersFolder, uuid + ".json");
+
             try {
-                java.nio.file.Files.delete(file.toPath());
-            } catch (java.io.IOException e) {
-                plugin.getLogger().warning("Could not delete player data file for " + uuid + ": " + e.getMessage());
-                e.printStackTrace();
+                Files.deleteIfExists(file.toPath());
+            } catch (IOException e) {
+                plugin.getLogger().warning(
+                        "Could not delete player data file for "
+                                + uuid + ": " + e.getMessage()
+                );
             }
+
+            // 3. Delete all quarantined backups belonging to this player.
+            File[] backups = playersFolder.listFiles((dir, name) ->
+                    name.equals(uuid + ".json.corrupted")
+                            || name.matches(
+                            java.util.regex.Pattern.quote(uuid.toString())
+                                    + "-\\d+\\.json\\.corrupted"
+                    )
+            );
+
+            if (backups != null) {
+                for (File backup : backups) {
+                    try {
+                        Files.deleteIfExists(backup.toPath());
+                    } catch (IOException e) {
+                        plugin.getLogger().warning(
+                                "Could not delete corrupted backup '"
+                                        + backup.getName() + "': " + e.getMessage()
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    private JsonObject recoverCorruptedFile(
+            UUID uuid,
+            File file,
+            JsonObject cachedData
+    ) {
+        blockedSaves.add(uuid);
+
+        String fileName = uuid + ".json";
+
+        File corruptedFile = new File(
+                playersFolder,
+                fileName + ".corrupted"
+        );
+
+        int backupNumber = 1;
+
+        while (corruptedFile.exists()) {
+            corruptedFile = new File(
+                    playersFolder,
+                    uuid + "-" + backupNumber + ".json.corrupted"
+            );
+
+            backupNumber++;
+        }
+
+        try {
+            try {
+                Files.move(
+                        file.toPath(),
+                        corruptedFile.toPath(),
+                        StandardCopyOption.ATOMIC_MOVE
+                );
+            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                Files.move(file.toPath(), corruptedFile.toPath());
+            }
+
+        } catch (IOException e) {
+            plugin.getLogger().severe(
+                    "CRITICAL: Could not quarantine corrupted file '"
+                            + file.getName() + "': " + e.getMessage()
+            );
+
+            return cachedData != null
+                    ? cachedData.deepCopy()
+                    : new JsonObject();
+        }
+
+        JsonObject recoveredData = cachedData != null
+                ? cachedData.deepCopy()
+                : new JsonObject();
+
+        try (FileWriter writer = new FileWriter(file)) {
+            gson.toJson(recoveredData, writer);
+
+            blockedSaves.remove(uuid);
+
+            if (cachedData != null) {
+                plugin.getLogger().warning(
+                        "Corrupted file '"
+                                + file.getName()
+                                + "' was quarantined. Player data has been restored from cache."
+                );
+            } else {
+                plugin.getLogger().severe(
+                        "CRITICAL DATA LOSS WARNING: "
+                                + "Corrupted file '" + file.getName()
+                                + "' was quarantined, but no cached data was available. "
+                                + "A new empty JSON file has been created. "
+                                + "Original data is preserved in '"
+                                + corruptedFile.getName() + "'."
+                );
+            }
+
+            return recoveredData;
+
+        } catch (IOException e) {
+            blockedSaves.add(uuid);
+
+            plugin.getLogger().severe(
+                    "CRITICAL: Could not create replacement file '"
+                            + file.getName() + "': " + e.getMessage()
+            );
+
+            return recoveredData;
         }
     }
 }

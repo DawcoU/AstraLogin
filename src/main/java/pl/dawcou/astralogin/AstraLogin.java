@@ -21,18 +21,18 @@ import pl.dawcou.astralogin.auth.sessions.SessionManager;
 import pl.dawcou.astralogin.auth.manage.*;
 import pl.dawcou.astralogin.auth.AccountManager;
 import pl.dawcou.astralogin.auth.manage.spawn.SpawnManager;
-import pl.dawcou.astralogin.auth.passwords.PINManager;
-import pl.dawcou.astralogin.auth.passwords.PasswordManager;
+import pl.dawcou.astralogin.auth.password.PINManager;
+import pl.dawcou.astralogin.auth.password.PasswordManager;
 import pl.dawcou.astralogin.auth.security.premium.PremiumManager;
 import pl.dawcou.astralogin.auth.security.ip.IPTrustManager;
-import pl.dawcou.astralogin.commands.account.AccountCommand;
+import pl.dawcou.astralogin.commands.account.AccountCommands;
 import pl.dawcou.astralogin.commands.admin.*;
 import pl.dawcou.astralogin.commands.ip.IPManagerCommand;
 import pl.dawcou.astralogin.commands.ip.IPResetCommand;
 import pl.dawcou.astralogin.commands.ip.IPTrustCommand;
-import pl.dawcou.astralogin.commands.account.PINCommand;
-import pl.dawcou.astralogin.commands.account.PasswordsCommand;
-import pl.dawcou.astralogin.commands.account.TwoFactorCommand;
+import pl.dawcou.astralogin.commands.account.PINCommands;
+import pl.dawcou.astralogin.commands.account.PasswordCommands;
+import pl.dawcou.astralogin.commands.account.TwoFactorCommands;
 import pl.dawcou.astralogin.data.GlobalDataManager;
 import pl.dawcou.astralogin.data.PlayerDataManager;
 import pl.dawcou.astralogin.file.BackupManager;
@@ -130,8 +130,8 @@ public class AstraLogin extends JavaPlugin implements Listener {
     private TechnicalListeners technicalListeners;
 
     private AstraLoginCommand astraLoginCommand;
-    private PasswordsCommand passwordsCommand;
-    private PINCommand pinCommand;
+    private PasswordCommands passwordCommands;
+    private PINCommands pinCommands;
     private IPResetCommand ipResetCommand;
     private IPManagerCommand iPManagerCommand;
     private IPTrustCommand iPTrustCommand;
@@ -259,11 +259,11 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
         // --- KOMENDY HASŁA ---
         passwordManager = new PasswordManager(this, playerDataManager);
-        passwordsCommand = new PasswordsCommand(this);
+        passwordCommands = new PasswordCommands(this);
 
         // --- KOMENDY PIN ---
         pinManager = new PINManager(this, playerDataManager);
-        pinCommand = new PINCommand(this, pinManager);
+        pinCommands = new PINCommands(this, pinManager);
 
         // --- KOMENDY PIN ---
         ipTrustManager = new IPTrustManager(this, globalDataManager);
@@ -301,8 +301,8 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
         loginListeners = new LoginListeners(this);
         technicalListeners = new TechnicalListeners(this);
-        AccountCommand accountCommand = new AccountCommand(this);
-        TwoFactorCommand twoFactorCommand = new TwoFactorCommand(this, twoFactorManager, loginSystem);
+        AccountCommands accountCommands = new AccountCommands(this);
+        TwoFactorCommands twoFactorCommands = new TwoFactorCommands(this, twoFactorManager, loginSystem);
 
         // Wczytywanie baz danych i cache
         ipManager.reload();
@@ -331,27 +331,27 @@ public class AstraLogin extends JavaPlugin implements Listener {
         // Komendy dla graczy
         registerCommand("zarejestruj", loginSystem);
         registerCommand("zaloguj", loginSystem);
-        registerCommand("zmienhaslo", passwordsCommand, passwordsCommand);
-        registerCommand("pin", pinCommand, pinCommand);
-        registerCommand("niepamietamhasla", passwordsCommand, passwordsCommand);
-        registerCommand("wyloguj", accountCommand);
+        registerCommand("zmienhaslo", passwordCommands, passwordCommands);
+        registerCommand("pin", pinCommands, pinCommands);
+        registerCommand("niepamietamhasla", passwordCommands, passwordCommands);
+        registerCommand("wyloguj", accountCommands);
 
         // Komendy administracyjne
         registerCommand("astralogin", astraLoginCommand, astraLoginCommand);
-        registerCommand("zresetujhaslo", passwordsCommand);
-        registerCommand("zresetujpin", pinCommand);
+        registerCommand("zresetujhaslo", passwordCommands);
+        registerCommand("zresetujpin", pinCommands);
         registerCommand("zresetujip", ipResetCommand);
-        registerCommand("konto", accountCommand);
-        registerCommand("zresetujkonto", accountCommand);
-        registerCommand("listaip", accountCommand);
+        registerCommand("konto", accountCommands);
+        registerCommand("zresetujkonto", accountCommands);
+        registerCommand("listaip", accountCommands);
         registerCommand("zaufanieip", iPTrustCommand, iPTrustCommand);
         registerCommand("ipmanager", iPManagerCommand, iPManagerCommand);
-        registerCommand("listakont", accountCommand);
-        registerCommand("przenieskonto", accountCommand);
+        registerCommand("listakont", accountCommands);
+        registerCommand("przenieskonto", accountCommands);
         registerCommand("spawnlogowania", loginSpawnCommand, loginSpawnCommand);
 
-        registerCommand("2fa", twoFactorCommand, twoFactorCommand);
-        registerCommand("zresetuj2fa", twoFactorCommand);
+        registerCommand("2fa", twoFactorCommands, twoFactorCommands);
+        registerCommand("zresetuj2fa", twoFactorCommands);
 
         sessionManager.reload();
         sessionManager.getTwoFactorSessionManager().reload();

@@ -18,11 +18,11 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-public class AccountCommand implements CommandExecutor {
+public class AccountCommands implements CommandExecutor {
 
     private final AstraLogin plugin;
 
-    public AccountCommand(AstraLogin plugin) {
+    public AccountCommands(AstraLogin plugin) {
         this.plugin = plugin;
     }
 
@@ -164,7 +164,7 @@ public class AccountCommand implements CommandExecutor {
             Player targetP = Bukkit.getPlayer(targetUUID);
             if (targetP != null && targetP.isOnline()) {
                 plugin.getLoginSystem().getLoggedIn().remove(targetUUID);
-                String purgeReason = plugin.getLanguageManager().getMessage("purge-account.player-kick");
+                String purgeReason = plugin.getLanguageManager().getMessage("purge-account.player.kick");
                 targetP.kickPlayer(purgeReason);
             }
 
@@ -174,7 +174,7 @@ public class AccountCommand implements CommandExecutor {
             plugin.getAttemptManager().clearCaptchaAttempts(targetUUID);
             plugin.getTwoFactorManager().invalidateSetup(targetUUID);
 
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("purge-account.admin-success").replace("%player%", targetName));
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("purge-account.admin.success").replace("%player%", targetName));
             if (p != null) {
                 plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
             }

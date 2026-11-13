@@ -8,7 +8,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.jspecify.annotations.NonNull;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.auth.passwords.PINManager;
+import pl.dawcou.astralogin.auth.password.PINManager;
 import pl.dawcou.astralogin.system.SoundManager;
 
 import java.util.ArrayList;
@@ -16,12 +16,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class PINCommand implements CommandExecutor, TabCompleter {
+public class PINCommands implements CommandExecutor, TabCompleter {
 
     private final AstraLogin plugin;
     private final PINManager pinManager;
 
-    public PINCommand(AstraLogin plugin, PINManager pinManager) {
+    public PINCommands(AstraLogin plugin, PINManager pinManager) {
         this.plugin = plugin;
         this.pinManager = pinManager;
     }
@@ -73,7 +73,7 @@ public class PINCommand implements CommandExecutor, TabCompleter {
 
             pinManager.deletePIN(targetUUID);
 
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-pin.admin-success")
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-pin.admin.success")
                     .replace("%player%", targetName));
             if (p != null) {
                 plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
@@ -86,7 +86,7 @@ public class PINCommand implements CommandExecutor, TabCompleter {
 
             if (targetPlayer != null) {
                 targetPlayer.sendMessage(
-                        plugin.getLanguageManager().getWithPrefix("reset-pin.player-message")
+                        plugin.getLanguageManager().getWithPrefix("reset-pin.player.message")
                 );
             }
 

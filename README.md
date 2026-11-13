@@ -75,10 +75,14 @@ Paper or its forks are strongly recommended for the best experience.
   * **Temporary IP Bans:** If the limit is reached, the user's IP is banned to prevent further attacks without bloating your database. 🚫🛡️🌐🔒
 
 
-* **Multi-Mode Captcha Protection:** Advanced defense mechanism against automated bot attacks and malicious scripts, featuring three distinct, highly customizable verification modes: 🤖🧩🛡️
-  - **MAP Mode:** Generates and renders a custom map held in the player's hand displaying a distorted image containing a unique alphanumeric code which the player must type into the chat to verify. Requires PacketEvents to function properly as it directly dispatches custom map payload packets to the client. 🗺️🔤
-  - **GUI Mode:** Presents an inventory puzzle filled with noise items where only specific choices are valid. Players must analyze the prompt question and click the correct item to pass. 🎒🖱️
-  - **CHAT Mode:** The fastest verification mode requiring players to solve a dynamic mathematical riddle (e.g., `(2 + 6) * 5`) and type the correct numerical result directly into the chat. 🔢💬
+* **Multi-Mode Captcha Protection:** Advanced defense mechanism against automated bot attacks and malicious scripts, featuring three distinct, highly customizable verification modes and three difficulty levels: **EASY, MEDIUM, and HARD**. Difficulty levels adjust the complexity of generated challenges, allowing server administrators to fine-tune the verification experience and security level. 🤖🧩🛡️
+  * **Difficulty Levels:**
+    * **EASY:** Simple challenges designed for quick and accessible verification.
+    * **MEDIUM:** Moderately challenging puzzles requiring more attention and basic problem-solving.
+    * **HARD:** More complex challenges designed to provide stronger protection against automated attempts.
+  * **MAP Mode:** Generates and renders a custom map held in the player's hand displaying a distorted image containing a unique alphanumeric code which the player must type into the chat to verify. Requires PacketEvents to function properly as it directly dispatches custom map payload packets to the client. 🗺️🔤
+  * **GUI Mode:** Presents an inventory puzzle filled with noise items where only specific choices are valid. Players must analyze the prompt question and click the correct item to pass. 🎒🖱️
+  * **CHAT Mode:** The fastest verification mode requiring players to solve a dynamic mathematical riddle (e.g., `(2 + 6) * 5`) and type the correct numerical result directly into the chat. 🔢💬
 
 * **Player Suspicion Levels:** Dynamic security tracking system featuring four tiers (**NONE**, **LOW**, **MEDIUM**, and **HIGH**) that increase or decrease based on suspicious and sensitive player behaviors. For players flagged with high suspicion, convenient features such as premium auto-login and automatic sessions are automatically restricted. 📈🔍🛡️
 

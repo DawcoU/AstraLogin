@@ -2,11 +2,17 @@ package pl.dawcou.astralogin.data;
 
 import com.google.gson.*;
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.system.utils.JsonHelper;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 //--------------------------------------------------
@@ -19,6 +25,9 @@ public class GlobalDataManager {
     private final Gson gson;
 
     private JsonObject globalCache;
+
+    private final Set<String> blockedSaves = ConcurrentHashMap.newKeySet();
+    private static final String GLOBAL_SAVE_KEY = "global";
 
     private final Object saveLock = new Object();
     private final AtomicLong saveVersion = new AtomicLong();
@@ -41,17 +50,6 @@ public class GlobalDataManager {
         reload();
     }
 
-    //--------------------------------------------------
-    // Pomocnicze metody do obsługi ścieżek z kropkami
-    //--------------------------------------------------
-    private JsonObject getTargetObject(JsonObject root, String path, boolean createIfMissing) {
-        return JsonHelper.getTargetObject(root, path, createIfMissing);
-    }
-
-    private String getFinalKey(String path) {
-        return JsonHelper.getFinalKey(path);
-    }
-
     private JsonElement getElementByPath(JsonObject root, String path) {
         return JsonHelper.getElementByPath(root, path);
     }
@@ -60,39 +58,23 @@ public class GlobalDataManager {
     // Metody odczytu danych z pliku JSON
     //--------------------------------------------------
     public String getString(String key) {
-        JsonObject root = getOrLoad();
-        JsonElement element = getElementByPath(root, key);
-        if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
-            return element.getAsString();
-        }
-        return null;
+        return JsonHelper.getString(getOrLoad(), key);
     }
 
     public boolean getBoolean(String key, boolean defaultValue) {
-        JsonObject root = getOrLoad();
-        JsonElement element = getElementByPath(root, key);
-        if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
-            return element.getAsBoolean();
-        }
-        return defaultValue;
+        return JsonHelper.getBoolean(getOrLoad(), key, defaultValue);
     }
 
     public int getInt(String key, int defaultValue) {
-        JsonObject root = getOrLoad();
-        JsonElement element = getElementByPath(root, key);
-        if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
-            return element.getAsInt();
-        }
-        return defaultValue;
+        return JsonHelper.getInt(getOrLoad(), key, defaultValue);
     }
 
     public long getLong(String key, long defaultValue) {
-        JsonObject root = getOrLoad();
-        JsonElement element = getElementByPath(root, key);
-        if (element != null && !element.isJsonNull() && element.isJsonPrimitive()) {
-            return element.getAsLong();
-        }
-        return defaultValue;
+        return JsonHelper.getLong(getOrLoad(), key, defaultValue);
+    }
+
+    public boolean has(String key) {
+        return JsonHelper.has(getOrLoad(), key);
     }
 
     public JsonObject getJsonObject(String key) {
@@ -102,12 +84,6 @@ public class GlobalDataManager {
             return element.getAsJsonObject();
         }
         return null;
-    }
-
-    public boolean has(String key) {
-        JsonObject root = getOrLoad();
-        JsonElement element = getElementByPath(root, key);
-        return element != null && !element.isJsonNull();
     }
 
     //--------------------------------------------------
@@ -138,27 +114,37 @@ public class GlobalDataManager {
     }
 
     public void set(String key, JsonElement element) {
-        JsonObject root = getOrLoad();
-        if (element == null || element.isJsonNull()) {
-            remove(key);
-            return;
+        synchronized (saveLock) {
+            JsonObject root = getOrLoad();
+            if (element == null || element.isJsonNull()) {
+                removeInternal(root, key);
+            } else {
+                putInternal(root, key, element);
+            }
+            saveAsyncInternal(root);
         }
+    }
 
+    public void remove(String key) {
+        synchronized (saveLock) {
+            JsonObject root = getOrLoad();
+            removeInternal(root, key);
+            saveAsyncInternal(root);
+        }
+    }
+
+    private void putInternal(JsonObject root, String key, JsonElement value) {
         if (!key.contains(".")) {
-            root.add(key, element);
+            root.add(key, value);
         } else {
             String parentPath = key.substring(0, key.lastIndexOf('.'));
             String finalKey = key.substring(key.lastIndexOf('.') + 1);
             JsonObject parent = JsonHelper.getTargetObject(root, parentPath, true);
-            parent.add(finalKey, element);
+            parent.add(finalKey, value);
         }
-
-        saveAsync(root);
     }
 
-    public void remove(String key) {
-        JsonObject root = getOrLoad();
-
+    private void removeInternal(JsonObject root, String key) {
         if (!key.contains(".")) {
             root.remove(key);
         } else {
@@ -169,87 +155,14 @@ public class GlobalDataManager {
                 parent.remove(finalKey);
             }
         }
-
-        saveAsync(root);
     }
 
-    //--------------------------------------------------
-    // Metody do obsługi kluczy ze znakami specjalnymi (np. IP)
-    //--------------------------------------------------
-
-    // Pobieranie liczby int dla ścieżek typu: "ip_trust", "127.0.0.1", "score"
-    public int getIntExplicit(int defaultValue, String... keys) {
-        JsonElement element = getElementExplicit(keys);
-        if (element != null && element.isJsonPrimitive()) {
-            return element.getAsInt();
-        }
-        return defaultValue;
-    }
-
-    // Pobieranie surowego JsonElement bez splitowania po kropkach
-    public JsonElement getElementExplicit(String... keys) {
-        return JsonHelper.getElementExplicit(getOrLoad(), keys);
-    }
-
-    // Zapisywanie dowolnej wartości (Number, Boolean, String, JsonElement) bez splitowania
-    public void setExplicit(Object value, String... keys) {
-        JsonObject root = getOrLoad();
-        if (JsonHelper.setExplicit(root, value, keys)) {
-            saveAsync(root);
-        }
-    }
-
-    // Usuwanie klucza bez splitowania
-    public void removeExplicit(String... keys) {
-        JsonObject root = getOrLoad();
-        if (JsonHelper.removeExplicit(root, keys)) {
-            saveAsync(root);
-        }
-    }
-
-    //--------------------------------------------------
-    // Wewnętrzna obsługa cache i I/O
-    //--------------------------------------------------
-    private synchronized JsonObject getOrLoad() {
-        if (globalCache == null) {
-            globalCache = loadFromFile();
-        }
-        return globalCache;
-    }
-
-    private JsonObject loadFromFile() {
-        if (!globalFile.exists()) {
-            return new JsonObject();
-        }
-
-        try (FileReader reader = new FileReader(globalFile)) {
-            JsonElement element = JsonParser.parseReader(reader);
-            if (element != null && element.isJsonObject()) {
-                return element.getAsJsonObject();
-            }
-        } catch (IOException e) {
-            plugin.getLogger().severe("Could not load global data: " + e.getMessage());
-        }
-        return new JsonObject();
-    }
-
-    private synchronized void saveToFile(JsonObject json) {
-        try (FileWriter writer = new FileWriter(globalFile)) {
-            gson.toJson(json, writer);
-        } catch (IOException e) {
-            plugin.getLogger().severe("Could not save global data: " + e.getMessage());
-        }
-    }
-
-    private void saveAsync(JsonObject json) {
-        JsonObject copy = json.deepCopy();
+    private void saveAsyncInternal(JsonObject root) {
+        JsonObject copy = root.deepCopy();
         long version = saveVersion.incrementAndGet();
 
         if (!plugin.isEnabled()) {
-            synchronized (saveLock) {
-                if (version != saveVersion.get()) {
-                    return;
-                }
+            if (version == saveVersion.get()) {
                 saveToFile(copy);
             }
             return;
@@ -265,15 +178,118 @@ public class GlobalDataManager {
         });
     }
 
-    public void save() {
-        JsonObject cache;
+    //--------------------------------------------------
+    // Metody do obsługi kluczy ze znakami specjalnymi (np. IP)
+    //--------------------------------------------------
 
+    public int getIntExplicit(int defaultValue, String... keys) {
+        JsonElement element = getElementExplicit(keys);
+        if (element != null && element.isJsonPrimitive()) {
+            return element.getAsInt();
+        }
+        return defaultValue;
+    }
+
+    public JsonElement getElementExplicit(String... keys) {
+        return JsonHelper.getElementExplicit(getOrLoad(), keys);
+    }
+
+    public void setExplicit(Object value, String... keys) {
         synchronized (saveLock) {
-            cache = globalCache;
-            if (cache == null) return;
+            JsonObject root = getOrLoad();
+            if (JsonHelper.setExplicit(root, value, keys)) {
+                saveAsyncInternal(root);
+            }
+        }
+    }
+
+    public void removeExplicit(String... keys) {
+        synchronized (saveLock) {
+            JsonObject root = getOrLoad();
+            if (JsonHelper.removeExplicit(root, keys)) {
+                saveAsyncInternal(root);
+            }
+        }
+    }
+
+    //--------------------------------------------------
+    // Wewnętrzna obsługa cache i I/O
+    //--------------------------------------------------
+    private synchronized JsonObject getOrLoad() {
+        if (globalCache == null) {
+            globalCache = loadFromFile();
+        }
+        return globalCache;
+    }
+
+    private JsonObject loadFromFile() {
+        if (!globalFile.exists()) {
+            blockedSaves.remove(GLOBAL_SAVE_KEY);
+            return new JsonObject();
+        }
+
+        try (BufferedReader reader = Files.newBufferedReader(globalFile.toPath(), StandardCharsets.UTF_8)) {
+            JsonElement element = JsonParser.parseReader(reader);
+
+            if (element != null && element.isJsonObject()) {
+                blockedSaves.remove(GLOBAL_SAVE_KEY);
+                return element.getAsJsonObject();
+            }
+
+            plugin.getLogger().severe(
+                    "File '" + globalFile.getName()
+                            + "' does not contain a valid JSON Object!"
+            );
+
+            return recoverCorruptedFile();
+
+        } catch (JsonParseException e) {
+            JsonHelper.logFormattedJsonError(
+                    plugin,
+                    globalFile.getName(),
+                    e
+            );
+
+            return recoverCorruptedFile();
+
+        } catch (IOException e) {
+            blockedSaves.add(GLOBAL_SAVE_KEY);
+
+            plugin.getLogger().severe(
+                    "Could not read '"
+                            + globalFile.getName() + "': " + e.getMessage()
+            );
+
+            return globalCache != null
+                    ? globalCache.deepCopy()
+                    : new JsonObject();
+        }
+    }
+
+    private void saveToFile(JsonObject json) {
+        if (blockedSaves.contains(GLOBAL_SAVE_KEY)) {
+            plugin.getLogger().warning(
+                    "Save skipped! "
+                            + "Global data file is unavailable or corrupted."
+            );
+            return;
+        }
+
+        try (BufferedWriter writer = Files.newBufferedWriter(globalFile.toPath(), StandardCharsets.UTF_8)) {
+            gson.toJson(json, writer);
+        } catch (IOException e) {
+            plugin.getLogger().severe(
+                    "Could not save global data: " + e.getMessage()
+            );
+        }
+    }
+
+    public void save() {
+        synchronized (saveLock) {
+            if (globalCache == null) return;
 
             long version = saveVersion.incrementAndGet();
-            JsonObject copy = cache.deepCopy();
+            JsonObject copy = globalCache.deepCopy();
 
             if (version != saveVersion.get()) {
                 return;
@@ -283,10 +299,98 @@ public class GlobalDataManager {
         }
     }
 
-    public synchronized void reload() {
+    public void reload() {
         synchronized (saveLock) {
             saveVersion.incrementAndGet();
             globalCache = loadFromFile();
+        }
+    }
+
+    private JsonObject recoverCorruptedFile() {
+        JsonObject cachedData = globalCache != null
+                ? globalCache.deepCopy()
+                : null;
+
+        String baseName = "global";
+
+        File corruptedFile = new File(
+                globalFile.getParentFile(),
+                globalFile.getName() + ".corrupted"
+        );
+
+        int backupNumber = 1;
+
+        while (corruptedFile.exists()) {
+            corruptedFile = new File(
+                    globalFile.getParentFile(),
+                    baseName + "-" + backupNumber + ".json.corrupted"
+            );
+
+            backupNumber++;
+        }
+
+        try {
+            try {
+                Files.move(
+                        globalFile.toPath(),
+                        corruptedFile.toPath(),
+                        StandardCopyOption.ATOMIC_MOVE
+                );
+            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                Files.move(globalFile.toPath(), corruptedFile.toPath());
+            }
+
+        } catch (IOException e) {
+            blockedSaves.add(GLOBAL_SAVE_KEY);
+
+            plugin.getLogger().severe(
+                    "CRITICAL: Could not quarantine corrupted file '"
+                            + globalFile.getName() + "': " + e.getMessage()
+            );
+
+            return cachedData != null ? cachedData : new JsonObject();
+        }
+
+        JsonObject recoveredData = cachedData != null
+                ? cachedData
+                : new JsonObject();
+
+        try (BufferedWriter writer = Files.newBufferedWriter(
+                globalFile.toPath(),
+                StandardCharsets.UTF_8
+        )) {
+            gson.toJson(recoveredData, writer);
+
+            blockedSaves.remove(GLOBAL_SAVE_KEY);
+
+            if (cachedData != null) {
+                plugin.getLogger().warning(
+                        "Corrupted file '"
+                                + globalFile.getName()
+                                + "' was quarantined. Global data has been restored from cache."
+                );
+            } else {
+                plugin.getLogger().severe(
+                        "CRITICAL DATA LOSS WARNING: "
+                                + "Corrupted file '" + globalFile.getName()
+                                + "' was quarantined, but no cached data was available. "
+                                + "A new empty JSON file has been created. "
+                                + "Original data is preserved in '"
+                                + corruptedFile.getName() + "'."
+                );
+            }
+
+            return recoveredData;
+
+        } catch (IOException e) {
+            blockedSaves.add(GLOBAL_SAVE_KEY);
+
+            plugin.getLogger().severe(
+                    "CRITICAL: Could not create replacement file '"
+                            + globalFile.getName() + "': " + e.getMessage()
+            );
+
+            return recoveredData;
         }
     }
 }

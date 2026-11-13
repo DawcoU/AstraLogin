@@ -6,7 +6,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.auth.security.captcha.generator.CaptchaChallengeGenerator;
+import pl.dawcou.astralogin.auth.security.captcha.generator.GuiCaptchaGenerator;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,7 +18,7 @@ public class GuiCaptchaHandler {
     private static final Map<UUID, List<ItemStack>> activeItems = new ConcurrentHashMap<>();
 
     public static void openCaptchaGui(Player player, AstraLogin plugin) {
-        int rows = plugin.getConfig().getInt("security.captcha.gui.rows", 6);
+        int rows = plugin.getConfig().getInt("security.captcha.modes.gui.rows", 6);
         int size = Math.min(Math.max(rows, 1), 6) * 9;
 
         List<ItemStack> items;
@@ -29,10 +29,10 @@ public class GuiCaptchaHandler {
             if (player.hasMetadata("astralogin_captcha_lang")) {
                 langKey = (String) player.getMetadata("astralogin_captcha_lang").get(0).value();
             } else {
-                langKey = "captcha.gui.prompts.edible";
+                langKey = "captcha.modes.gui.prompts.edible";
             }
         } else {
-            CaptchaChallengeGenerator.ChallengeResult challenge = CaptchaChallengeGenerator.generate(size, plugin);
+            GuiCaptchaGenerator.ChallengeResult challenge = GuiCaptchaGenerator.generate(size, plugin);
             activeChallenges.put(player.getUniqueId(), challenge.getTargetMaterials());
             items = challenge.getItems(size);
             activeItems.put(player.getUniqueId(), items);
@@ -41,7 +41,7 @@ public class GuiCaptchaHandler {
             player.setMetadata("astralogin_captcha_lang", new org.bukkit.metadata.FixedMetadataValue(plugin, langKey));
         }
 
-        String baseTitle = plugin.getLanguageManager().getMessage("captcha.gui.title");
+        String baseTitle = plugin.getLanguageManager().getMessage("captcha.modes.gui.title");
         String promptText = plugin.getLanguageManager().getMessage(langKey);
         String fullTitle = baseTitle + " " + promptText;
 

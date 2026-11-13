@@ -18,13 +18,13 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class TwoFactorCommand implements CommandExecutor, TabCompleter {
+public class TwoFactorCommands implements CommandExecutor, TabCompleter {
 
     private final AstraLogin plugin;
     private final TwoFactorManager twoFactorManager;
     private final LoginSystem loginSystem;
 
-    public TwoFactorCommand(AstraLogin plugin, TwoFactorManager twoFactorManager, LoginSystem loginSystem) {
+    public TwoFactorCommands(AstraLogin plugin, TwoFactorManager twoFactorManager, LoginSystem loginSystem) {
         this.plugin = plugin;
         this.twoFactorManager = twoFactorManager;
         this.loginSystem = loginSystem;
@@ -72,7 +72,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             }
 
             if (twoFactorManager.isSetupActive(targetUUID)) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.player-setting-up")
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.target.setting-up")
                         .replace("%target%", targetName));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
@@ -82,7 +82,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
             boolean is2faEnabled = twoFactorManager.has2FA(targetUUID);
             if (!is2faEnabled) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.not-found").replace("%target%", targetName));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.target.not-enabled").replace("%target%", targetName));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 }
@@ -90,7 +90,7 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
             }
 
             if (loginSystem.isWaitingFor2FA(targetUUID)) {
-                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.player-waiting").replace("%target%", targetName));
+                sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.target.waiting").replace("%target%", targetName));
                 if (p != null) {
                     plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 }
@@ -102,11 +102,13 @@ public class TwoFactorCommand implements CommandExecutor, TabCompleter {
 
             Player targetP = Bukkit.getPlayer(targetUUID);
             if (targetP != null && targetP.isOnline()) {
-                String messageReset2FA = plugin.getLanguageManager().getMessage("reset-twofactor.player-message");
-                targetP.sendMessage(messageReset2FA);
+                String messageReset2FA = plugin.getLanguageManager()
+                        .getMessage("reset-twofactor.player.kick");
+
+                targetP.kickPlayer(messageReset2FA);
             }
 
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.admin-success").replace("%player%", targetName));
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-twofactor.admin.success").replace("%player%", targetName));
             if (p != null) {
                 plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
             }

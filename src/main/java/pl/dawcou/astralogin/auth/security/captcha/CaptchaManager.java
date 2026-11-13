@@ -9,12 +9,14 @@ import pl.dawcou.astralogin.auth.security.captcha.mode.chat.ChatCaptchaHandler;
 import pl.dawcou.astralogin.auth.security.captcha.mode.gui.GuiCaptchaHandler;
 import pl.dawcou.astralogin.auth.security.captcha.mode.map.MapCaptchaHandler;
 import pl.dawcou.astralogin.auth.security.suspicious.SuspicionLevel;
+import pl.dawcou.astralogin.system.SoundManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CaptchaManager {
 
@@ -82,11 +84,11 @@ public class CaptchaManager {
 
         flaggedPlayers.remove(uuid);
 
-        boolean isRandom = plugin.getConfig().getBoolean("security.captcha.random-mode", false);
-        String mode = plugin.getConfig().getString("security.captcha.mode", "GUI");
+        boolean isRandom = plugin.getConfig().getBoolean("security.captcha.selection.random-mode", false);
+        String mode = plugin.getConfig().getString("security.captcha.selection.mode", "GUI");
 
         if (isRandom) {
-            int pick = java.util.concurrent.ThreadLocalRandom.current().nextInt(3);
+            int pick = ThreadLocalRandom.current().nextInt(3);
             mode = switch (pick) {
                 case 0 -> "MAP";
                 case 1 -> "CHAT";
@@ -122,6 +124,13 @@ public class CaptchaManager {
 
         flaggedPlayers.remove(uuid);
         plugin.getAttemptManager().clearCaptchaAttempts(uuid);
+
+        plugin.getSoundManager().playSound(player, SoundManager.SoundType.SUCCESS);
+        player.sendMessage(plugin.getLanguageManager().getWithPrefix(player, "captcha.success"));
+
+        plugin.getLogManager().log(
+                "Player " + player.getName() + " (" + ip + ") successfully completed CAPTCHA."
+        );
 
         if (!plugin.getConfig().getBoolean("security.captcha.automatic.enabled", true)) {
             return;

@@ -51,7 +51,8 @@ messages:
     wrong-pin: "&cWrong PIN!"
     no-has-pin: "&cYou don't have a registered PIN!"
 
-    player-kick: "&aYour password has been successfully reset!"
+    player:
+      kick: "&aYour password has been successfully reset!"
 
 
   # --- Passwords ---
@@ -86,13 +87,14 @@ messages:
   # --- Security and Bans ---
   security:
     timeout: "&cLogin time has expired!"
-    max-attempts: "&cToo many failed login attempts! Remaining attempts: &6%remaining%"
-    max-attempts-ban: "&cToo many failed login attempts! You have been banned for &6%time%"
+    attempts:
+      exceeded: "&cToo many failed login attempts! Remaining attempts: &6%remaining%"
+      ban: "&cToo many failed login attempts! You have been banned for &6%time%"
     multiaccount: "&cAccount limit for this IP address has been reached!"
     ip-spam: "&cToo many connection attempts from your IP address! You are blocked on &6%time%"
     suspicious-ip-alert: "&cSuspicious activity detected! Player &4%target% &cjoined from an unknown IP address: &6%ip%"
 
-    security-reminder:
+    reminders:
       no-2fa-no-pin:
         - "&c----------------------------------------"
         - "&eYour account is not fully secured!"
@@ -110,6 +112,45 @@ messages:
         - "&fYou have 2FA enabled, but you haven't set a recovery PIN"
         - "&fSet it using &a/pin <setup>&f so you can recover access to your account"
         - "&e----------------------------------------"
+
+
+  # --- Captcha (Bot Protection) ---
+  captcha:
+    success: "&a✔ Captcha completed successfully!"
+    required: "&cYou must complete the captcha before logging in!"
+    attempts:
+      exceeded: "&cToo many failed captcha attempts! Remaining attempts: &6%remaining%"
+      ban: "&cToo many failed captcha attempts! You have been banned for &6%time%"
+    timer: "&eSolve the captcha within &6%time%&e!"
+    timeout: "&cTime to solve the captcha has expired!"
+    modes:
+      gui:
+        title: "&6Captcha"
+        wrong-choice: "&c✖ Incorrect choice! Attempt &6%attempts%&c/&6%max% &cTry again"
+        prompts:
+          edible: "&8- &eClick Edible"
+          red: "&8- &eClick Red"
+          blue: "&8- &eClick Blue"
+          green: "&8- &eClick Green"
+          yellow: "&8- &eClick Yellow"
+          wood: "&8- &eClick Wood"
+          bow_ammo: "&8- &eClick Bow Ammo"
+          chicken_drop: "&8- &eClick Chicken Drop"
+          redstone: "&8- &eClick Redstone"
+          ore: "&8- &eClick Ore"
+          helmet: "&8- &eClick Helmet"
+          netherite: "&8- &eClick Netherite"
+          potion: "&8- &eClick Potion"
+          music_disc: "&8- &eClick Music Disc"
+          boat: "&8- &eClick Boat"
+          tool: "&8- &eClick Tool"
+      map:
+        instruction: "&eType the code shown on the map in your hand into the chat!"
+        item-name: "&6Captcha Map"
+        wrong-code: "&c✖ Incorrect code! Attempt &6%attempts%&c/&6%max% &cTry again"
+      chat:
+        instruction: "&eSolve the math puzzle: &6%equation%"
+        wrong-answer: "&c✖ Incorrect answer! Attempt &6%attempts%&c/&6%max% &cTry again"
 
 
   # --- IP Trust ---
@@ -132,55 +173,24 @@ messages:
     rate-ideal: "&bIdeal"
 
 
-  # --- Captcha (Bot Protection) ---
-  captcha:
-    success: "&a✔ Captcha completed successfully!"
-    failed: "&c✖ Incorrect choice! Attempt &6%attempts%&c/&6%max% &cTry again"
-    required: "&cYou must complete the captcha before logging in!"
-    max-attempts: "&cToo many failed captcha attempts! Remaining attempts: &6%remaining%"
-    max-attempts-ban: "&cToo many failed captcha attempts! You have been banned for &6%time%"
-    timer: "&eSolve the captcha within &6%time%&e!"
-    timeout: "&cTime to solve the captcha has expired!"
-    gui:
-      title: "&6Captcha"
-      prompts:
-        edible: "&8- &eClick Edible"
-        red: "&8- &eClick Red"
-        blue: "&8- &eClick Blue"
-        green: "&8- &eClick Green"
-        yellow: "&8- &eClick Yellow"
-        wood: "&8- &eClick Wood"
-        bow_ammo: "&8- &eClick Bow Ammo"
-        chicken_drop: "&8- &eClick Chicken Drop"
-        redstone: "&8- &eClick Redstone"
-        ore: "&8- &eClick Ore"
-        helmet: "&8- &eClick Helmet"
-        netherite: "&8- &eClick Netherite"
-        potion: "&8- &eClick Potion"
-        music_disc: "&8- &eClick Music Disc"
-        boat: "&8- &eClick Boat"
-        tool: "&8- &eClick Tool"
-    map:
-      instruction: "&eType the code shown on the map in your hand into the chat!"
-      item-name: "&6Captcha Map"
-      wrong-code: "&c✖ Incorrect code! Attempt &6%attempts%&c/&6%max% &cTry again"
-    chat:
-      instruction: "&eSolve the math puzzle: &6%equation%"
-      wrong-answer: "&c✖ Incorrect answer! Attempt &6%attempts%&c/&6%max% &cTry again"
-
-
   # --- IP Management and Bans /ipmanager ---
   ip-manager:
     usage: "&cUsage: /ipmanager <info, unban, bypass, unbypass, player>"
     no-ip: "&cNo registered IP address found for player &6%player%&c!"
-    info-not-banned: "&aPlayer &6%player% &7(IP address: %ip%) &adoes not have an active IP address ban"
-    info-banned: "&cPlayer &6%player% &7(IP address: %ip%) &cis banned! Reason: &6%reason%&c, Time left: &6%time%"
-    not-banned: "&cIP address for player &6%player% &cis not banned!"
-    unban-success: "&aSuccessfully unbanned IP address for player &6%player% &7(%ip%)&a!"
-    bypass-enabled: "&aEnabled IP address check bypass for player &6%player%"
-    bypass-active: "&cIP address Bypass for player &6%player% &cis already enabled!"
-    bypass-disabled: "&cDisabled IP address check bypass for player &6%player%"
-    bypass-not-active: "&cIP address Bypass for player &6%player% &cis already disabled!"
+
+    info:
+      not-banned: "&aPlayer &6%player% &7(IP address: %ip%) &adoes not have an active IP address ban"
+      banned: "&cPlayer &6%player% &7(IP address: %ip%) &cis banned! Reason: &6%reason%&c, Time left: &6%time%"
+
+    unban:
+      not-banned: "&cIP address for player &6%player% &cis not banned!"
+      success: "&aSuccessfully unbanned IP address for player &6%player% &7(%ip%)&a!"
+
+    bypass:
+      enabled: "&aEnabled IP address check bypass for player &6%player%"
+      already-enabled: "&cIP address Bypass for player &6%player% &cis already enabled!"
+      disabled: "&cDisabled IP address check bypass for player &6%player%"
+      already-disabled: "&cIP address Bypass for player &6%player% &cis already disabled!"
 
 
   # --- Sessions ---
@@ -296,9 +306,11 @@ messages:
   reset-password:
     usage: "&cCorrect usage: &e/resetpassword <player>"
 
-    admin-success: "&aPassword for player &6%player% &ahas been successfully reset"
+    admin:
+      success: "&aPassword for player &6%player% &ahas been successfully reset"
 
-    player-kick: "&cYour password has been reset by an administrator!"
+    player:
+      kick: "&cYour password has been reset by an administrator!"
 
 
   # --- PIN Reset /resetpin ---
@@ -306,9 +318,11 @@ messages:
     usage: "&cCorrect usage: &e/resetpin <player>"
     no-has-pin: "&cThis player does not have a registered PIN!"
 
-    admin-success: "&aPlayer &6%player%['s] PIN has been reset"
+    admin:
+      success: "&aPlayer &6%player%['s] PIN has been reset"
 
-    player-message: "&cYour PIN has been reset by the administrator!"
+    player:
+      message: "&cYour PIN has been reset by the administrator!"
 
 
   # --- Reset IP (/resetip) ---
@@ -316,17 +330,21 @@ messages:
     usage: "&cCorrect usage: &e/resetip <player>"
     no-ip: "&cThis player does not have a saved IP address!"
 
-    admin-success: "&aIP address for player &6%player% &ahas been successfully reset"
+    admin:
+      success: "&aIP address for player &6%player% &ahas been successfully reset"
 
-    player-kick: "&cYour IP address has been reset by an administrator!"
+    player:
+      kick: "&cYour IP address has been reset by an administrator!"
 
 
   # --- Purge Account (/resetaccount) ---
   purge-account:
     usage: "&cCorrect usage: &e/purgeaccount <player>"
-    admin-success: "&aSuccessfully purged ALL account data for player &e%player%"
+    admin:
+      success: "&aSuccessfully purged ALL account data for player &e%player%"
 
-    player-kick: "&cYour account has been completely removed from the server database by an administrator"
+    player:
+      kick: "&cYour account has been completely removed from the server database by an administrator"
 
     confirm: "&cThis action is &4&nIRREVERSIBLE&c!"
     button: "&6&l[DELETE]"
@@ -336,13 +354,17 @@ messages:
   # --- Reset 2FA (/reset2fa) ---
   reset-twofactor:
     usage: "&cCorrect usage: &e/reset2fa <player>"
-    admin-success: "&aSuccessfully removed two-factor authentication from &e%player%['s] account"
 
-    not-found: "&cPlayer &6%target% &cdoes not have two-factor authentication (2FA) enabled!"
+    admin:
+      success: "&aSuccessfully removed two-factor authentication from &e%player%['s] account"
 
-    player-waiting: "&cPlayer &6%target% &cis currently undergoing verification!"
-    player-setting-up: "&cPlayer &6%target% &cis currently setting up 2FA!"
-    player-kick: "&cYour two-factor authentication has been removed by an administrator"
+    target:
+      not-enabled: "&cPlayer &6%target% &cdoes not have two-factor authentication (2FA) enabled!"
+      waiting: "&cPlayer &6%target% &cis currently undergoing verification!"
+      setting-up: "&cPlayer &6%target% &cis currently setting up 2FA!"
+
+    player:
+      kick: "&cYour two-factor authentication has been removed by an administrator"
 
 
   # --- Login Spawn System ---
@@ -362,26 +384,26 @@ messages:
     delete-hover: "&aClick to permanently delete the spawn: &e%type%"
 
 
-# --- Seasonal Events ---
-seasonal-events:
-  halloween:
-    - "&6[Halloween] &cShadows of the past are watching your every &4step..."
-    - "&6[Halloween] &cSomething terrifying lurks in the darkness... &4Run!"
-    - "&6[Halloween] &cTrick or treat? There is no &4escape &ctoday!"
-    - "&6[Halloween] &cDo you hear those quiet whispers behind your &4back?"
-    - "&6[Halloween] &cThe night has just begun, and your &4fate &cis already sealed..."
+  # --- Seasonal Events ---
+  seasonal-events:
+    halloween:
+      - "&6[Halloween] &cShadows of the past are watching your every &4step..."
+      - "&6[Halloween] &cSomething terrifying lurks in the darkness... &4Run!"
+      - "&6[Halloween] &cTrick or treat? There is no &4escape &ctoday!"
+      - "&6[Halloween] &cDo you hear those quiet whispers behind your &4back?"
+      - "&6[Halloween] &cThe night has just begun, and your &4fate &cis already sealed..."
 
 
-# --- Update System ---
-update:
-  in-progress: "&cChecking for updates is already in progress..."
-  api-error: "&cFailed to connect to the Modrinth API"
-  no-versions: "&cNo published versions were found"
-  up-to-date: "&aAstraLogin is already up to date"
-  local-newer: "&eThe installed version is newer than the latest version published on Modrinth. Update skipped"
-  no-files: "&cNo downloadable file was found for the latest version"
-  directory-error: "&cFailed to create the update directory"
-  download-error: "&cFailed to download the update"
-  downloaded: "&aAstraLogin update downloaded successfully"
-  restart-required: "&eRestart the server to apply the update"
-  failed: "&cAn error occurred while checking for or downloading the update"
+  # --- Update System ---
+  update:
+    in-progress: "&cChecking for updates is already in progress..."
+    api-error: "&cFailed to connect to the Modrinth API"
+    no-versions: "&cNo published versions were found"
+    up-to-date: "&aAstraLogin is already up to date"
+    local-newer: "&eThe installed version is newer than the latest version published on Modrinth. Update skipped"
+    no-files: "&cNo downloadable file was found for the latest version"
+    directory-error: "&cFailed to create the update directory"
+    download-error: "&cFailed to download the update"
+    downloaded: "&aAstraLogin update downloaded successfully"
+    restart-required: "&eRestart the server to apply the update"
+    failed: "&cAn error occurred while checking for or downloading the update"

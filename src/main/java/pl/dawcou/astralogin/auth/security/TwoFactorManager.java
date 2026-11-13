@@ -3,7 +3,7 @@ package pl.dawcou.astralogin.auth.security;
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.auth.passwords.PasswordHasher;
+import pl.dawcou.astralogin.auth.password.PasswordHasher;
 import pl.dawcou.astralogin.data.PlayerDataManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 

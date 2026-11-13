@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.auth.passwords;
+package pl.dawcou.astralogin.auth.password;
 
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.data.PlayerDataManager;
@@ -18,9 +18,11 @@ public class PINManager {
     }
 
     public String generatePIN(int length) {
-        int bound = (int) Math.pow(10, length);
-        int pinNumber = secureRandom.nextInt(bound);
-        return String.format("%0" + length + "d", pinNumber);
+        int bound = 1;
+        for (int i = 0; i < length; i++) bound *= 10;
+
+        String pattern = "%%0%dd".formatted(length);
+        return String.format(pattern, secureRandom.nextInt(bound));
     }
 
     public void savePIN(UUID uuid, String pin) {

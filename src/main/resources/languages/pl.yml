@@ -51,7 +51,8 @@ messages:
     wrong-pin: "&cBłędny PIN!"
     no-has-pin: "&cNie masz zarejestrowanego PIN'u!"
 
-    player-kick: "&aTwoje hasło zostało pomyślnie zresetowane!"
+    player:
+      kick: "&aTwoje hasło zostało pomyślnie zresetowane!"
 
 
   # --- Hasła ---
@@ -86,13 +87,14 @@ messages:
   # --- Bezpieczeństwo i bany ---
   security:
     timeout: "&cCzas na zalogowanie minął!"
-    max-attempts: "&cZbyt wiele nieudanych prób logowania! Pozostałe próby: &6%remaining%"
-    max-attempts-ban: "&cZbyt wiele nieudanych prób logowania! Zostałeś zbanowany na &6%time%"
+    attempts:
+      exceeded: "&cZbyt wiele nieudanych prób logowania! Pozostałe próby: &6%remaining%"
+      ban: "&cZbyt wiele nieudanych prób logowania! Zostałeś zbanowany na &6%time%"
     multiaccount: "&cOsiągnięto limit kont dla tego adresu IP!"
     ip-spam: "&cWykryto zbyt dużo prób połączenia z Twojego adresu IP! Jesteś zablokowany na &6%time%"
     suspicious-ip-alert: "&cWykryto podejrzaną aktywność! Gracz &4%target% &cwszedł z nieznanego adresu IP: &6%ip%"
 
-    security-reminder:
+    reminders:
       no-2fa-no-pin:
         - "&c----------------------------------------"
         - "&eTwoje konto nie jest w pełni zabezpieczone!"
@@ -115,38 +117,40 @@ messages:
   # --- Captcha (Ochrona przed botami) ---
   captcha:
     success: "&a✔ Pomyślnie ukończono captchę!"
-    failed: "&c✖ Błędny wybór! Próba &6%attempts%&c/&6%max% &cSpróbuj ponownie"
     required: "&cNajpierw musisz rozwiązać captchę, przed zalogowaniem!"
-    max-attempts: "&cZbyt wiele nieudanych prób weryfikacji captcha! Pozostałe próby: &6%remaining%"
-    max-attempts-ban: "&cZbyt wiele nieudanych prób weryfikacji captcha! Zostałeś zbanowany na &6%time%"
+    attempts:
+      exceeded: "&cZbyt wiele nieudanych prób weryfikacji captcha! Pozostałe próby: &6%remaining%"
+      ban: "&cZbyt wiele nieudanych prób weryfikacji captcha! Zostałeś zbanowany na &6%time%"
     timer: "&eRozwiąż captchę w ciągu &6%time%&e!"
     timeout: "&cCzas na rozwiązanie captchy minął!"
-    gui:
-      title: "&6Captcha"
-      prompts:
-        edible: "&8- &eKliknij Jadalny"
-        red: "&8- &eKliknij Czerwony"
-        blue: "&8- &eKliknij Niebieski"
-        green: "&8- &eKliknij Zielony"
-        yellow: "&8- &eKliknij Żółty"
-        wood: "&8- &eKliknij Drewno"
-        bow_ammo: "&8- &eKliknij Amunicję do Łuku"
-        chicken_drop: "&8- &eKliknij od Kury"
-        redstone: "&8- &eKliknij Redstone"
-        ore: "&8- &eKliknij Rudę"
-        helmet: "&8- &eKliknij Hełm"
-        netherite: "&8- &eKliknij netheryt"
-        potion: "&8- &eKliknij Miksturę"
-        music_disc: "&8- &eKliknij Płytę Muzyczną"
-        boat: "&8- &eKliknij Łódkę"
-        tool: "&8- &eKliknij Narzędzie"
-    map:
-      instruction: "&ePrzepisz kod widoczny na mapie w trzymanej ręce na czat!"
-      item-name: "&6Mapa captcha"
-      wrong-code: "&c✖ Błędny kod! Próba &6%attempts%&c/&6%max% &cSpróbuj ponownie"
-    chat:
-      instruction: "&eRozwiąż zagadkę matematyczną: &6%equation%"
-      wrong-answer: "&c✖ Błędny wynik! Próba &6%attempts%&c/&6%max% &cSpróbuj ponownie"
+    modes:
+      gui:
+        title: "&6Captcha"
+        wrong-choice: "&c✖ Niepoprawny wybór! Próba &6%attempts%&c/&6%max%&c. Spróbuj ponownie"
+        prompts:
+          edible: "&8- &eKliknij Jadalny"
+          red: "&8- &eKliknij Czerwony"
+          blue: "&8- &eKliknij Niebieski"
+          green: "&8- &eKliknij Zielony"
+          yellow: "&8- &eKliknij Żółty"
+          wood: "&8- &eKliknij Drewno"
+          bow_ammo: "&8- &eKliknij Amunicję do Łuku"
+          chicken_drop: "&8- &eKliknij od Kury"
+          redstone: "&8- &eKliknij Redstone"
+          ore: "&8- &eKliknij Rudę"
+          helmet: "&8- &eKliknij Hełm"
+          netherite: "&8- &eKliknij netheryt"
+          potion: "&8- &eKliknij Miksturę"
+          music_disc: "&8- &eKliknij Płytę Muzyczną"
+          boat: "&8- &eKliknij Łódkę"
+          tool: "&8- &eKliknij Narzędzie"
+      map:
+        instruction: "&ePrzepisz kod widoczny na mapie w trzymanej ręce na czat!"
+        item-name: "&6Mapa captcha"
+        wrong-code: "&c✖ Błędny kod! Próba &6%attempts%&c/&6%max% &cSpróbuj ponownie"
+      chat:
+        instruction: "&eRozwiąż zagadkę matematyczną: &6%equation%"
+        wrong-answer: "&c✖ Błędny wynik! Próba &6%attempts%&c/&6%max% &cSpróbuj ponownie"
 
 
   # --- Zaufanie IP ---
@@ -173,14 +177,20 @@ messages:
   ip-manager:
     usage: "&cUżycie: /ipmanager <info, unban, bypass, unbypass, gracz>"
     no-ip: "&cBrak zarejestrowanego adresu IP dla gracza &6%player%&c!"
-    info-not-banned: "&aGracz &6%player% &7(Adres IP: %ip%) &anie ma aktywnej blokady adresu IP"
-    info-banned: "&cGracz &6%player% &7(Adres IP: %ip%) &cjest zbanowany! Powód: &6%reason%&c, Pozostało: &6%time%"
-    not-banned: "&cAdres IP gracza &6%player% &cnie jest zbanowany!"
-    unban-success: "&aPomyślnie odbanowano adres IP gracza &6%player% &7(%ip%)&a!"
-    bypass-enabled: "&aWłączono bypass sprawdzania adresu IP dla gracza &6%player%"
-    bypass-active: "&cBypass adresu IP dla gracza &6%player% &cjest już włączony!"
-    bypass-disabled: "&cWyłączono bypass sprawdzania adresu IP dla gracza &6%player%"
-    bypass-not-active: "&cBypass adresu IP dla gracza &6%player% &cjest już wyłączony!"
+
+    info:
+      not-banned: "&aGracz &6%player% &7(Adres IP: %ip%) &anie ma aktywnej blokady adresu IP"
+      banned: "&cGracz &6%player% &7(Adres IP: %ip%) &cjest zbanowany! Powód: &6%reason%&c, Pozostało: &6%time%"
+
+    unban:
+      not-banned: "&cAdres IP gracza &6%player% &cnie jest zbanowany!"
+      success: "&aPomyślnie odbanowano adres IP gracza &6%player% &7(%ip%)&a!"
+
+    bypass:
+      enabled: "&aWłączono bypass sprawdzania adresu IP dla gracza &6%player%"
+      already-enabled: "&cBypass adresu IP dla gracza &6%player% &cjest już włączony!"
+      disabled: "&cWyłączono bypass sprawdzania adresu IP dla gracza &6%player%"
+      already-disabled: "&cBypass adresu IP dla gracza &6%player% &cjest już wyłączony!"
 
 
   # --- Sesje ---
@@ -296,9 +306,11 @@ messages:
   reset-password:
     usage: "&cPoprawne użycie: &e/zresetujhaslo <gracz>"
 
-    admin-success: "&aHasło gracza &6%player% &azostało zresetowane"
+    admin:
+      success: "&aHasło gracza &6%player% &azostało zresetowane"
 
-    player-kick: "&cTwoje hasło zostało zresetowane przez administratora!"
+    player:
+      kick: "&cTwoje hasło zostało zresetowane przez administratora!"
 
 
   # --- Reset PIN'u /zresetujpin ---
@@ -306,9 +318,11 @@ messages:
     usage: "&cPoprawne użycie: &e/zresetujpin <gracz>"
     no-has-pin: "&cTen gracz nie ma zarejestrowanego PIN'u!"
 
-    admin-success: "&aPIN gracza &6%player% &azostał zresetowany"
+    admin:
+      success: "&aPIN gracza &6%player% &azostał zresetowany"
 
-    player-message: "&cTwój PIN został zresetowany przez administratora!"
+    player:
+      message: "&cTwój PIN został zresetowany przez administratora!"
 
 
   # --- Reset IP /zresetujip ---
@@ -316,17 +330,21 @@ messages:
     usage: "&cPoprawne użycie: &e/zresetujip <gracz>"
     no-ip: "&cTen gracz nie ma zapisanego adresu IP!"
 
-    admin-success: "&aAdres IP gracza &6%player% &azostał zresetowany"
+    admin:
+      success: "&aAdres IP gracza &6%player% &azostał zresetowany"
 
-    player-kick: "&cTwój adres IP został zresetowany przez administratora!"
+    player:
+      kick: "&cTwój adres IP został zresetowany przez administratora!"
 
 
   # --- Reset całego konta /zresetujkonto ---
   purge-account:
     usage: "&cPoprawne użycie: &e/zresetujkonto <nick>"
-    admin-success: "&aPomyślnie usunięto WSZYSTKIE dane konta gracza &e%player%"
+    admin:
+      success: "&aPomyślnie usunięto WSZYSTKIE dane konta gracza &e%player%"
 
-    player-kick: "&cTwoje konto zostało całkowicie usunięte z bazy danych serwera przez administratora"
+    player:
+      kick: "&cTwoje konto zostało całkowicie usunięte z bazy danych serwera przez administratora"
 
     confirm: "&cTo działanie jest &4&nNIEODWRACALNE&c!"
     button: "&6&l[USUŃ]"
@@ -336,13 +354,17 @@ messages:
   # --- Reset 2FA /zresetuj2fa ---
   reset-twofactor:
     usage: "&cPoprawne użycie: &e/zresetuj2fa <nick>"
-    admin-success: "&aPomyślnie usunięto weryfikację dwuetapową z konta gracza &e%player%"
 
-    not-found: "&cGracz &6%target% &cnie ma włączonej weryfikacji dwuetapowej (2FA)!"
+    admin:
+      success: "&aPomyślnie usunięto weryfikację dwuetapową z konta gracza &e%player%"
 
-    player-waiting: "&cGracz &6%target% &cjest w trakcie weryfikacji!"
-    player-setting-up: "&cGracz &6%target% &cjest w trakcie konfiguracji 2FA!"
-    player-kick: "&cTwoja weryfikacja dwuetapowa została usunięta przez administratora"
+    target:
+      not-enabled: "&cGracz &6%target% &cnie ma włączonej weryfikacji dwuetapowej (2FA)!"
+      waiting: "&cGracz &6%target% &cjest w trakcie weryfikacji!"
+      setting-up: "&cGracz &6%target% &cjest w trakcie konfiguracji 2FA!"
+
+    player:
+      kick: "&cTwoja weryfikacja dwuetapowa została usunięta przez administratora"
 
 
   # --- System spawnów logowania ---
@@ -362,26 +384,26 @@ messages:
     delete-hover: "&aKliknij, aby bezpowrotnie usunąć spawn: &e%type%"
 
 
-# --- Wydarzenia Sezonowe ---
-seasonal-events:
-  halloween:
-    - "&6[Halloween] &cCienie przeszłości obserwują każdy Twój &4krok..."
-    - "&6[Halloween] &cCoś strasznego czai się w ciemnościach... &4Uciekaj!"
-    - "&6[Halloween] &cCukierek albo psikus? Dzisiaj nie ma &4ucieczki!"
-    - "&6[Halloween] &cSłyszysz te ciche szepty za swoimi &4plecami?"
-    - "&6[Halloween] &cNoc dopiero się zaczęła, a Twój &4los &czostał już przypieczętowany..."
+  # --- Wydarzenia Sezonowe ---
+  seasonal-events:
+    halloween:
+      - "&6[Halloween] &cCienie przeszłości obserwują każdy Twój &4krok..."
+      - "&6[Halloween] &cCoś strasznego czai się w ciemnościach... &4Uciekaj!"
+      - "&6[Halloween] &cCukierek albo psikus? Dzisiaj nie ma &4ucieczki!"
+      - "&6[Halloween] &cSłyszysz te ciche szepty za swoimi &4plecami?"
+      - "&6[Halloween] &cNoc dopiero się zaczęła, a Twój &4los &czostał już przypieczętowany..."
 
 
-# --- Aktualizacja systemu ---
-update:
-  in-progress: "&cSprawdzanie aktualizacji jest już w toku..."
-  api-error: "&cNie udało się połączyć z API Modrinth"
-  no-versions: "&cNie znaleziono żadnych opublikowanych wersji"
-  up-to-date: "&aAstraLogin jest już w najnowszej wersji"
-  local-newer: "&eZainstalowana wersja jest nowsza niż najnowsza wersja opublikowana na Modrinth. Pominięto aktualizację"
-  no-files: "&cNie znaleziono pliku do pobrania dla najnowszej wersji"
-  directory-error: "&cNie udało się utworzyć folderu aktualizacji"
-  download-error: "&cNie udało się pobrać aktualizacji"
-  downloaded: "&aPomyślnie pobrano aktualizację AstraLogin"
-  restart-required: "&eUruchom ponownie serwer, aby zastosować aktualizację"
-  failed: "&cWystąpił błąd podczas sprawdzania lub pobierania aktualizacji"
+  # --- Aktualizacja systemu ---
+  update:
+    in-progress: "&cSprawdzanie aktualizacji jest już w toku..."
+    api-error: "&cNie udało się połączyć z API Modrinth"
+    no-versions: "&cNie znaleziono żadnych opublikowanych wersji"
+    up-to-date: "&aAstraLogin jest już w najnowszej wersji"
+    local-newer: "&eZainstalowana wersja jest nowsza niż najnowsza wersja opublikowana na Modrinth. Pominięto aktualizację"
+    no-files: "&cNie znaleziono pliku do pobrania dla najnowszej wersji"
+    directory-error: "&cNie udało się utworzyć folderu aktualizacji"
+    download-error: "&cNie udało się pobrać aktualizacji"
+    downloaded: "&aPomyślnie pobrano aktualizację AstraLogin"
+    restart-required: "&eUruchom ponownie serwer, aby zastosować aktualizację"
+    failed: "&cWystąpił błąd podczas sprawdzania lub pobierania aktualizacji"

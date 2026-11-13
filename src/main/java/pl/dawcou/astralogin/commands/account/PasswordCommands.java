@@ -8,8 +8,8 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.jspecify.annotations.NonNull;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.auth.passwords.PasswordHasher;
-import pl.dawcou.astralogin.auth.passwords.PasswordValidator;
+import pl.dawcou.astralogin.auth.password.PasswordHasher;
+import pl.dawcou.astralogin.auth.password.PasswordValidator;
 import pl.dawcou.astralogin.auth.security.attempt.AttemptType;
 import pl.dawcou.astralogin.system.SoundManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
@@ -20,11 +20,11 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class PasswordsCommand implements CommandExecutor, TabCompleter {
+public class PasswordCommands implements CommandExecutor, TabCompleter {
 
     private final AstraLogin plugin;
 
-    public PasswordsCommand(AstraLogin plugin) {
+    public PasswordCommands(AstraLogin plugin) {
         this.plugin = plugin;
     }
 
@@ -75,7 +75,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
 
             plugin.getPasswordManager().deletePassword(targetUUID);
 
-            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-password.admin-success")
+            sender.sendMessage(plugin.getLanguageManager().getWithPrefix("reset-password.admin.success")
                     .replace("%player%", targetName));
 
             String adminName = sender.getName();
@@ -89,7 +89,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
             if (targetP != null && targetP.isOnline()) {
                 String playerIP = Objects.requireNonNull(targetP.getAddress()).getAddress().getHostAddress();
                 plugin.getIPManager().resetIPAttempts(playerIP);
-                targetP.kickPlayer(plugin.getLanguageManager().getMessage("reset-password.player-kick"));
+                targetP.kickPlayer(plugin.getLanguageManager().getMessage("reset-password.player.kick"));
             }
 
             return true;
@@ -128,7 +128,7 @@ public class PasswordsCommand implements CommandExecutor, TabCompleter {
                             plugin.getPasswordManager().savePassword(playerUUID, result.newHash());
                         }
 
-                        plugin.getSchedulerManager().runSync(() -> p.kickPlayer(plugin.getLanguageManager().getMessage("forgot-password.player-kick")));
+                        plugin.getSchedulerManager().runSync(() -> p.kickPlayer(plugin.getLanguageManager().getMessage("forgot-password.player.kick")));
 
                         plugin.getPasswordManager().deletePassword(playerUUID);
 

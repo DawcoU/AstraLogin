@@ -23,11 +23,11 @@ public class SecurityReminderTask {
     public synchronized void start() {
         stop();
 
-        if (!plugin.getConfig().getBoolean("security.security-reminder.enabled", true)) {
+        if (!plugin.getConfig().getBoolean("security.reminders.enabled", true)) {
             return;
         }
 
-        String rawTime = plugin.getConfig().getString("security.security-reminder.interval", "24 hours");
+        String rawTime = plugin.getConfig().getString("security.reminders.interval", "24 hours");
         long intervalMillis = TimeUtils.parseTime(rawTime, 86400000L);
 
         this.currentTask = plugin.getSchedulerManager().runAsyncRepeating(task -> {
@@ -51,13 +51,13 @@ public class SecurityReminderTask {
 
                 if ((now - lastReminder) >= intervalMillis) {
                     if (!has2FA && !hasPin) {
-                        sendReminderMessage(player, "security.security-reminder.no-2fa-no-pin");
+                        sendReminderMessage(player, "security.reminders.no-2fa-no-pin");
                         plugin.getSoundManager().playSound(player, SoundManager.SoundType.SECURITY_REMINDER);
                     } else if (!has2FA) {
-                        sendReminderMessage(player, "security.security-reminder.no-2fa-has-pin");
+                        sendReminderMessage(player, "security.reminders.no-2fa-has-pin");
                         plugin.getSoundManager().playSound(player, SoundManager.SoundType.SECURITY_REMINDER);
                     } else {
-                        sendReminderMessage(player, "security.security-reminder.has-2fa-no-pin");
+                        sendReminderMessage(player, "security.reminders.has-2fa-no-pin");
                         plugin.getSoundManager().playSound(player, SoundManager.SoundType.SECURITY_REMINDER);
                     }
 

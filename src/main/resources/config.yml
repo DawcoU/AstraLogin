@@ -80,22 +80,17 @@ security:
     # Should Captcha be enabled?
     enabled: true
 
-    # GUI – Uses inventory window
-    # MAP - Uses a map with garbled code
-    # CHAT - Using math puzzles for results
-    mode: "MAP"
-
-    # Enables random selection of captcha type, ignoring the 'mode' setting above
-    random-mode: false
-
     # Number of errors allowed (from 1 to 5)
     max-attempts: 3
 
-    # Difficulty level: easy, medium, hard
-    difficulty: "medium"
+    selection:
+      # GUI - Solve the CAPTCHA by selecting the correct item from an inventory window
+      # MAP - Solve the CAPTCHA by reading and entering a code displayed on a map
+      # CHAT - Solve the CAPTCHA by answering a mathematical question in chat
+      mode: "GUI"
 
-    # Number of correct items in the noise (from 1 to 5)
-    correct-items-count: 3
+      # Randomly selects a CAPTCHA type, ignoring the 'mode' setting above
+      random-mode: false
 
     # Settings for automatic periodic captchas
     automatic:
@@ -112,7 +107,7 @@ security:
       time-limit: "60 seconds"
 
       boss-bar:
-        # Should the login time be displayed on the boss bar?
+        # Should the captcha time be displayed on the boss bar?
         use: true
 
         # Colors: BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
@@ -121,14 +116,28 @@ security:
         # Styles: PROGRESS, NOTCHED_6, NOTCHED_10, NOTCHED_12, NOTCHED_20
         style: "PROGRESS"
 
-    gui:
-      # Number of rows from 1 to 6 (multiples of 9)
-      rows: 6
-    map:
-      code_length: 6 # Length of the generated verification code displayed on the map
-      font_size: 26 # Font size used for rendering the code characters
-      noise_lines: 50 # Number of random crossing lines to prevent bot OCR
-      noise_dots: 200 # Number of random background pixels/dots for visual noise
+    modes:
+      gui:
+        # Number of rows from 1 to 6 (multiples of 9)
+        rows: 6
+
+        # Difficulty level: easy, medium, hard
+        difficulty: "medium"
+
+        # Number of correct items in the noise (from 1 to 5)
+        correct-items-count: 3
+      map:
+        # Difficulty level: easy, medium, hard
+        difficulty: "medium"
+
+        noise:
+          code_length: 6 # Length of the generated verification code displayed on the map
+          font_size: 26 # Font size used for rendering the code characters
+          lines: 50 # Number of random crossing lines to prevent bot OCR
+          dots: 200 # Number of random background pixels/dots for visual noise
+      chat:
+        # Difficulty level: easy, medium, hard
+        difficulty: "medium"
 
   auto-login:
     # Should premium login be enabled?

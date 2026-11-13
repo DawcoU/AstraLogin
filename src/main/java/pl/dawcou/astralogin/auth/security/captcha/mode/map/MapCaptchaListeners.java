@@ -37,14 +37,10 @@ public class MapCaptchaListeners implements Listener {
 
         plugin.getSchedulerManager().runForEntity(player, () -> {
             if (MapCaptchaHandler.verifyCode(player, message)) {
-                // Zdejmujemy mapę z ręki
+                // Zdejmujemy mapę z ręki i usuwamy sesję
                 MapCaptchaHandler.removeSession(player, plugin);
 
-                plugin.getAttemptManager().clearCaptchaAttempts(player.getUniqueId());
                 plugin.getCaptchaManager().handleCaptchaSuccess(player);
-
-                plugin.getSoundManager().playSound(player, SoundManager.SoundType.SUCCESS);
-                player.sendMessage(plugin.getLanguageManager().getWithPrefix(player, "captcha.success"));
             } else {
                 PlayerFailedCaptchaEvent captchaEvent = new PlayerFailedCaptchaEvent(player, ip);
                 Bukkit.getPluginManager().callEvent(captchaEvent);
@@ -52,9 +48,11 @@ public class MapCaptchaListeners implements Listener {
                     return;
                 }
 
-                plugin.getSoundManager().playSound(player, SoundManager.SoundType.FAIL);
+                plugin.getLogManager().log(
+                        "Player " + player.getName() + " (" + ip + ") failed MAP CAPTCHA: incorrect code."
+                );
 
-                // Przekazujemy błąd do AttemptManager (ten sam menedżer co w GUI)
+                plugin.getSoundManager().playSound(player, SoundManager.SoundType.FAIL);
                 plugin.getAttemptManager().addCaptchaTrial(player, AttemptType.CAPTCHA_MAP);
             }
         });
