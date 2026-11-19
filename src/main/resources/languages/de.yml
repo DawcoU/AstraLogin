@@ -13,7 +13,7 @@ messages:
   general:
     only-players: "&cDieser Befehl kann nur von Spielern ausgeführt werden!"
     no-permission: "&cDu hast dazu keine Rechte!"
-    reload-success: "&aKonfiguration erfolgreich neu geladen!"
+    reload-success: "&aPlugin erfolgreich neu geladen!"
     blocked-action: "&cDu kannst diese Aktion nicht ausführen, bis du dich angemeldet hast!"
     player-not-found: "&cSpieler &6%target% &cexistiert nicht in der Serverdatenbank!"
 
@@ -45,9 +45,9 @@ messages:
     success: "&ePremium-&aKonto erkannt, automatisch angemeldet!"
 
 
-  # --- /forgotpassword ---
+  # --- /forgotpass ---
   forgot-password:
-    usage: "&cKorrekte Verwendung: &e/forgotpassword <PIN>"
+    usage: "&cKorrekte Verwendung: &e/forgotpass <PIN>"
     wrong-pin: "&cFalsche PIN!"
     no-has-pin: "&cDu hast keine registrierte PIN!"
 
@@ -61,7 +61,7 @@ messages:
     not-match: "&cPasswörter stimmen nicht überein!"
     too-short: "&cPasswort ist zu kurz! Mindestens &6%min% &cZeichen"
     too-long: "&cPasswort ist zu lang! Maximal &6%max% &cZeichen"
-    change-usage: "&cKorrekte Verwendung: &e/changepassword <alt, neu, wiederholen>"
+    change-usage: "&cKorrekte Verwendung: &e/changepass <alt, neu, wiederholen>"
     wrong-old: "&cAltes Passwort ist falsch!"
     changed-kick: "&aDein Passwort wurde geändert! &eBitte melde dich erneut an"
     changed: "&aDein Passwort wurde erfolgreich geändert!"
@@ -304,7 +304,7 @@ messages:
 
   # --- Reset hasła /zresetujhaslo ---
   reset-password:
-    usage: "&cKorrekte Verwendung: &e/resetpassword <Spieler>"
+    usage: "&cKorrekte Verwendung: &e/resetpass <Spieler>"
 
     admin:
       success: "&aPasswort für Spieler &6%player% &awurde erfolgreich zurückgesetzt"
@@ -339,7 +339,7 @@ messages:
 
   # --- Reset całego konta /zresetujkonto ---
   purge-account:
-    usage: "&cKorrekte Verwendung: &e/purgeaccount <Spieler>"
+    usage: "&cKorrekte Verwendung: &e/resetaccount <Spieler>"
     admin:
       success: "&aAlle Kontodaten für Spieler &e%player% &aerfolgreich gelöscht"
 

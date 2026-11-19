@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.auth.security.premium.protocol.listeners;
+package pl.dawcou.astralogin.auth.security.premium.protocol.listener;
 
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerAbstract;
@@ -262,7 +262,7 @@ public class PacketEventsListener extends PacketListenerAbstract implements List
     /**
      * Obsługa logowania graczy non-premium po wykryciu braku konta premium w API Mojanga
      */
-    private void handleOfflineLogin(com.github.retrooper.packetevents.protocol.player.User user, Channel channel, InetAddress address, UUID uuid, String username) {
+    private void handleOfflineLogin(User user, Channel channel, InetAddress address, UUID uuid, String username) {
         try {
             GameProfile offlineProfile = new GameProfile(uuid, username);
             plugin.getPremiumManager().setAuthenticated(uuid, false);

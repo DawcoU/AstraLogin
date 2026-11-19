@@ -13,7 +13,7 @@ messages:
   general:
     only-players: "&cThis command can only be executed by players!"
     no-permission: "&cYou do not have permission!"
-    reload-success: "&aConfiguration reloaded successfully!"
+    reload-success: "&aPlugin reloaded successfully!"
     blocked-action: "&cYou cannot perform this action until you log in!"
     player-not-found: "&cPlayer &6%target% &cdoes not exist in the server database!"
 
@@ -45,9 +45,9 @@ messages:
     success: "&ePremium &aaccount detected, logged in automatically!"
 
 
-  # --- /forgotpassword ---
+  # --- /forgotpass ---
   forgot-password:
-    usage: "&cCorrect usage: &e/forgotpassword <PIN>"
+    usage: "&cCorrect usage: &e/forgotpass <PIN>"
     wrong-pin: "&cWrong PIN!"
     no-has-pin: "&cYou don't have a registered PIN!"
 
@@ -61,7 +61,7 @@ messages:
     not-match: "&cPasswords do not match!"
     too-short: "&cPassword is too short! Minimum &6%min% &ccharacters"
     too-long: "&cPassword is too long! Maximum &6%max% &ccharacters"
-    change-usage: "&cCorrect usage: &e/changepassword <old, new, repeat>"
+    change-usage: "&cCorrect usage: &e/changepass <old, new, repeat>"
     wrong-old: "&cOld password is incorrect!"
     changed-kick: "&aYour password has been changed! &ePlease log in again"
     changed: "&aYour password has been successfully changed!"
@@ -302,9 +302,9 @@ messages:
     hover: "&4Click here to transfer the account"
 
 
-  # --- Reset Password (/resetpassword) ---
+  # --- Reset Password (/resetpass) ---
   reset-password:
-    usage: "&cCorrect usage: &e/resetpassword <player>"
+    usage: "&cCorrect usage: &e/resetpass <player>"
 
     admin:
       success: "&aPassword for player &6%player% &ahas been successfully reset"
@@ -339,7 +339,7 @@ messages:
 
   # --- Purge Account (/resetaccount) ---
   purge-account:
-    usage: "&cCorrect usage: &e/purgeaccount <player>"
+    usage: "&cCorrect usage: &e/resetaccount <player>"
     admin:
       success: "&aSuccessfully purged ALL account data for player &e%player%"
 

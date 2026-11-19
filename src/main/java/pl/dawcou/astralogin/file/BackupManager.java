@@ -81,6 +81,10 @@ public class BackupManager {
                 return;
             }
 
+            // Zapisujemy aktualne dane przed wykonaniem kopii
+            plugin.getPlayerDataManager().saveAll();
+            plugin.getGlobalDataManager().save();
+
             try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile))) {
                 Path sourcePath = dataFolder.toPath();
                 // Wyciągamy ścieżki tutaj, żeby utworzyć je tylko RAZ

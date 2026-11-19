@@ -1,4 +1,4 @@
-package pl.dawcou.astralogin.auth.security.premium.protocol.listeners;
+package pl.dawcou.astralogin.auth.security.premium.protocol.listener;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolManager;

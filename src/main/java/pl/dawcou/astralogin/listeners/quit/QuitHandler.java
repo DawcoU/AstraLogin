@@ -68,6 +68,7 @@ public class QuitHandler {
         // Usuwamy z mapy zalogowanych
         if (loginSystem != null && loginSystem.getLoggedIn() != null) {
             loginSystem.getLoggedIn().remove(uuid);
+            loginSystem.removeWaitingFor2FA(uuid);
         }
 
         // CZYSZCZENIE (zamrożonych setup'ów)
@@ -77,8 +78,6 @@ public class QuitHandler {
 
         // Czyszczenie pamięci
         plugin.getPremiumManager().removeAuthenticatedPlayer(uuid);
-        plugin.getPremiumManager().clearPendingBypass(uuid);
-
         plugin.getPasswordManager().getPasswordHasher().cleanupPlayer(uuid);
 
         if (!isShutdown) {

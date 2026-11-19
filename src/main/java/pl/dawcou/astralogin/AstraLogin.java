@@ -325,7 +325,6 @@ public class AstraLogin extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(new MapCaptchaListeners(this), this);
         getServer().getPluginManager().registerEvents(new ChatCaptchaListeners(this), this);
 
-        // Ten zajmuje się blokowaniem niszczenia bloków, ruchu itp. dla niezalogowanych
         getServer().getPluginManager().registerEvents(new LoginBlocks(this), this);
 
         // Komendy dla graczy
@@ -335,36 +334,32 @@ public class AstraLogin extends JavaPlugin implements Listener {
         registerCommand("pin", pinCommands, pinCommands);
         registerCommand("niepamietamhasla", passwordCommands, passwordCommands);
         registerCommand("wyloguj", accountCommands);
+        registerCommand("2fa", twoFactorCommands, twoFactorCommands);
 
         // Komendy administracyjne
         registerCommand("astralogin", astraLoginCommand, astraLoginCommand);
         registerCommand("zresetujhaslo", passwordCommands);
         registerCommand("zresetujpin", pinCommands);
         registerCommand("zresetujip", ipResetCommand);
-        registerCommand("konto", accountCommands);
         registerCommand("zresetujkonto", accountCommands);
+        registerCommand("zresetuj2fa", twoFactorCommands);
+        registerCommand("konto", accountCommands);
+        registerCommand("listakont", accountCommands);
+
         registerCommand("listaip", accountCommands);
         registerCommand("zaufanieip", iPTrustCommand, iPTrustCommand);
         registerCommand("ipmanager", iPManagerCommand, iPManagerCommand);
-        registerCommand("listakont", accountCommands);
+
         registerCommand("przenieskonto", accountCommands);
         registerCommand("spawnlogowania", loginSpawnCommand, loginSpawnCommand);
-
-        registerCommand("2fa", twoFactorCommands, twoFactorCommands);
-        registerCommand("zresetuj2fa", twoFactorCommands);
 
         sessionManager.reload();
         sessionManager.getTwoFactorSessionManager().reload();
 
-        // Odpala tworzenie backupów co 15 minut
-        schedulerManager.runAsyncRepeating(
-                () -> backupManager.createBackup(false),
-                15,
-                15,
-                TimeUnit.MINUTES
-        );
+        // Schedulery
+        // ----------------------------------------------------------------------------------------------------
 
-        // Zapis plików co 5 minut
+        // Zapis danych co 5 minut
         schedulerManager.runAsyncRepeating(
                 () -> {
                     playerDataManager.saveAll();
@@ -375,6 +370,24 @@ public class AstraLogin extends JavaPlugin implements Listener {
                 TimeUnit.MINUTES
         );
 
+        // Próba stworzenia backupu co 10 minut
+        schedulerManager.runAsyncRepeating(
+                () -> backupManager.createBackup(false),
+                10,
+                10,
+                TimeUnit.MINUTES
+        );
+
+        // Czyszczenie śmieci
+        schedulerManager.runAsyncRepeating(
+                () -> premiumManager.cleanCache(),
+                30,
+                30,
+                TimeUnit.MINUTES
+        );
+
+        // ----------------------------------------------------------------------------------------------------
+
         if (playerDataManager != null) {
             playerDataManager.saveAll();
         }
@@ -383,7 +396,6 @@ public class AstraLogin extends JavaPlugin implements Listener {
             globalDataManager.save();
         }
 
-        // LOGO STARTOWE I SPRAWDZANIE WERSJI
         noticeManager.sendStartupLogo();
 
         // Sprawdzanie aktualizacji

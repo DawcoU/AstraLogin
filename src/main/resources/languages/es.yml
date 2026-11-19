@@ -13,7 +13,7 @@ messages:
   general:
     only-players: "&c¡Este comando solo puede ser ejecutado por jugadores!"
     no-permission: "&c¡No tienes permisos!"
-    reload-success: "&a¡Configuración recargada con éxito!"
+    reload-success: "&a¡El plugin se ha recargado correctamente!"
     blocked-action: "&c¡No puedes realizar esta acción hasta que inicies sesión!"
     player-not-found: "&c¡El jugador &6%target% &cno existe en la base de datos del servidor!"
 
@@ -45,9 +45,9 @@ messages:
     success: "&a¡Cuenta &ePremium &adetectada, sesión iniciada automáticamente!"
 
 
-  # --- /forgotpassword ---
+  # --- /forgotpass ---
   forgot-password:
-    usage: "&cUso correcto: &e/forgotpassword <PIN>"
+    usage: "&cUso correcto: &e/forgotpass <PIN>"
     wrong-pin: "&c¡PIN incorrecto!"
     no-has-pin: "&c¡No tienes un PIN registrado!"
 
@@ -61,7 +61,7 @@ messages:
     not-match: "&c¡Las contraseñas no coinciden!"
     too-short: "&c¡La contraseña es demasiado corta! Mínimo &6%min% &ccaracteres"
     too-long: "&c¡La contraseña es demasiado larga! Máximo &6%max% &ccaracteres"
-    change-usage: "&cUso correcto: &e/changepassword <antigua, nueva, repetir>"
+    change-usage: "&cUso correcto: &e/changepass <antigua, nueva, repetir>"
     wrong-old: "&c¡La contraseña antigua es incorrecta!"
     changed-kick: "&a¡Tu contraseña ha sido cambiada! &ePor favor, inicia sesión de nuevo"
     changed: "&a¡Tu contraseña se ha cambiado con éxito!"
@@ -304,7 +304,7 @@ messages:
 
   # --- Reset hasła /zresetujhaslo ---
   reset-password:
-    usage: "&cUso correcto: &e/resetpassword <jugador>"
+    usage: "&cUso correcto: &e/resetpass <jugador>"
 
     admin:
       success: "&aLa contraseña del jugador &6%player% &ase ha restablecido con éxito"
@@ -339,7 +339,7 @@ messages:
 
   # --- Reset całego konta /zresetujkonto ---
   purge-account:
-    usage: "&cUso correcto: &e/purgeaccount <jugador>"
+    usage: "&cUso correcto: &e/resetaccount <jugador>"
     admin:
       success: "&aDatos de cuenta COMPLETOS purgados con éxito para el jugador &e%player%"
 

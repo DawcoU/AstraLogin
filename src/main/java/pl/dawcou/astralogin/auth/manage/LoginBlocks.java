@@ -93,9 +93,8 @@ public class LoginBlocks implements Listener {
                 cmd.equals("/reg") || cmd.startsWith("/reg ") ||
                 cmd.equals("/zarejestruj") || cmd.startsWith("/zarejestruj ") ||
                 cmd.equals("/zmienhaslo") || cmd.startsWith("/zmienhaslo ") ||
-                cmd.equals("/changepassword") || cmd.startsWith("/changepassword ") ||
+                cmd.equals("/changepass") || cmd.startsWith("/changepass ") ||
                 cmd.equals("/niepamietamhasla") || cmd.startsWith("/niepamietamhasla ") ||
-                cmd.equals("/forgotpassword") || cmd.startsWith("/forgotpassword ") ||
                 cmd.equals("/forgotpass") || cmd.startsWith("/forgotpass ")) {
             return;
         }
@@ -252,6 +251,13 @@ public class LoginBlocks implements Listener {
         if (!(e.getWhoClicked() instanceof Player player)) return;
 
         UUID uuid = player.getUniqueId();
+
+        String captchaTitle = plugin.getLanguageManager()
+                .getMessage("captcha.modes.gui.title");
+
+        if (e.getView().getTitle().startsWith(captchaTitle)) {
+            return;
+        }
 
         if (!isAuthenticated(uuid) && !GuiCaptchaHandler.hasActiveCaptcha(player)) {
             e.setCancelled(true);

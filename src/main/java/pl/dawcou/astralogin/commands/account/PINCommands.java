@@ -30,7 +30,7 @@ public class PINCommands implements CommandExecutor, TabCompleter {
     public boolean onCommand(@NonNull CommandSender sender, Command command, @NonNull String label, String[] args) {
         Player p = (sender instanceof Player) ? (Player) sender : null;
 
-        if (command.getName().equalsIgnoreCase("zresetujpin") || command.getName().equalsIgnoreCase("resetpin")) {
+        if (command.getName().equalsIgnoreCase("zresetujpin") || command.getName().equalsIgnoreCase("resetpin") || command.getName().equalsIgnoreCase("delpin")) {
             if (!sender.hasPermission("astralogin.resetpin")) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
                 if (p != null) {

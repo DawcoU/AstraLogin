@@ -111,13 +111,22 @@ public class PreLoginHandler {
             plugin.getCaptchaManager().flagForCaptcha(uuid);
 
             // Wysyłanie alertu do adminów
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                if (p.hasPermission("astralogin.alerts") && plugin.getConfig().getBoolean("visuals.suspicious-activity-alerts")) {
-                    p.sendMessage(plugin.getLanguageManager().getWithPrefix("security.suspicious-ip-alert")
-                            .replace("%target%", playerName)
-                            .replace("%ip%", currentIP));
+            plugin.getSchedulerManager().runSync(() -> {
+                if (!plugin.getConfig().getBoolean("visuals.suspicious-activity-alerts")) {
+                    return;
                 }
-            }
+
+                String message = plugin.getLanguageManager()
+                        .getWithPrefix("security.suspicious-ip-alert")
+                        .replace("%target%", playerName)
+                        .replace("%ip%", currentIP);
+
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    if (p.hasPermission("astralogin.alerts")) {
+                        p.sendMessage(message);
+                    }
+                }
+            });
             return;
         }
 

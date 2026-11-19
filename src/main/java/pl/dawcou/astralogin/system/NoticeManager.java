@@ -78,7 +78,7 @@ public class NoticeManager {
 
                 logoutCmd = "/logout";
 
-                changePassCmd = "/changepassword";
+                changePassCmd = "/changepass";
                 changePassSyntax = "<old> <new> <repeat>";
 
                 pinCmd = "/pin";
@@ -142,7 +142,7 @@ public class NoticeManager {
 
                 logoutCmd = "/logout";
 
-                changePassCmd = "/changepassword";
+                changePassCmd = "/changepass";
                 changePassSyntax = "<altes> <neues> <wiederholen>";
 
                 pinCmd = "/pin";
@@ -206,7 +206,7 @@ public class NoticeManager {
 
                 logoutCmd = "/logout";
 
-                changePassCmd = "/changepassword";
+                changePassCmd = "/changepass";
                 changePassSyntax = "<anterior> <nueva> <repetir>";
 
                 pinCmd = "/pin";
@@ -270,7 +270,7 @@ public class NoticeManager {
 
                 logoutCmd = "/logout";
 
-                changePassCmd = "/changepassword";
+                changePassCmd = "/changepass";
                 changePassSyntax = "<old> <new> <repeat>";
 
                 pinCmd = "/pin";

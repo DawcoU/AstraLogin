@@ -2,8 +2,8 @@ package pl.dawcou.astralogin.auth.security;
 
 import com.comphenix.protocol.ProtocolManager;
 import pl.dawcou.astralogin.AstraLogin;
-import pl.dawcou.astralogin.auth.security.premium.protocol.listeners.PacketEventsListener;
-import pl.dawcou.astralogin.auth.security.premium.protocol.listeners.ProtocolLibListener;
+import pl.dawcou.astralogin.auth.security.premium.protocol.listener.PacketEventsListener;
+import pl.dawcou.astralogin.auth.security.premium.protocol.listener.ProtocolLibListener;
 
 public class BackendManager {
 

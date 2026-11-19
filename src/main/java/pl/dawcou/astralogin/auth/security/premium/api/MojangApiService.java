@@ -26,8 +26,7 @@ public class MojangApiService {
     }
 
     /**
-     * Uniwersalna metoda pobierająca profil gracza z Mojang API (lub mocka dev),
-     * zwracająca czysty obiekt GameProfile (w pełni niezależny od ProtocolLib).
+     * Uniwersalna metoda pobierająca profil gracza z Mojang API (lub mocka dev)
      */
     public GameProfile fetchMojangProfile(String username, String serverHash) {
         if (plugin.isDevMockMode()) {

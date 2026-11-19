@@ -108,7 +108,7 @@ public class AccountCommands implements CommandExecutor {
         }
 
         // ==========================================
-        // KOMENDA: /zresetujkonto lub /resetaccount
+        // KOMENDA: /zresetujkonto
         // ==========================================
         else if (command.getName().equalsIgnoreCase("zresetujkonto") || command.getName().equalsIgnoreCase("resetaccount")) {
             if (!sender.hasPermission("astralogin.resetaccount")) {

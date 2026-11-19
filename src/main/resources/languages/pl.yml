@@ -13,7 +13,7 @@ messages:
   general:
     only-players: "&cTa komenda nie jest dostępna dla konsoli!"
     no-permission: "&cNie masz permisji!"
-    reload-success: "&aKonfiguracja przeładowana pomyślnie!"
+    reload-success: "&aPlugin przeładowany pomyślnie!"
     blocked-action: "&cNie możesz wykonać tej akcji, dopóki się nie zalogujesz!"
     player-not-found: "&cGracz &6%target% &cnie istnieje w bazie danych serwera!"
 

@@ -35,9 +35,9 @@ public class TwoFactorCommands implements CommandExecutor, TabCompleter {
         Player p = (sender instanceof Player) ? (Player) sender : null;
 
         //--------------------------------------------------
-        // KOMENDA: /zresetuj2fa lub /reset2fa
+        // KOMENDA: /zresetuj2fa
         //--------------------------------------------------
-        if (command.getName().equalsIgnoreCase("zresetuj2fa") || command.getName().equalsIgnoreCase("reset2fa")) {
+        if (command.getName().equalsIgnoreCase("zresetuj2fa") || command.getName().equalsIgnoreCase("reset2fa") || command.getName().equalsIgnoreCase("del2fa")) {
             if (!sender.hasPermission("astralogin.reset2fa")) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
                 if (p != null) {

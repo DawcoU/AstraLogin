@@ -32,7 +32,7 @@ public class PasswordCommands implements CommandExecutor, TabCompleter {
     public boolean onCommand(@NonNull CommandSender sender, Command command, @NonNull String label, String[] args) {
         Player p = (sender instanceof Player) ? (Player) sender : null;
 
-        if (command.getName().equalsIgnoreCase("zresetujhaslo") || command.getName().equalsIgnoreCase("resetpassword")) {
+        if (command.getName().equalsIgnoreCase("zresetujhaslo") || command.getName().equalsIgnoreCase("resetpass") || command.getName().equalsIgnoreCase("delpass")) {
             if (!sender.hasPermission("astralogin.resetpassword")) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
                 if (p != null) {
@@ -95,7 +95,7 @@ public class PasswordCommands implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (command.getName().equalsIgnoreCase("niepamietamhasla") || command.getName().equalsIgnoreCase("forgotpassword") || command.getName().equalsIgnoreCase("forgotpass")) {
+        if (command.getName().equalsIgnoreCase("niepamietamhasla") || command.getName().equalsIgnoreCase("forgotpass")) {
             if (p == null) {
                 sender.sendMessage(plugin.getLanguageManager().getMessage("general.only-players"));
                 return true;
@@ -174,7 +174,7 @@ public class PasswordCommands implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (command.getName().equalsIgnoreCase("zmienhaslo") || command.getName().equalsIgnoreCase("changepassword")) {
+        if (command.getName().equalsIgnoreCase("zmienhaslo") || command.getName().equalsIgnoreCase("changepass")) {
             if (p == null) {
                 sender.sendMessage(plugin.getLanguageManager().getMessage("general.only-players"));
                 return true;
@@ -355,7 +355,7 @@ public class PasswordCommands implements CommandExecutor, TabCompleter {
         List<String> hints = new ArrayList<>();
         String cmd = command.getName();
 
-        if (cmd.equalsIgnoreCase("zmienhaslo") || cmd.equalsIgnoreCase("changepassword")) {
+        if (cmd.equalsIgnoreCase("zmienhaslo") || cmd.equalsIgnoreCase("changepass")) {
             if (args.length == 1) {
                 hints.add("<old password>");
             }

@@ -12,7 +12,7 @@ public class LogFilter extends AbstractFilter {
     private final AstraLogin plugin;
     private static final Logger ROOT_LOGGER = LogManager.getRootLogger();
 
-    // Zapobiega ponownemu przechwyceniu naszego zamaskowanego logu
+    // Zapobiega ponownemu przechwyceniu zamaskowanego logu
     private final ThreadLocal<Boolean> sendingMaskedMessage = ThreadLocal.withInitial(() -> false);
 
     public LogFilter(AstraLogin plugin) {
@@ -24,7 +24,7 @@ public class LogFilter extends AbstractFilter {
     @Override
     public Result filter(LogEvent event) {
         // Jeśli to log wygenerowany przez nas po zamaskowaniu,
-        // pozwalamy mu przejść bez ponownego filtrowania.
+        // pozwalamy mu przejść.
         if (sendingMaskedMessage.get()) {
             return Result.NEUTRAL;
         }
@@ -94,9 +94,8 @@ public class LogFilter extends AbstractFilter {
                 message.contains("/zaloguj ") ||
                 message.contains("/zarejestruj ") ||
                 message.contains("/zmienhaslo ") ||
-                message.contains("/changepassword ") ||
+                message.contains("/changepass ") ||
                 message.contains("/niepamietamhasla ") ||
-                message.contains("/forgotpassword ") ||
                 message.contains("/forgotpass ")) {
             return 1;
         }
@@ -113,8 +112,8 @@ public class LogFilter extends AbstractFilter {
                 "/login", "/l",
                 "/register", "/reg",
                 "/zaloguj", "/zarejestruj",
-                "/zmienhaslo", "/changepassword",
-                "/niepamietamhasla", "/forgotpassword", "/forgotpass",
+                "/zmienhaslo", "/changepass",
+                "/niepamietamhasla", "/forgotpass",
                 "/pin", "/2fa", "/tfa"
         };
 

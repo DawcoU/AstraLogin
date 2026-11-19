@@ -100,7 +100,7 @@ public class PremiumManager {
                     .uri(URI.create("https://api.mojang.com/users/profiles/minecraft/" + username))
                     .timeout(Duration.ofSeconds(5))
                     .header("Accept", "application/json")
-                    .header("User-Agent", "AstraLogin/" + plugin.getDescription().getVersion())
+                    .header("User-Agent", "AstraLogin-PremiumChecker")
                     .GET()
                     .build();
 
@@ -136,16 +136,19 @@ public class PremiumManager {
     public void cleanCache() {
         long now = System.currentTimeMillis();
 
+        // Czyścimy cache nicków Premium po 12 godzinach
         usernameCacheTime.forEach((name, time) -> {
-            if (now - time >= 12L * 60 * 60 * 1000) {
+            if (now - time >= 12L * 60 * 60 * 1000L) {
                 usernameCache.remove(name);
                 usernameCacheTime.remove(name);
             }
         });
 
-        // Czyścimy porzucone stany z pakietów (np. połączenia zerwane przed dołączeniem do świata > 30s)
+        // Czyścimy porzucone stany z pakietów
+        // (np. połączenia zerwane przed dołączeniem do świata > 30s)
         playerStates.forEach((uuid, entry) -> {
-            if (now - entry.timestamp >= 30_000 && entry.state != BypassState.AUTHENTICATED) {
+            if (now - entry.timestamp >= 30_000
+                    && entry.state != BypassState.AUTHENTICATED) {
                 playerStates.remove(uuid);
             }
         });
@@ -191,10 +194,6 @@ public class PremiumManager {
     }
 
     public void removeAuthenticatedPlayer(UUID uuid) {
-        playerStates.remove(uuid);
-    }
-
-    public void clearPendingBypass(UUID uuid) {
         playerStates.remove(uuid);
     }
 }

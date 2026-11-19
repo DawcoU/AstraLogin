@@ -29,7 +29,7 @@ public class IPResetCommand implements CommandExecutor {
     public boolean onCommand(@NonNull CommandSender sender, Command command, @NonNull String label, String[] args) {
         Player p = (sender instanceof Player) ? (Player) sender : null;
 
-        if (command.getName().equalsIgnoreCase("zresetujip") || command.getName().equalsIgnoreCase("resetip")) {
+        if (command.getName().equalsIgnoreCase("zresetujip") || command.getName().equalsIgnoreCase("resetip") || command.getName().equalsIgnoreCase("delip")) {
             if (!sender.hasPermission("astralogin.resetip")) {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
                 if (p != null) {

@@ -7,20 +7,19 @@ author: DawcoU
 softdepend:
   - ProtocolLib
   - PacketEvents
-
 folia-supported: true
 
 commands:
   astralogin:
     aliases: [al]
   zresetujhaslo:
-    aliases: [resetpassword]
+    aliases: [resetpass, delpass]
   zresetujpin:
-    aliases: [resetpin]
+    aliases: [resetpin, delpin]
   zmienhaslo:
-    aliases: [changepassword]
+    aliases: [changepass]
   zresetujip:
-    aliases: [resetip]
+    aliases: [resetip, delip]
   zaufanieip:
     aliases: [iptrust]
   zaloguj:
@@ -32,7 +31,7 @@ commands:
   zresetujkonto:
     aliases: [resetaccount]
   zresetuj2fa:
-    aliases: [reset2fa]
+    aliases: [reset2fa, del2fa]
   listaip:
     aliases: [iplist]
   listakont:
@@ -46,7 +45,7 @@ commands:
   wyloguj:
     aliases: [logout]
   niepamietamhasla:
-    aliases: [forgotpassword, forgotpass]
+    aliases: [forgotpass]
   pin:
     description: PIN
   ipmanager:
