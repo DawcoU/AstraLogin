@@ -31,9 +31,7 @@ public class AstraLoginCommand implements CommandExecutor, TabCompleter {
             // Brak argumentów lub komenda /al help /al pomoc
             if (args.length == 0 || (args.length == 1 && (args[0].equalsIgnoreCase("help") || args[0].equalsIgnoreCase("pomoc")))) {
                 plugin.getNoticeManager().sendHelp(sender);
-                if (p != null) {
-                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
-                }
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
                 return true;
             }
 
@@ -41,18 +39,14 @@ public class AstraLoginCommand implements CommandExecutor, TabCompleter {
             if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
                 if (!sender.hasPermission("astralogin.reload")) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
-                    if (p != null) {
-                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
-                    }
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     return true;
                 }
 
                 plugin.reload();
 
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.reload-success"));
-                if (p != null) {
-                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
-                }
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
                 return true;
             }
 
@@ -67,22 +61,24 @@ public class AstraLoginCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage("§6Copyright © 2026 " + plugin.getAuthor() + " All rights reserved");
                 sender.sendMessage("§7-----------------------");
 
-                if (p != null) {
-                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
-                }
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
                 return true;
             }
 
             // Komenda /al update
             if (args.length == 1 && args[0].equalsIgnoreCase("update")) {
+                if (!sender.hasPermission("astralogin.update")) {
+                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
+                    return true;
+                }
+
                 plugin.getAutoUpdater().checkAndDownload(sender);
                 return true;
             }
         }
 
-        if (p != null) {
-            plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
-        }
+        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
         return false;
     }
 

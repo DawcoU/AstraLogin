@@ -86,6 +86,11 @@ public class LogFilter extends AbstractFilter {
             return 1;
         }
 
+        // /email set <adres> / /mail set <adres>
+        if (message.matches("(?i).*/(email|mail)\\s+set\\s+\\S+.*")) {
+            return 2;
+        }
+
         // Komendy z hasłem/PIN-em jako pierwszym argumentem
         if (message.contains("/login ") ||
                 message.contains("/l ") ||
@@ -114,7 +119,8 @@ public class LogFilter extends AbstractFilter {
                 "/zaloguj", "/zarejestruj",
                 "/zmienhaslo", "/changepass",
                 "/niepamietamhasla", "/forgotpass",
-                "/pin", "/2fa", "/tfa"
+                "/pin", "/2fa", "/tfa",
+                "/email", "/mail"
         };
 
         String lowerMessage = message.toLowerCase();
@@ -129,7 +135,7 @@ public class LogFilter extends AbstractFilter {
                 String beforeArguments = message.substring(0, argumentsStart);
                 String arguments = message.substring(argumentsStart);
 
-                String[] args = arguments.split(" ");
+                String[] args = arguments.trim().split("\\s+");
 
                 if (args.length < maskFromArgument) {
                     return message;

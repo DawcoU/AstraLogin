@@ -63,8 +63,8 @@ public class LoginSpawnCommand implements CommandExecutor, TabCompleter {
 
                 if (plugin.getSpawnManager().hasSpawn(spawnType) && !confirmed) {
                     String baseMsgStr = plugin.getLanguageManager().getWithPrefix("spawn.exists").replace("%type%", type);
-                    String btnTextStr = plugin.getLanguageManager().getMessage("spawn.overwrite-button");
-                    String hoverTextStr = plugin.getLanguageManager().getMessage("spawn.overwrite-hover").replace("%type%", type);
+                    String btnTextStr = plugin.getLanguageManager().getMessage("spawn.overwrite.button");
+                    String hoverTextStr = plugin.getLanguageManager().getMessage("spawn.overwrite.hover").replace("%type%", type);
 
                     Component baseMsg = LegacyComponentSerializer.legacySection()
                             .deserialize(baseMsgStr + " ");
@@ -108,7 +108,7 @@ public class LoginSpawnCommand implements CommandExecutor, TabCompleter {
                 if (confirmed) {
                     if (plugin.getSpawnManager().hasSpawn(spawnType)) {
                         plugin.getSpawnManager().delSpawn(spawnType);
-                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.deleted-success").replace("%type%", type));
+                        p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.delete.success").replace("%type%", type));
                         plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
                     } else {
                         p.sendMessage(plugin.getLanguageManager().getWithPrefix("spawn.does-not-exist").replace("%type%", type));
@@ -125,9 +125,9 @@ public class LoginSpawnCommand implements CommandExecutor, TabCompleter {
                 }
 
                 // 3. SHOW BUTTON
-                String baseMsgStr = plugin.getLanguageManager().getWithPrefix("spawn.delete-confirm").replace("%type%", type);
-                String btnTextStr = plugin.getLanguageManager().getMessage("spawn.delete-button");
-                String hoverTextStr = plugin.getLanguageManager().getMessage("spawn.delete-hover").replace("%type%", type);
+                String baseMsgStr = plugin.getLanguageManager().getWithPrefix("spawn.delete.confirm").replace("%type%", type);
+                String btnTextStr = plugin.getLanguageManager().getMessage("spawn.delete.button");
+                String hoverTextStr = plugin.getLanguageManager().getMessage("spawn.delete.hover").replace("%type%", type);
 
                 Component baseMsg = LegacyComponentSerializer.legacySection()
                         .deserialize(baseMsgStr + " ");

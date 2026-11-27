@@ -4,6 +4,7 @@ import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.security.captcha.mode.gui.GuiCaptchaHandler;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
+import pl.dawcou.astralogin.system.utils.TimedCache;
 
 import java.util.Map;
 import java.util.Objects;
@@ -14,6 +15,9 @@ public class AttemptManager {
 
     private final Map<UUID, Integer> attempts = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> captchaAttempts = new ConcurrentHashMap<>();
+
+    private final Map<UUID, Long> attemptsTime = TimedCache.create();
+    private final Map<UUID, Long> captchaAttemptsTime = TimedCache.create();
 
     private final AstraLogin plugin;
 
@@ -26,6 +30,10 @@ public class AttemptManager {
             return;
         }
 
+        if (plugin.getConfig().getInt("security.attempts.max", 3) <= 0) {
+            return;
+        }
+
         String ip = Objects.requireNonNull(p.getAddress()).getAddress().getHostAddress();
 
         int max = plugin.getConfig().getInt("security.attempts.max", 3);
@@ -34,6 +42,7 @@ public class AttemptManager {
         String timeStr = plugin.getConfig().getString("security.attempts.tempban-time", "15 minutes");
 
         int current = attempts.merge(p.getUniqueId(), 1, Integer::sum);
+        TimedCache.touch(attemptsTime, p.getUniqueId());
 
         if (current >= threshold) {
             clearAttempts(p.getUniqueId());
@@ -61,20 +70,24 @@ public class AttemptManager {
     }
 
     public void addCaptchaTrial(Player p, AttemptType type) {
+        if (!plugin.getConfig().getBoolean("security.captcha.attempts.enabled", true)) {
+            return;
+        }
+
         UUID uuid = p.getUniqueId();
 
-        boolean bansEnabled = plugin.getConfig().getBoolean("security.captcha.attempts.ban-enabled", true);
-        int maxFails = Math.min(Math.max(plugin.getConfig().getInt("security.captcha.attempts.exceeded", 2), 1), 5);
-        int margin = plugin.getConfig().getInt("security.captcha.attempts.margin", 2);
+        int maxFails = Math.min(Math.max(plugin.getConfig().getInt("security.captcha.attempts.max", 2), 1), 5);
+        int margin = plugin.getConfig().getInt("security.captcha.attempts.margin", 1);
         int threshold = maxFails + margin;
 
         String timeStr = plugin.getConfig().getString("security.captcha.attempts.tempban-time", "15 minutes");
 
         int current = captchaAttempts.merge(uuid, 1, Integer::sum);
+        TimedCache.touch(captchaAttemptsTime, uuid);
         String ip = Objects.requireNonNull(p.getAddress()).getAddress().getHostAddress();
 
         // 1. Sprawdzamy próg bana (max + margin)
-        if (bansEnabled && current >= threshold) {
+        if (current >= threshold) {
             captchaAttempts.remove(uuid); // Przy banie czyścimy próby
             GuiCaptchaHandler.removeSession(p);
 
@@ -132,13 +145,26 @@ public class AttemptManager {
         }
     }
 
-    public void checkCrime(Player p, AttemptType type) {
-        if (plugin.getConfig().getInt("security.attempts.max", 3) > 0) {
-            addTrial(p, type);
-        }
+    public void clearAttempts(UUID uuid) {
+        attempts.remove(uuid);
+        attemptsTime.remove(uuid);
     }
 
-    public void clearAttempts(UUID uuid) { attempts.remove(uuid); }
+    public void clearCaptchaAttempts(UUID uuid) {
+        captchaAttempts.remove(uuid);
+        captchaAttemptsTime.remove(uuid);
+    }
 
-    public void clearCaptchaAttempts(UUID uuid) { captchaAttempts.remove(uuid); }
+    /**
+     * Usuwa wpisy, które nie były aktualizowane przez 1 godzinę.
+     */
+    public void cleanCache() {
+        long ttl = 3_600_000L; // 1 godzina
+
+        TimedCache.cleanExpired(attemptsTime, ttl);
+        attempts.keySet().removeIf(uuid -> !attemptsTime.containsKey(uuid));
+
+        TimedCache.cleanExpired(captchaAttemptsTime, ttl);
+        captchaAttempts.keySet().removeIf(uuid -> !captchaAttemptsTime.containsKey(uuid));
+    }
 }

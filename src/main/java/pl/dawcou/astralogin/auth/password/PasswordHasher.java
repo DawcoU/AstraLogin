@@ -16,15 +16,31 @@ import java.util.concurrent.Semaphore;
 public class PasswordHasher {
 
     private final AstraLogin plugin;
-    private final boolean argon2Available = true;
+    private final boolean argon2Available;
     private final SecureRandom secureRandom = new SecureRandom();
 
     // Globalny czas ostatniego przeliczenia hasła na serwerze (w ms)
     private final Semaphore hashingSemaphore;
     private final Map<UUID, Long> playerCooldowns = new ConcurrentHashMap<>();
 
+    //--------------------------------------------------
+    // Checks Argon2 availability even when package is relocated
+    //--------------------------------------------------
+    private boolean checkArgon2Available() {
+        try {
+            Class.forName(Argon2BytesGenerator.class.getName());
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     public PasswordHasher(AstraLogin plugin) {
         this.plugin = plugin;
+        this.argon2Available = checkArgon2Available();
+        if (!this.argon2Available) {
+            plugin.getLogger().warning("Argon2 classes not found! Falling back to BCrypt.");
+        }
 
         int rawMaxConcurrent = plugin.getConfig().getInt("security.hashing.rate-limit.max-concurrent-hashings", 2);
         // Gwarantuje przedział od 1 do liczby rdzeni procesora
@@ -95,12 +111,16 @@ public class PasswordHasher {
                 long remainingSeconds = (long) Math.ceil(remainingMs / 1000.0);
                 return new HashingResult(HashStatus.RATE_LIMITED_PLAYER, null, remainingSeconds);
             }
-            playerCooldowns.put(playerUuid, now);
         }
 
         // Semafor CPU
         if (!hashingSemaphore.tryAcquire()) {
             return new HashingResult(HashStatus.RATE_LIMITED_SERVER, null);
+        }
+
+        // Cooldown dopiero po zdobyciu slotu
+        if (playerUuid != null) {
+            playerCooldowns.put(playerUuid, now);
         }
 
         try {
@@ -185,6 +205,10 @@ public class PasswordHasher {
     }
 
     // --- WERYFIKACJA ORAZ MIGRACJA ---
+    public VerificationResult verifyPassword(String rawPassword, String storedHash) {
+        return verifyPassword(null, rawPassword, storedHash);
+    }
+
     public VerificationResult verifyPassword(UUID playerUuid, String rawPassword, String storedHash) {
         if (storedHash == null || rawPassword == null || rawPassword.isEmpty() || storedHash.isEmpty()) {
             return new VerificationResult(HashStatus.INVALID_PASSWORD, false, null);
@@ -204,12 +228,16 @@ public class PasswordHasher {
                 long remainingSeconds = (long) Math.ceil(remainingMs / 1000.0);
                 return new VerificationResult(HashStatus.RATE_LIMITED_PLAYER, false, null, remainingSeconds);
             }
-            playerCooldowns.put(playerUuid, now);
         }
 
         // 2. Rezerwacja wolnego slotu CPU
         if (!hashingSemaphore.tryAcquire()) {
             return new VerificationResult(HashStatus.RATE_LIMITED_SERVER, false, null);
+        }
+
+        // 3. Cooldown dopiero po zdobyciu slotu
+        if (playerUuid != null) {
+            playerCooldowns.put(playerUuid, now);
         }
 
         try {
@@ -284,8 +312,8 @@ public class PasswordHasher {
     }
 
     private boolean verifyArgon2(char[] password, String storedHash) {
-        String[] parts = storedHash.split("\\$");
-        if (parts.length < 6) {
+        String[] parts = storedHash.split("\\$", -1);
+        if (parts.length != 6 || !"argon2id".equals(parts[1]) || !"v=19".equals(parts[2])) {
             return false;
         }
 
@@ -306,9 +334,22 @@ public class PasswordHasher {
             }
         }
 
+
+        if (memoryKb < 4096 || memoryKb > 131072
+                || iterations < 1 || iterations > 10
+                || parallelism < 1 || parallelism > 4) {
+            plugin.getLogger().warning("Rejected Argon2 hash with invalid parameters.");
+            return false;
+        }
+
         Base64.Decoder decoder = Base64.getDecoder();
         byte[] salt = decoder.decode(parts[4]);
         byte[] expectedHash = decoder.decode(parts[5]);
+
+        if (salt.length < 8 || salt.length > 64
+                || expectedHash.length < 16 || expectedHash.length > 64) {
+            return false;
+        }
 
         byte[] actualHash = generateArgon2idBytes(password, salt, iterations, memoryKb, parallelism, expectedHash.length);
 
@@ -316,11 +357,7 @@ public class PasswordHasher {
             return false;
         }
 
-        int result = 0;
-        for (int i = 0; i < actualHash.length; i++) {
-            result |= actualHash[i] ^ expectedHash[i];
-        }
-        return result == 0;
+        return java.security.MessageDigest.isEqual(actualHash, expectedHash);
     }
 
     private void wipeArray(char[] array) {

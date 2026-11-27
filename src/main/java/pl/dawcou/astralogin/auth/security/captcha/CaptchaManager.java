@@ -31,6 +31,8 @@ public class CaptchaManager {
         flaggedPlayers.add(uuid);
     }
 
+    public void removeFlagged(UUID uuid) { flaggedPlayers.remove(uuid); }
+
     public boolean isFlagged(UUID uuid) {
         return flaggedPlayers.contains(uuid);
     }
@@ -54,7 +56,7 @@ public class CaptchaManager {
         }
 
         // Sprawdzamy timestamp w pliku danych gracza
-        long captchaExpiry = plugin.getPlayerDataManager().getLong(uuid, "captcha.timestamp", 0L);
+        long captchaExpiry = plugin.getPlayerDataManager().getLong(uuid, "security.captcha.last-completed-at", 0L);
         return System.currentTimeMillis() > captchaExpiry;
     }
 
@@ -140,7 +142,7 @@ public class CaptchaManager {
         long intervalMillis = TimeUtils.parseTime(intervalConfig, 432000L);
         long expiryTimestamp = System.currentTimeMillis() + intervalMillis;
 
-        plugin.getPlayerDataManager().set(uuid, "captcha.timestamp", expiryTimestamp);
+        plugin.getPlayerDataManager().set(uuid, "security.captcha.last-completed-at", expiryTimestamp);
         plugin.getSuspicionManager().decrementSuspicion(player.getUniqueId());
 
         plugin.getIpTrustManager().changeTrustScore(

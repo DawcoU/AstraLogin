@@ -34,13 +34,13 @@ public class LoginBlocks implements Listener {
     // Please remain calm. The code is secure, the binaries are innocent, and the potato is under control.
 
     private boolean isAuthenticated(UUID uuid) {
-        return loginSystem.getLoggedIn().contains(uuid)
-                && !loginSystem.isWaitingFor2FA(uuid);
+        return loginSystem.isLoggedIn(uuid)
+                && !loginSystem.getTwoFactorSystem().isWaitingFor2FA(uuid);
     }
 
     private void sendBlockedMessage(Player p, UUID uuid) {
         p.sendMessage(plugin.getLanguageManager().getWithPrefix(
-                loginSystem.isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"
+                loginSystem.getTwoFactorSystem().isWaitingFor2FA(uuid) ? "twofactor.required" : "general.blocked-action"
         ));
     }
 
@@ -74,7 +74,7 @@ public class LoginBlocks implements Listener {
         }
 
         // 1. Jeśli czeka na 2FA
-        if (loginSystem.isWaitingFor2FA(uuid)) {
+        if (loginSystem.getTwoFactorSystem().isWaitingFor2FA(uuid)) {
             if (cmd.equals("/2fa") || cmd.startsWith("/2fa ") ||
                     cmd.equals("/tfa") || cmd.startsWith("/tfa ") ||
                     cmd.equals("/auth") || cmd.startsWith("/auth ")) {

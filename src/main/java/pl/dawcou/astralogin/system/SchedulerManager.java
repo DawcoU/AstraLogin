@@ -92,7 +92,7 @@ public class SchedulerManager {
     }
 
     /**
-     * Safe teleportation logic for Spigot, Paper, and Folia.
+     * Safe teleportation logic for Paper, and Folia.
      */
     public void teleport(Entity entity, Location location) {
         if (isFolia || hasTeleportAsync) {
@@ -215,6 +215,21 @@ public class SchedulerManager {
 
     public Task runSyncRepeating(Runnable runnable, long initialDelayTicks, long periodTicks) {
         return runSyncRepeating(task -> runnable.run(), initialDelayTicks, periodTicks);
+    }
+
+    // --------------------------------------------------
+    // Converts time values to server ticks and delegates to tick-based sync repeating tasks
+    // --------------------------------------------------
+    public Task runSyncRepeating(Consumer<Task> taskConsumer, long initialDelay, long period, TimeUnit unit) {
+        long initialDelayTicks = Math.max(0L, unit.toMillis(initialDelay) / 50L);
+        long periodTicks = Math.max(1L, unit.toMillis(period) / 50L);
+        return runSyncRepeating(taskConsumer, initialDelayTicks, periodTicks);
+    }
+
+    public Task runSyncRepeating(Runnable runnable, long initialDelay, long period, TimeUnit unit) {
+        long initialDelayTicks = Math.max(0L, unit.toMillis(initialDelay) / 50L);
+        long periodTicks = Math.max(1L, unit.toMillis(period) / 50L);
+        return runSyncRepeating(runnable, initialDelayTicks, periodTicks);
     }
 
     /**

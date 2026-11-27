@@ -5,6 +5,8 @@ import org.bukkit.inventory.ItemStack;
 import pl.dawcou.astralogin.AstraLogin;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 
 public class GuiCaptchaGenerator {
@@ -43,7 +45,7 @@ public class GuiCaptchaGenerator {
         }
     }
 
-    private static final Map<String, List<ChallengeDefinition>> DIFFICULTIES = new HashMap<>();
+    private static final Map<String, List<ChallengeDefinition>> DIFFICULTIES = new ConcurrentHashMap<>();
 
     static {
         DIFFICULTIES.put("easy", Arrays.asList(
@@ -79,7 +81,7 @@ public class GuiCaptchaGenerator {
             pool = DIFFICULTIES.get("medium");
         }
 
-        ChallengeDefinition def = pool.get(new Random().nextInt(pool.size()));
+        ChallengeDefinition def = pool.get(ThreadLocalRandom.current().nextInt(pool.size()));
         int countConfig = plugin.getConfig().getInt("security.captcha.modes.gui.correct-items-count", 3);
         int correctCount = Math.min(Math.max(countConfig, 1), 3);
 
@@ -91,11 +93,10 @@ public class GuiCaptchaGenerator {
             items.add(new ItemStack(def.targetMaterial()));
         }
 
-        Random random = new Random();
         Material[] allMaterials = Material.values();
 
         while (items.size() < size) {
-            Material randomMat = allMaterials[random.nextInt(allMaterials.length)];
+            Material randomMat = allMaterials[ThreadLocalRandom.current().nextInt(allMaterials.length)];
             if (!randomMat.isItem() || randomMat.isAir() || targets.contains(randomMat)) {
                 continue;
             }

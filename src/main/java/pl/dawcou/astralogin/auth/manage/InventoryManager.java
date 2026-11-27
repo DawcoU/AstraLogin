@@ -40,25 +40,27 @@ public class InventoryManager {
             return;
         }
 
-        // Zapis glównego ekwipunku i zbroi w Base64
+        // Zapis głównego ekwipunku i zbroi w Base64
         String invBase64 = itemStackArrayToBase64(p.getInventory().getContents());
         String armorBase64 = itemStackArrayToBase64(p.getInventory().getArmorContents());
 
-        playerDataManager.set(uuid, "inventory.contents", invBase64);
-        playerDataManager.set(uuid, "inventory.armor", armorBase64);
+        // Przerywamy zapis, jeśli serializacja się nie powiodła
+        if (invBase64 == null || armorBase64 == null) {
+            plugin.getLogger().severe("Could not save inventory for player " + p.getName() + " because serialization failed!");
+            return;
+        }
+
+        playerDataManager.set(uuid, "player.inventory.contents", invBase64);
+        playerDataManager.set(uuid, "player.inventory.armor", armorBase64);
 
         // Zapis trybu gry
         boolean saveGamemode = plugin.getConfig().getBoolean("features.inventory.save-gamemode", true);
         if (saveGamemode) {
-            playerDataManager.set(uuid, "inventory.gamemode", p.getGameMode().name());
+            playerDataManager.set(uuid, "player.gamemode", p.getGameMode().name());
         }
 
+        // Czyszczenie ekwipunku
         p.getInventory().clear();
-        p.getInventory().setArmorContents(null);
-
-        if (saveGamemode) {
-            p.setGameMode(GameMode.SURVIVAL);
-        }
     }
 
     public void restore(Player p) {
@@ -77,20 +79,29 @@ public class InventoryManager {
             }
         }
 
-        // Przywracanie glównego ekwipunku
-        String invBase64 = playerDataManager.getString(uuid, "inventory.contents");
+
+        // Odczytywanie zapisanych danych ekwipunku
+        String invBase64 = playerDataManager.getString(uuid, "player.inventory.contents");
+        String armorBase64 = playerDataManager.getString(uuid, "player.inventory.armor");
+
+        // Deserializacja przed rozpoczęciem przywracania
+        ItemStack[] inv = null;
+        ItemStack[] armor = null;
+
         if (invBase64 != null) {
-            ItemStack[] inv = itemStackArrayFromBase64(invBase64);
-
-            p.getInventory().setContents(inv);
-
+            inv = itemStackArrayFromBase64(invBase64);
         }
 
-        // Przywracanie zbroi
-        String armorBase64 = playerDataManager.getString(uuid, "inventory.armor");
         if (armorBase64 != null) {
-            ItemStack[] armor = itemStackArrayFromBase64(armorBase64);
+            armor = itemStackArrayFromBase64(armorBase64);
+        }
 
+        // Dopiero po poprawnej deserializacji obu części przywracamy ekwipunek
+        if (inv != null) {
+            p.getInventory().setContents(inv);
+        }
+
+        if (armor != null) {
             p.getInventory().setArmorContents(armor);
         }
 
@@ -107,8 +118,8 @@ public class InventoryManager {
         }
 
         // Przywracanie trybu gry
-        if (playerDataManager.has(uuid, "inventory.gamemode")) {
-            String gmName = playerDataManager.getString(uuid, "inventory.gamemode");
+        if (playerDataManager.has(uuid, "player.gamemode")) {
+            String gmName = playerDataManager.getString(uuid, "player.gamemode");
             try {
                 GameMode gm = GameMode.valueOf(gmName != null ? gmName : "SURVIVAL");
                 p.setGameMode(gm);
@@ -117,18 +128,19 @@ public class InventoryManager {
             }
         }
 
-        deleteInventoryCache(uuid);
+        if (inv != null && armor != null) {
+            deleteInventoryCache(uuid);
+        }
     }
 
     private boolean hasSavedInventory(Player p) {
-        return playerDataManager.has(p.getUniqueId(), "inventory");
+        return playerDataManager.has(p.getUniqueId(), "player.inventory")
+                || playerDataManager.has(p.getUniqueId(), "player.gamemode");
     }
 
     public void deleteInventoryCache(UUID uuid) {
-        try {
-            playerDataManager.remove(uuid, "inventory");
-        } catch (IllegalArgumentException ignored) {
-        }
+        playerDataManager.remove(uuid, "player.inventory");
+        playerDataManager.remove(uuid, "player.gamemode");
     }
 
     //--------------------------------------------------
@@ -143,7 +155,6 @@ public class InventoryManager {
                 dataOutput.writeObject(item);
             }
 
-            // Zamiast Base64Coder.encodeLines(...)
             return Base64.getEncoder().encodeToString(outputStream.toByteArray());
         } catch (Exception e) {
             plugin.getLogger().severe("Could not serialize items to Base64: " + e.getMessage());
@@ -155,14 +166,20 @@ public class InventoryManager {
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(Base64.getDecoder().decode(data));
              BukkitObjectInputStream dataInput = new BukkitObjectInputStream(inputStream)) {
 
-            ItemStack[] items = new ItemStack[dataInput.readInt()];
+            int length = dataInput.readInt();
+
+            if (length < 0 || length > 256) {
+                throw new IllegalArgumentException("Invalid inventory array length: " + length);
+            }
+
+            ItemStack[] items = new ItemStack[length];
             for (int i = 0; i < items.length; i++) {
                 items[i] = (ItemStack) dataInput.readObject();
             }
             return items;
         } catch (Exception e) {
             plugin.getLogger().severe("Could not deserialize items from Base64: " + e.getMessage());
-            return new ItemStack[0];
+            return null;
         }
     }
 }

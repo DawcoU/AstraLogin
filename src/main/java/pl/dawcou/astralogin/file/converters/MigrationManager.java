@@ -1,37 +1,76 @@
 package pl.dawcou.astralogin.file.converters;
 
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.file.converters.config.ConfigMigration;
+import pl.dawcou.astralogin.file.converters.file.migrations.*;
+import pl.dawcou.astralogin.file.converters.file.FileMigration;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MigrationManager {
 
     private final AstraLogin plugin;
-    private final ConfigConverter configConverter;
-    private final FilesConverter filesConverter;
+    private final List<FileMigration> fileMigrations;
 
     public MigrationManager(AstraLogin plugin) {
         this.plugin = plugin;
-        this.configConverter = new ConfigConverter(plugin);
-        this.filesConverter = new FilesConverter(plugin);
+
+        this.fileMigrations = List.of(
+                new PasswordSectionFileMigration(plugin),
+                new InventorySectionFileMigration(plugin),
+                new SpawnSectionFileMigration(plugin),
+                new DataFoldersFileMigration(plugin),
+                new YamlToJsonFileMigration(plugin),
+                new PlayerJsonStructureFileMigration(plugin),
+                new ConfigMigration(plugin)
+        );
     }
 
     public void migrate() {
-        boolean filesNeedMigration = filesConverter.needsMigration();
-        boolean configNeedsMigration = configConverter.needsMigration();
+        List<FileMigration> pendingFileMigrations = new ArrayList<>();
 
-        // Jeśli żaden plik nie wymaga migracji, kończymy bez tworzenia backupu
-        if (!filesNeedMigration && !configNeedsMigration) {
+        for (FileMigration fileMigration : fileMigrations) {
+            try {
+                if (fileMigration.needsMigration()) {
+                    pendingFileMigrations.add(fileMigration);
+                }
+            } catch (Exception e) {
+                plugin.getLogger().severe(
+                        "Failed to check fileMigration: "
+                                + fileMigration.getClass().getSimpleName()
+                );
+                e.printStackTrace();
+
+                // Nie uruchamiamy częściowej migracji, jeśli nie możemy
+                // prawidłowo ustalić, które migracje są wymagane.
+                return;
+            }
+        }
+
+        if (pendingFileMigrations.isEmpty()) {
             return;
         }
 
-        // Wykonujemy JEDEN backup z flagą ignoreInterval = true przed rozpoczęciem jakichkolwiek migracji
+        plugin.getLogger().info(
+                "Found " + pendingFileMigrations.size()
+                        + " pending migration(s)."
+        );
+
         plugin.getBackupManager().createBackup(true);
 
-        if (filesNeedMigration) {
-            filesConverter.runAllMigrations();
-        }
+        for (FileMigration fileMigration : pendingFileMigrations) {
+            String name = fileMigration.getClass().getSimpleName();
 
-        if (configNeedsMigration) {
-            configConverter.runAllMigrations();
+            try {
+                fileMigration.migrate();
+
+            } catch (Exception e) {
+                plugin.getLogger().severe(
+                        "FileMigration failed: " + name
+                );
+                e.printStackTrace();
+            }
         }
     }
 }

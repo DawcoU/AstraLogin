@@ -10,9 +10,7 @@ import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.data.GlobalDataManager;
 import pl.dawcou.astralogin.data.PlayerDataManager;
 
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 //--------------------------------------------------
 // Menedżer spawnów oraz ostatnich lokalizacji graczy
@@ -23,20 +21,14 @@ public class SpawnManager {
     private final PlayerDataManager playerDataManager;
     private final GlobalDataManager globalDataManager;
 
-    private final Map<SpawnType, Location> spawnsCache = new ConcurrentHashMap<>();
-    private final Map<UUID, Location> lastLocationsCache = new ConcurrentHashMap<>();
-
     public SpawnManager(AstraLogin plugin, PlayerDataManager playerDataManager, GlobalDataManager globalDataManager) {
         this.plugin = plugin;
         this.playerDataManager = playerDataManager;
         this.globalDataManager = globalDataManager;
-
-        reload();
     }
 
     public void setSpawn(SpawnType type, Player p) {
         Location loc = p.getLocation();
-        spawnsCache.put(type, loc);
 
         JsonObject globalSpawns = globalDataManager.getJsonObject("spawns");
         if (globalSpawns == null) {
@@ -48,8 +40,6 @@ public class SpawnManager {
     }
 
     public void delSpawn(SpawnType type) {
-        spawnsCache.remove(type);
-
         JsonObject globalSpawns = globalDataManager.getJsonObject("spawns");
         if (globalSpawns != null && globalSpawns.has(type.getKey())) {
             globalSpawns.remove(type.getKey());
@@ -58,7 +48,7 @@ public class SpawnManager {
     }
 
     public void teleport(Player p, SpawnType type) {
-        Location loc = spawnsCache.get(type);
+        Location loc = getSpawnLocation(type);
 
         if (loc != null) {
             plugin.getSchedulerManager().teleport(p, loc);
@@ -71,26 +61,19 @@ public class SpawnManager {
     }
 
     public boolean hasSpawn(SpawnType type) {
-        return spawnsCache.containsKey(type);
+        return getSpawnLocation(type) != null;
     }
 
     public void saveLastLocation(Player p) {
         Location loc = p.getLocation();
         UUID uuid = p.getUniqueId();
 
-        lastLocationsCache.put(uuid, loc);
-
-        // Zapisujemy całą lokalizację jednym obiektem JSON
-        playerDataManager.set(uuid, "location", serializeLocation(loc));
+        playerDataManager.set(uuid, "player.location", serializeLocation(loc));
     }
 
     public void teleportToLastLocation(Player p) {
         UUID uuid = p.getUniqueId();
-        Location loc = lastLocationsCache.get(uuid);
-
-        if (loc == null) {
-            loc = loadLastLocationFromPlayer(uuid);
-        }
+        Location loc = loadLastLocationFromPlayer(uuid);
 
         if (loc == null) {
             teleport(p, SpawnType.AFTER_LOGIN);
@@ -106,50 +89,27 @@ public class SpawnManager {
     }
 
     public void deletePlayerSpawn(UUID uuid) {
-        lastLocationsCache.remove(uuid);
-
-        // Kasujemy cały obiekt "location" jednym wywołaniem publicznej metody remove
-        playerDataManager.remove(uuid, "location");
+        playerDataManager.remove(uuid, "player.location");
     }
 
-    public void reload() {
-        spawnsCache.clear();
-        lastLocationsCache.clear();
-
+    private Location getSpawnLocation(SpawnType type) {
         JsonObject globalSpawns = globalDataManager.getJsonObject("spawns");
-        if (globalSpawns != null) {
-            for (Map.Entry<String, JsonElement> entry : globalSpawns.entrySet()) {
-                SpawnType type = SpawnType.parse(entry.getKey());
-                if (type != null && entry.getValue().isJsonObject()) {
-                    Location loc = deserializeLocation(entry.getValue().getAsJsonObject());
-                    if (loc != null) spawnsCache.put(type, loc);
-                }
+        if (globalSpawns != null && globalSpawns.has(type.getKey())) {
+            JsonElement element = globalSpawns.get(type.getKey());
+            if (element != null && element.isJsonObject()) {
+                return deserializeLocation(element.getAsJsonObject());
             }
         }
+        return null;
     }
 
     private Location loadLastLocationFromPlayer(UUID uuid) {
-        if (!playerDataManager.has(uuid, "location.world")) return null;
-
-        String worldName = playerDataManager.getString(uuid, "location.world");
-        if (worldName == null) return null;
-
-        World world = Bukkit.getWorld(worldName);
-        if (world == null) return null;
-
-        try {
-            double x = Double.parseDouble(playerDataManager.getString(uuid, "location.x"));
-            double y = Double.parseDouble(playerDataManager.getString(uuid, "location.y"));
-            double z = Double.parseDouble(playerDataManager.getString(uuid, "location.z"));
-            float yaw = Float.parseFloat(playerDataManager.getString(uuid, "location.yaw"));
-            float pitch = Float.parseFloat(playerDataManager.getString(uuid, "location.pitch"));
-
-            Location loc = new Location(world, x, y, z, yaw, pitch);
-            lastLocationsCache.put(uuid, loc);
-            return loc;
-        } catch (Exception e) {
+        JsonElement element = playerDataManager.getElement(uuid, "player.location");
+        if (element == null || !element.isJsonObject()) {
             return null;
         }
+
+        return deserializeLocation(element.getAsJsonObject());
     }
 
     private JsonObject serializeLocation(Location loc) {
@@ -163,19 +123,42 @@ public class SpawnManager {
         return json;
     }
 
+    //--------------------------------------------------
+    // Deserializes location with safe numeric fallbacks
+    //--------------------------------------------------
     private Location deserializeLocation(JsonObject json) {
-        if (!json.has("world") || json.get("world").isJsonNull()) return null;
+        if (!json.has("world") || !json.get("world").isJsonPrimitive() || !json.get("world").getAsJsonPrimitive().isString()) {
+            return null;
+        }
 
         String worldName = json.get("world").getAsString();
         World world = Bukkit.getWorld(worldName);
         if (world == null) return null;
 
-        double x = json.get("x").getAsDouble();
-        double y = json.get("y").getAsDouble();
-        double z = json.get("z").getAsDouble();
-        float yaw = json.get("yaw").getAsFloat();
-        float pitch = json.get("pitch").getAsFloat();
+        double x = getDoubleOrDefault(json, "x", 0.0);
+        double y = getDoubleOrDefault(json, "y", 64.0);
+        double z = getDoubleOrDefault(json, "z", 0.0);
+        float yaw = getFloatOrDefault(json, "yaw", 0.0f);
+        float pitch = getFloatOrDefault(json, "pitch", 0.0f);
 
         return new Location(world, x, y, z, yaw, pitch);
+    }
+
+    private double getDoubleOrDefault(JsonObject json, String key, double defaultValue) {
+        if (!json.has(key) || json.get(key).isJsonNull()) return defaultValue;
+        try {
+            return json.get(key).getAsDouble();
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
+    private float getFloatOrDefault(JsonObject json, String key, float defaultValue) {
+        if (!json.has(key) || json.get(key).isJsonNull()) return defaultValue;
+        try {
+            return json.get(key).getAsFloat();
+        } catch (Exception e) {
+            return defaultValue;
+        }
     }
 }

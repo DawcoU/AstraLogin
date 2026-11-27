@@ -5,6 +5,7 @@ import pl.dawcou.astralogin.AstraLogin;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.security.SecureRandom;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class MapCaptchaGenerator {
 
@@ -73,6 +74,7 @@ public class MapCaptchaGenerator {
         int height = 128;
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = image.createGraphics();
+        ThreadLocalRandom random = ThreadLocalRandom.current();
 
         // Wygładzanie krawędzi, żeby człowiek bez problemu odczytał litery
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -83,20 +85,20 @@ public class MapCaptchaGenerator {
 
         // 1. Gęste losowe kropki (szum utrudniający OCR botów)
         for (int i = 0; i < dotsCount; i++) {
-            g2d.setColor(new Color(secureRandom.nextInt(180), secureRandom.nextInt(180), secureRandom.nextInt(180)));
-            int x = secureRandom.nextInt(width);
-            int y = secureRandom.nextInt(height);
-            g2d.fillRect(x, y, 1 + secureRandom.nextInt(2), 1 + secureRandom.nextInt(2));
+            g2d.setColor(new Color(random.nextInt(180), random.nextInt(180), random.nextInt(180)));
+            int x = random.nextInt(width);
+            int y = random.nextInt(height);
+            g2d.fillRect(x, y, 1 + random.nextInt(2), 1 + random.nextInt(2));
         }
 
         // 2. Losowe linie przecinające obraz
         g2d.setStroke(new BasicStroke(1.5f));
         for (int i = 0; i < linesCount; i++) {
-            g2d.setColor(new Color(secureRandom.nextInt(150), secureRandom.nextInt(150), secureRandom.nextInt(150)));
-            int x1 = secureRandom.nextInt(width);
-            int y1 = secureRandom.nextInt(height);
-            int x2 = secureRandom.nextInt(width);
-            int y2 = secureRandom.nextInt(height);
+            g2d.setColor(new Color(random.nextInt(150), random.nextInt(150), random.nextInt(150)));
+            int x1 = random.nextInt(width);
+            int y1 = random.nextInt(height);
+            int x2 = random.nextInt(width);
+            int y2 = random.nextInt(height);
             g2d.drawLine(x1, y1, x2, y2);
         }
 
@@ -106,8 +108,8 @@ public class MapCaptchaGenerator {
         int startX = 10;
         int y = 78;
         for (int i = 0; i < code.length(); i++) {
-            g2d.setColor(new Color(secureRandom.nextInt(40), secureRandom.nextInt(40), secureRandom.nextInt(40)));
-            double angle = (secureRandom.nextDouble() - 0.5) * 0.7;
+            g2d.setColor(new Color(random.nextInt(40), random.nextInt(40), random.nextInt(40)));
+            double angle = (random.nextDouble() - 0.5) * 0.7;
             g2d.rotate(angle, startX, y);
             g2d.drawString(String.valueOf(code.charAt(i)), startX, y);
             g2d.rotate(-angle, startX, y);

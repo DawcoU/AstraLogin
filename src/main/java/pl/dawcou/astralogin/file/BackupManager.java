@@ -32,101 +32,101 @@ public class BackupManager {
             return;
         }
 
-        plugin.getSchedulerManager().runAsync(() -> {
-            File dataFolder = plugin.getDataFolder();
-            File backupDirectory = new File(dataFolder, "backups");
+        File dataFolder = plugin.getDataFolder();
+        File backupDirectory = new File(dataFolder, "backups");
 
-            if (!ignoreInterval) {
-                long defaultIntervalMs = 24L * 60 * 60 * 1000;
-                long intervalMs = TimeUtils.parseTime(timeString, defaultIntervalMs);
+        if (!ignoreInterval) {
+            long defaultIntervalMs = 86_400_000L;
+            long intervalMs = TimeUtils.parseTime(timeString, defaultIntervalMs);
 
-                long minimumMs = 12L * 60 * 60 * 1000;
-                if (intervalMs < minimumMs) {
-                    intervalMs = minimumMs;
-                }
+            long minimumMs = 43_200_000L;
+            if (intervalMs < minimumMs) {
+                intervalMs = minimumMs;
+            }
 
-                long now = System.currentTimeMillis();
-                long lastBackupTime = 0L;
+            long now = System.currentTimeMillis();
+            long lastBackupTime = 0L;
 
-                if (backupDirectory.exists() && backupDirectory.isDirectory()) {
-                    File[] files = backupDirectory.listFiles((dir, name) -> name.endsWith(".zip"));
-                    if (files != null) {
-                        for (File file : files) {
-                            if (file.lastModified() > lastBackupTime) {
-                                lastBackupTime = file.lastModified();
-                            }
+            if (backupDirectory.exists() && backupDirectory.isDirectory()) {
+                File[] files = backupDirectory.listFiles((dir, name) -> name.endsWith(".zip"));
+                if (files != null) {
+                    for (File file : files) {
+                        if (file.lastModified() > lastBackupTime) {
+                            lastBackupTime = file.lastModified();
                         }
                     }
                 }
-
-                if (lastBackupTime > 0 && (now - lastBackupTime < intervalMs)) {
-                    return;
-                }
             }
 
-            // Sprawdzamy czy w ogóle jest co pakować
-            if (!dataFolder.exists()) {
+            if (lastBackupTime > 0 && (now - lastBackupTime < intervalMs)) {
                 return;
             }
+        }
 
-            if (!backupDirectory.exists()) {
-                backupDirectory.mkdirs();
-            }
+        // Sprawdzamy czy w ogóle jest co pakować
+        if (!dataFolder.exists()) {
+            return;
+        }
 
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm");
-            String zipFileName = "backup_" + LocalDateTime.now().format(formatter) + ".zip";
-            File zipFile = new File(backupDirectory, zipFileName);
+        if (!backupDirectory.exists()) {
+            backupDirectory.mkdirs();
+        }
 
-            if (zipFile.exists()) {
-                return;
-            }
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm");
+        String zipFileName = "backup_" + LocalDateTime.now().format(formatter) + ".zip";
+        File zipFile = new File(backupDirectory, zipFileName);
 
-            // Zapisujemy aktualne dane przed wykonaniem kopii
+        if (zipFile.exists()) {
+            return;
+        }
+
+        // Zapisujemy aktualne dane przed wykonaniem kopii
+        if (plugin.getPlayerDataManager() != null && plugin.getGlobalDataManager() != null) {
             plugin.getPlayerDataManager().saveAll();
             plugin.getGlobalDataManager().save();
+        }
 
-            try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile))) {
-                Path sourcePath = dataFolder.toPath();
-                // Wyciągamy ścieżki tutaj, żeby utworzyć je tylko RAZ
-                Path backupsPath = backupDirectory.toPath();
-                Path logsPath = new File(dataFolder, "logs").toPath();
+        try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile))) {
+            Path sourcePath = dataFolder.toPath();
+            // Wyciągamy ścieżki tutaj, żeby utworzyć je tylko RAZ
+            Path backupsPath = backupDirectory.toPath();
+            Path logsPath = new File(dataFolder, "logs").toPath();
 
-                Files.walkFileTree(sourcePath, new SimpleFileVisitor<>() {
-                    @Override
-                    public @NonNull FileVisitResult preVisitDirectory(@NonNull Path dir, @NonNull BasicFileAttributes attrs) {
-                        // Porównujemy gotowe obiekty
-                        if (dir.equals(backupsPath) || dir.equals(logsPath)) {
-                            return FileVisitResult.SKIP_SUBTREE;
-                        }
-                        return FileVisitResult.CONTINUE;
+            Files.walkFileTree(sourcePath, new SimpleFileVisitor<>() {
+                @Override
+                public @NonNull FileVisitResult preVisitDirectory(@NonNull Path dir, @NonNull BasicFileAttributes attrs) {
+                    // Porównujemy gotowe obiekty
+                    if (dir.equals(backupsPath) || dir.equals(logsPath)) {
+                        return FileVisitResult.SKIP_SUBTREE;
                     }
-
-                    @Override
-                    public @NonNull FileVisitResult visitFile(@NonNull Path file, @NonNull BasicFileAttributes attrs) throws IOException {
-                        String zipEntryName = sourcePath.relativize(file).toString().replace("\\", "/");
-                        zos.putNextEntry(new ZipEntry(zipEntryName));
-                        Files.copy(file, zos);
-                        zos.closeEntry();
-                        return FileVisitResult.CONTINUE;
-                    }
-                });
-
-                if (ignoreInterval) {
-                    plugin.getNoticeManager().sendBackupSave(zipFileName);
-                } else {
-                    plugin.getNoticeManager().sendAutomaticBackupSave(zipFileName);
+                    return FileVisitResult.CONTINUE;
                 }
 
-                // Pobieranie limitu z configu i czyszczenie starych kopii
-                int finalLimit = Math.max(1, Math.min(50, limit));
+                @Override
+                public @NonNull FileVisitResult visitFile(@NonNull Path file, @NonNull BasicFileAttributes attrs) throws IOException {
+                    String zipEntryName = sourcePath.relativize(file).toString().replace("\\", "/");
+                    zos.putNextEntry(new ZipEntry(zipEntryName));
+                    Files.copy(file, zos);
+                    zos.closeEntry();
+                    return FileVisitResult.CONTINUE;
+                }
+            });
 
-                deleteOldBackups(backupDirectory, finalLimit);
-
-            } catch (IOException e) {
-                plugin.getNoticeManager().sendBackupSaveError(e.getMessage());
-                e.printStackTrace();
+            if (ignoreInterval) {
+                plugin.getNoticeManager().sendBackupSave(zipFileName);
+            } else {
+                plugin.getNoticeManager().sendAutomaticBackupSave(zipFileName);
             }
-        });
+
+            // Pobieranie limitu z configu i czyszczenie starych kopii
+            int finalLimit = Math.max(1, Math.min(50, limit));
+
+            deleteOldBackups(backupDirectory, finalLimit);
+
+        } catch (IOException e) {
+            plugin.getNoticeManager().sendBackupSaveError(e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     private void deleteOldBackups(File backupDirectory, int limit) {

@@ -10,12 +10,15 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import pl.dawcou.astralogin.api.AstraLoginAPI;
 import pl.dawcou.astralogin.api.AstraLoginAPIImpl;
+import pl.dawcou.astralogin.auth.EmailSender;
 import pl.dawcou.astralogin.auth.LoginSystem;
 import pl.dawcou.astralogin.auth.security.BackendManager;
 import pl.dawcou.astralogin.auth.security.captcha.mode.chat.ChatCaptchaListeners;
 import pl.dawcou.astralogin.auth.security.captcha.mode.gui.GuiCaptchaListeners;
 import pl.dawcou.astralogin.auth.security.captcha.CaptchaManager;
 import pl.dawcou.astralogin.auth.security.captcha.mode.map.MapCaptchaListeners;
+import pl.dawcou.astralogin.auth.security.encryption.DataEncryptionManager;
+import pl.dawcou.astralogin.auth.security.encryption.EncryptionKeyManager;
 import pl.dawcou.astralogin.auth.security.suspicious.SuspiciousManager;
 import pl.dawcou.astralogin.auth.sessions.SessionManager;
 import pl.dawcou.astralogin.auth.manage.*;
@@ -25,14 +28,19 @@ import pl.dawcou.astralogin.auth.password.PINManager;
 import pl.dawcou.astralogin.auth.password.PasswordManager;
 import pl.dawcou.astralogin.auth.security.premium.PremiumManager;
 import pl.dawcou.astralogin.auth.security.ip.IPTrustManager;
-import pl.dawcou.astralogin.commands.account.AccountCommands;
+import pl.dawcou.astralogin.commands.account.*;
+import pl.dawcou.astralogin.commands.email.EmailCommand;
+import pl.dawcou.astralogin.commands.email.ResetEmailCommand;
+import pl.dawcou.astralogin.commands.ip.ResetIPCommand;
+import pl.dawcou.astralogin.commands.password.ChangePassCommand;
+import pl.dawcou.astralogin.commands.password.ForgotPassCommand;
+import pl.dawcou.astralogin.commands.password.ResetPassCommand;
+import pl.dawcou.astralogin.commands.pin.PINCommand;
+import pl.dawcou.astralogin.commands.pin.ResetPINCommand;
 import pl.dawcou.astralogin.commands.admin.*;
 import pl.dawcou.astralogin.commands.ip.IPManagerCommand;
-import pl.dawcou.astralogin.commands.ip.IPResetCommand;
 import pl.dawcou.astralogin.commands.ip.IPTrustCommand;
-import pl.dawcou.astralogin.commands.account.PINCommands;
-import pl.dawcou.astralogin.commands.account.PasswordCommands;
-import pl.dawcou.astralogin.commands.account.TwoFactorCommands;
+import pl.dawcou.astralogin.commands.twofactor.TwoFactorCommands;
 import pl.dawcou.astralogin.data.GlobalDataManager;
 import pl.dawcou.astralogin.data.PlayerDataManager;
 import pl.dawcou.astralogin.file.BackupManager;
@@ -44,16 +52,20 @@ import pl.dawcou.astralogin.logging.LogFilter;
 import pl.dawcou.astralogin.logging.LogManager;
 import pl.dawcou.astralogin.auth.security.attempt.AttemptManager;
 import pl.dawcou.astralogin.auth.security.ip.IPManager;
+import pl.dawcou.astralogin.modules.punishments.PunishmentModuleLoader;
 import pl.dawcou.astralogin.system.LanguageManager;
 import pl.dawcou.astralogin.system.NoticeManager;
 import pl.dawcou.astralogin.system.SchedulerManager;
 import pl.dawcou.astralogin.system.updater.AutoUpdater;
 import pl.dawcou.astralogin.system.updater.UpdateChecker;
-import pl.dawcou.astralogin.auth.security.TwoFactorManager;
+import pl.dawcou.astralogin.auth.security.twofactor.TwoFactorManager;
 import pl.dawcou.astralogin.system.seasonal.SeasonalEventManager;
 import pl.dawcou.astralogin.system.tasks.SecurityReminderTask;
 import pl.dawcou.astralogin.system.SoundManager;
 
+import javax.crypto.SecretKey;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.util.concurrent.TimeUnit;
@@ -73,6 +85,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
     private static AstraLogin instance;
     private BukkitAudiences adventure;
     private KeyPair keyPair;
+    private DataEncryptionManager encryptionManager;
 
     private boolean debugEnabled;
     private boolean devMockMode;
@@ -84,6 +97,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
     private PlayerDataManager playerDataManager;
     private GlobalDataManager globalDataManager;
 
+    private PunishmentModuleLoader punishmentModuleLoader;
     private BackendManager backendManager;
 
     private SchedulerManager schedulerManager;
@@ -106,6 +120,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
     private SessionManager sessionManager;
     private AttemptManager attemptManager;
     private TwoFactorManager twoFactorManager;
+    private EmailSender emailSender;
     private PremiumManager premiumManager;
     private IPManager ipManager;
     private IPTrustManager ipTrustManager;
@@ -124,18 +139,10 @@ public class AstraLogin extends JavaPlugin implements Listener {
     private SuspiciousManager suspiciousManager;
 
     // ----------------------------------------------------------------------------------------------------
-    // PROTOKOLY, NASLUCHIWACZE I KOMENDY
+    // NASLUCHIWACZE
     // ----------------------------------------------------------------------------------------------------
     private LoginListeners loginListeners;
     private TechnicalListeners technicalListeners;
-
-    private AstraLoginCommand astraLoginCommand;
-    private PasswordCommands passwordCommands;
-    private PINCommands pinCommands;
-    private IPResetCommand ipResetCommand;
-    private IPManagerCommand iPManagerCommand;
-    private IPTrustCommand iPTrustCommand;
-    private LoginSpawnCommand loginSpawnCommand;
 
     // ----------------------------------------------------------------------------------------------------
     // GETTERY - SYSTEMOWE I GLOWNE
@@ -144,6 +151,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
     public static AstraLogin getInstance() { return instance; }
     public BukkitAudiences getAdventure() { return this.adventure; }
     public KeyPair getKeyPair() { return keyPair; }
+    public DataEncryptionManager getEncryptionManager() { return encryptionManager; }
     public boolean isDebugEnabled() { return debugEnabled; }
     public boolean isDevMockMode() { return devMockMode; }
 
@@ -174,6 +182,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
     public SessionManager getSessionManager() { return sessionManager; }
     public AttemptManager getAttemptManager() { return attemptManager; }
     public TwoFactorManager getTwoFactorManager() { return twoFactorManager; }
+    public EmailSender getEmailSender() { return emailSender; }
     public PremiumManager getPremiumManager() { return premiumManager; }
     public IPManager getIPManager() { return ipManager; }
     public IPTrustManager getIpTrustManager() { return ipTrustManager; }
@@ -218,6 +227,19 @@ public class AstraLogin extends JavaPlugin implements Listener {
             getLogger().warning("==============================");
         }
 
+        try {
+            EncryptionKeyManager keyManager = new EncryptionKeyManager(getDataFolder().toPath());
+            SecretKey encryptionKey = keyManager.loadOrCreateKey();
+
+            encryptionManager = new DataEncryptionManager(encryptionKey);
+        } catch (IOException | GeneralSecurityException exception) {
+            getLogger().severe("Failed to initialize data encryption!");
+            exception.printStackTrace();
+
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
         schedulerManager = new SchedulerManager(this);
         soundManager = new SoundManager(this);
         backupManager = new BackupManager(this);
@@ -249,33 +271,17 @@ public class AstraLogin extends JavaPlugin implements Listener {
         autoUpdater = new AutoUpdater(this, "sO4dBl28");
 
         // 7. Inicjalizacja logiki i menedżerów
-        twoFactorManager = new TwoFactorManager(this, playerDataManager);
+        emailSender = new EmailSender(this);
+        twoFactorManager = new TwoFactorManager(this);
         accountManager = new AccountManager(this, playerDataManager);
         inventoryManager = new InventoryManager(this, playerDataManager);
         spawnManager = new SpawnManager(this, playerDataManager, globalDataManager);
 
         // --- MANAGERY ---
-        astraLoginCommand = new AstraLoginCommand(this);
-
-        // --- KOMENDY HASŁA ---
         passwordManager = new PasswordManager(this, playerDataManager);
-        passwordCommands = new PasswordCommands(this);
-
-        // --- KOMENDY PIN ---
         pinManager = new PINManager(this, playerDataManager);
-        pinCommands = new PINCommands(this, pinManager);
-
-        // --- KOMENDY PIN ---
         ipTrustManager = new IPTrustManager(this, globalDataManager);
-        iPTrustCommand = new IPTrustCommand(this, ipTrustManager);
-
-        // --- KOMENDY LOGIN SPAWNA ---
-        loginSpawnCommand = new LoginSpawnCommand(this);
-
-        // --- KOMENDY IP ---
         ipManager = new IPManager(this, playerDataManager, globalDataManager);
-        ipResetCommand = new IPResetCommand(this, ipManager);
-        iPManagerCommand = new IPManagerCommand(this);
 
         // --- POZOSTAŁE I ZADANIA ---
         sessionManager = new SessionManager(this, playerDataManager);
@@ -291,7 +297,7 @@ public class AstraLogin extends JavaPlugin implements Listener {
         try {
             // Generujemy parę kluczy RSA (1024-bit) dla autoryzacji Premium
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-            keyPairGenerator.initialize(1024);
+            keyPairGenerator.initialize(2048);
             keyPair = keyPairGenerator.generateKeyPair();
         } catch (Exception e) {
             getLogger().severe("Failed to generate RSA keys: " + e.getMessage());
@@ -301,11 +307,6 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
         loginListeners = new LoginListeners(this);
         technicalListeners = new TechnicalListeners(this);
-        AccountCommands accountCommands = new AccountCommands(this);
-        TwoFactorCommands twoFactorCommands = new TwoFactorCommands(this, twoFactorManager, loginSystem);
-
-        // Wczytywanie baz danych i cache
-        ipManager.reload();
 
         // --- FILTRACJA LOGÓW (UKRYWANIE HASEŁ) ---
         try {
@@ -327,35 +328,69 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
         getServer().getPluginManager().registerEvents(new LoginBlocks(this), this);
 
+        // --- KOMENDY ---
+        AstraLoginCommand astraLoginCommand = new AstraLoginCommand(this);
+        LoginSpawnCommand loginSpawnCommand = new LoginSpawnCommand(this);
+
+        ResetPassCommand resetPassCommand = new ResetPassCommand(this);
+        ForgotPassCommand forgotPassCommand = new ForgotPassCommand(this);
+        ChangePassCommand changePassCommand = new ChangePassCommand(this);
+
+        PINCommand pinCommand = new PINCommand(this, pinManager);
+        ResetPINCommand resetPINCommand = new ResetPINCommand(this, pinManager);
+
+        AccountCommand accountCommand = new AccountCommand(this);
+        ResetAccountCommand resetAccountCommand = new ResetAccountCommand(this);
+        IPListCommand ipListCommand = new IPListCommand(this);
+        AccountsListCommand accountsListCommand = new AccountsListCommand(this);
+        MoveAccountCommand moveAccountCommand = new MoveAccountCommand(this);
+        LogoutCommand logoutCommand = new LogoutCommand(this);
+
+        TwoFactorCommands twoFactorCommands = new TwoFactorCommands(this, twoFactorManager, loginSystem);
+
+        EmailCommand emailCommand = new EmailCommand(this, twoFactorManager);
+        ResetEmailCommand resetEmailCommand = new ResetEmailCommand(this, twoFactorManager.getEmailManager());
+
+        IPTrustCommand iPTrustCommand = new IPTrustCommand(this, ipTrustManager);
+        ResetIPCommand resetIPCommand = new ResetIPCommand(this, ipManager);
+        IPManagerCommand iPManagerCommand = new IPManagerCommand(this);
+
         // Komendy dla graczy
         registerCommand("zarejestruj", loginSystem);
         registerCommand("zaloguj", loginSystem);
-        registerCommand("zmienhaslo", passwordCommands, passwordCommands);
-        registerCommand("pin", pinCommands, pinCommands);
-        registerCommand("niepamietamhasla", passwordCommands, passwordCommands);
-        registerCommand("wyloguj", accountCommands);
+
+        registerCommand("zmienhaslo", changePassCommand, changePassCommand);
+
+        registerCommand("zresetujhaslo", resetPassCommand);
+
+        registerCommand("niepamietamhasla", forgotPassCommand);
+
+        registerCommand("pin", pinCommand, pinCommand);
+        registerCommand("wyloguj", logoutCommand);
         registerCommand("2fa", twoFactorCommands, twoFactorCommands);
+        registerCommand("mail", emailCommand, emailCommand);
 
         // Komendy administracyjne
         registerCommand("astralogin", astraLoginCommand, astraLoginCommand);
-        registerCommand("zresetujhaslo", passwordCommands);
-        registerCommand("zresetujpin", pinCommands);
-        registerCommand("zresetujip", ipResetCommand);
-        registerCommand("zresetujkonto", accountCommands);
+        registerCommand("zresetujhaslo", resetPassCommand);
+        registerCommand("zresetujpin", resetPINCommand);
+        registerCommand("zresetujip", resetIPCommand);
+        registerCommand("zresetujkonto", resetAccountCommand);
         registerCommand("zresetuj2fa", twoFactorCommands);
-        registerCommand("konto", accountCommands);
-        registerCommand("listakont", accountCommands);
+        registerCommand("zresetujmail", resetEmailCommand);
+        registerCommand("konto", accountCommand);
+        registerCommand("listakont", accountsListCommand);
 
-        registerCommand("listaip", accountCommands);
+        registerCommand("listaip", ipListCommand);
         registerCommand("zaufanieip", iPTrustCommand, iPTrustCommand);
         registerCommand("ipmanager", iPManagerCommand, iPManagerCommand);
 
-        registerCommand("przenieskonto", accountCommands);
+        registerCommand("przenieskonto", moveAccountCommand);
         registerCommand("spawnlogowania", loginSpawnCommand, loginSpawnCommand);
 
-        sessionManager.reload();
-        sessionManager.getTwoFactorSessionManager().reload();
+        sessionManager.loadAllSessions();
 
+        // ----------------------------------------------------------------------------------------------------
         // Schedulery
         // ----------------------------------------------------------------------------------------------------
 
@@ -380,7 +415,11 @@ public class AstraLogin extends JavaPlugin implements Listener {
 
         // Czyszczenie śmieci
         schedulerManager.runAsyncRepeating(
-                () -> premiumManager.cleanCache(),
+                () -> {
+                    premiumManager.cleanCache();
+                    seasonalEventManager.cleanCache();
+                    attemptManager.cleanCache();
+                },
                 30,
                 30,
                 TimeUnit.MINUTES
@@ -402,6 +441,9 @@ public class AstraLogin extends JavaPlugin implements Listener {
         if (getConfig().getBoolean("settings.update.check-updates", true)) {
             updateChecker.checkForUpdates(Bukkit.getConsoleSender());
         }
+
+        punishmentModuleLoader = new PunishmentModuleLoader(this);
+        punishmentModuleLoader.initialize();
 
         // Uruchamianie API
         AstraLoginAPIImpl apiImplementation = new AstraLoginAPIImpl(this);
@@ -470,9 +512,11 @@ public class AstraLogin extends JavaPlugin implements Listener {
         securityReminderTask.start();
         seasonalEventManager.loadEvents();
 
-        spawnManager.reload();
         sessionManager.reload();
+        twoFactorManager.reload();
         premiumManager.cleanCache();
+
+        punishmentModuleLoader.reload();
     }
 
     private void registerCommand(String name, CommandExecutor executor) {

@@ -4,121 +4,72 @@ import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.data.PlayerDataManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
-//--------------------------------------------------
-// Menedżer sesji dwuetapowej weryfikacji (2FA) oparty na PlayerDataManager z weryfikacją IP
-//--------------------------------------------------
 public class TwoFactorSessionManager {
 
     private final AstraLogin plugin;
     private final PlayerDataManager playerDataManager;
-
-    private final Map<UUID, Long> twoFactorSessions = new ConcurrentHashMap<>();
-    private final Map<UUID, String> twoFactorSessionsIP = new ConcurrentHashMap<>();
 
     public TwoFactorSessionManager(AstraLogin plugin, PlayerDataManager playerDataManager) {
         this.plugin = plugin;
         this.playerDataManager = playerDataManager;
     }
 
-    /**
-     * Zapisuje aktywną sesję 2FA w pamięci RAM i w pliku JSON gracza.
-     */
     public void saveSession2FA(UUID uuid, String ip) {
         if (uuid == null || ip == null) return;
 
         long now = System.currentTimeMillis();
-
-        twoFactorSessions.put(uuid, now);
-        twoFactorSessionsIP.put(uuid, ip);
-
-        playerDataManager.set(uuid, "sessions.2fa.timestamp", now);
-        playerDataManager.set(uuid, "sessions.2fa.ip", ip);
+        playerDataManager.set(uuid, "security.sessions.two-factor.created-at", now);
+        playerDataManager.set(uuid, "security.sessions.two-factor.ip", ip);
     }
 
-    /**
-     * Sprawdza ważność sesji 2FA gracza oraz zgodność adresu IP.
-     */
     public boolean hasActive2FASession(UUID uuid, String currentIP) {
         if (uuid == null || currentIP == null) return false;
 
         long now = System.currentTimeMillis();
         long limit = get2FALimitMillis();
 
-        // 1. Sprawdzamy najpierw pamięć RAM
-        if (twoFactorSessions.containsKey(uuid) && twoFactorSessionsIP.containsKey(uuid)) {
-            String savedIP = twoFactorSessionsIP.get(uuid);
-            long timestamp = twoFactorSessions.get(uuid);
+        long timestamp = playerDataManager.getLong(uuid, "security.sessions.two-factor.created-at", 0L);
+        String savedIP = playerDataManager.getString(uuid, "security.sessions.two-factor.ip");
 
-            if (!currentIP.equals(savedIP) || (now - timestamp > limit)) {
-                deleteSession2FA(uuid);
-                return false;
-            }
+        if (timestamp > 0 && (now - timestamp <= limit) && currentIP.equals(savedIP)) {
             return true;
-        }
-
-        // 2. Wczytujemy dane z pliku gracza w razie braku w RAM
-        long timestamp = playerDataManager.getLong(uuid, "sessions.2fa.timestamp", 0L);
-        String savedIP = playerDataManager.getString(uuid, "sessions.2fa.ip");
-
-        if (timestamp > 0 && savedIP != null && (now - timestamp <= limit)) {
-            if (currentIP.equals(savedIP)) {
-                twoFactorSessions.put(uuid, timestamp);
-                twoFactorSessionsIP.put(uuid, savedIP);
-                return true;
-            }
         }
 
         deleteSession2FA(uuid);
         return false;
     }
 
-    /**
-     * Usuwa sesję 2FA z pamięci RAM i z pliku gracza.
-     */
     public void deleteSession2FA(UUID uuid) {
         if (uuid == null) return;
 
-        twoFactorSessions.remove(uuid);
-        twoFactorSessionsIP.remove(uuid);
-
-        playerDataManager.remove(uuid, "sessions.2fa.timestamp");
-        playerDataManager.remove(uuid, "sessions.2fa.ip");
+        playerDataManager.remove(uuid, "security.sessions.two-factor.created-at");
+        playerDataManager.remove(uuid, "security.sessions.two-factor.ip");
     }
 
     public long get2FALimitMillis() {
         String timeStr = plugin.getConfig().getString("security.2fa.session.session-time", "2 days");
+
+
         return TimeUtils.parseTime(timeStr, 172800000L);
     }
 
-    /**
-     * Wczytuje i weryfikuje aktywne sesje 2FA z plików graczy.
-     */
-    public int loadSessionsFromFiles() {
+    public int loadAllSessions() {
         int count = 0;
         long now = System.currentTimeMillis();
         long limit = get2FALimitMillis();
 
         for (UUID uuid : playerDataManager.getAllPlayerUUIDs()) {
-            long timestamp = playerDataManager.getLong(uuid, "sessions.2fa.timestamp", 0L);
-            String savedIP = playerDataManager.getString(uuid, "sessions.2fa.ip");
+            long timestamp = playerDataManager.getLong(uuid, "security.sessions.two-factor.created-at", 0L);
+            String savedIP = playerDataManager.getString(uuid, "security.sessions.two-factor.ip");
 
             if (timestamp > 0 && savedIP != null && (now - timestamp <= limit)) {
-                twoFactorSessions.put(uuid, timestamp);
-                twoFactorSessionsIP.put(uuid, savedIP);
                 count++;
             } else if (timestamp > 0) {
                 deleteSession2FA(uuid);
             }
         }
         return count;
-    }
-
-    public void reload() {
-        twoFactorSessions.clear();
-        twoFactorSessionsIP.clear();
     }
 }

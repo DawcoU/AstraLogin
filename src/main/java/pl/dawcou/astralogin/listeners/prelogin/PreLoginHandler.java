@@ -55,7 +55,7 @@ public class PreLoginHandler {
             return;
         }
 
-        String registeredName = plugin.getAccountManager().getRegisteredNameIgnoreCase(playerName);
+        String registeredName = plugin.getAccountManager().getRegisteredName(playerName);
 
         // Jeśli znaleziono nick w pliku kont
         if (registeredName != null) {

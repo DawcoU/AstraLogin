@@ -10,6 +10,7 @@ import pl.dawcou.astralogin.data.PlayerDataManager;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class IPManager {
 
@@ -127,7 +128,7 @@ public class IPManager {
     // Utility & Mapping Methods
     // ----------------------------------------------------------------------------------------------------
     public Map<String, List<String>> getIpToNamesMap() {
-        Map<String, List<String>> ipToNamesMap = new HashMap<>();
+        Map<String, List<String>> ipToNamesMap = new ConcurrentHashMap<>();
         JsonObject uuidsObj = globalDataManager.getJsonObject("usermap.uuids");
 
         if (uuidsObj != null) {

@@ -57,7 +57,7 @@ public class JoinSessionHandler {
                     .hasActive2FASession(uuid, currentIP);
 
             if (!is2FASessionEnabled || !hasActive2FA) {
-                loginSystem.requestTwoFactor(p, false);
+                loginSystem.getTwoFactorSystem().requestTwoFactor(p, false);
                 return true;
             }
         }

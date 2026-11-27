@@ -4,7 +4,7 @@
 
 
 # =========================================
-#             General Settings
+#             GENERAL SETTINGS
 # =========================================
 settings:
   # Wybierz język pluginu (Dostępne: pl, en, de, es)
@@ -49,7 +49,7 @@ settings:
 
 
 # =====================================
-#           Security Settings
+#           SECURITY SETTINGS
 # =====================================
 security:
   attempts:
@@ -76,12 +76,39 @@ security:
       # How long should a 2FA session last?
       session-time: "2 days"
 
+    mail:
+      # How long an email verification code remains valid (e.g., "2 minutes", "90 seconds")
+      code-lifetime: "2 minutes"
+
+      # SMTP server settings for sending verification emails
+      smtp:
+        host: ""
+        port: 587
+        username: ""
+        password: ""
+        starttls: true
+        from: ""
+        connection-timeout: 10000
+        timeout: 10000
+        write-timeout: 10000
+
   captcha:
     # Should Captcha be enabled?
     enabled: true
 
-    # Number of errors allowed (from 1 to 5)
-    max-attempts: 3
+    attempts:
+      # Should captcha attempt protection be enabled?
+      enabled: true
+
+      # Maximum number of captcha attempts before action is taken (1 to 5)
+      max: 2
+
+      # 0 = Ban immediately after exceeding max attempts
+      # 1 = One extra "margin" chance (kick) before final ban, and other values do the same, etc.
+      margin: 1
+
+      # Temporary ban duration (format: "number unit", e.g., "5 minutes", "1 hour")
+      tempban-time: "15 minutes"
 
     selection:
       # GUI - Solve the CAPTCHA by selecting the correct item from an inventory window
@@ -396,7 +423,7 @@ sounds:
 
 
 # =========================================
-#             Seasonal Events
+#             SEASONAL EVENTS
 # =========================================
 seasonal-events:
   # Main toggle for seasonal event support
@@ -425,10 +452,29 @@ seasonal-events:
         - "ENTITY_WARDEN_LISTENING_ANGRY"
         - "ENTITY_WARDEN_AMBIENT"
         - "BLOCK_SCULK_SHRIEKER_SHRIEK"
+    christmas:
+      enabled: true
+      # Christmas and New Year period
+      date-range: "01.12-07.01"
+      # Festive sound pool picked randomly on played actions
+      sounds:
+        - "BLOCK_BELL_RESONATE"
+        - "BLOCK_BELL_USE"
+        - "BLOCK_NOTE_BLOCK_CHIME"
+        - "BLOCK_NOTE_BLOCK_BELL"
+        - "BLOCK_NOTE_BLOCK_FLUTE"
+        - "BLOCK_NOTE_BLOCK_PLING"
+        - "ENTITY_PLAYER_LEVELUP"
+        - "ENTITY_EXPERIENCE_ORB_PICKUP"
+        - "ENTITY_FIREWORK_ROCKET_TWINKLE"
+        - "ENTITY_FIREWORK_ROCKET_LAUNCH"
+        - "ENTITY_FIREWORK_ROCKET_BLAST"
 
-    # Future events structure example:
-    # christmas:
-    #   enabled: true
-    #   date-range: "20.12-05.01"
-    #   sounds:
-    #     - "BLOCK_AMETHYST_BLOCK_CHIME"
+
+# ===============================
+#             MODULES
+# ===============================
+modules:
+  punishments:
+    enabled: false
+    check-conflicts: true

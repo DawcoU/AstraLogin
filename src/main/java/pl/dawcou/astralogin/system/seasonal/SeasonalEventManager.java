@@ -4,14 +4,15 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.system.seasonal.events.ChristmasEvent;
 import pl.dawcou.astralogin.system.seasonal.events.HalloweenEvent;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
+import pl.dawcou.astralogin.system.utils.TimedCache;
 
 import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.MonthDay;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 // ---------------------------------------------------------------- //
@@ -22,7 +23,7 @@ public class SeasonalEventManager {
     private final AstraLogin plugin;
     private SeasonalEvent activeEvent;
 
-    private final Map<UUID, Long> lastMessageTime = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> lastMessageTime = TimedCache.create();
 
     public SeasonalEventManager(AstraLogin plugin) {
         this.plugin = plugin;
@@ -78,10 +79,12 @@ public class SeasonalEventManager {
 
     private SeasonalEvent createEventInstance(String eventKey, ConfigurationSection section) {
         List<String> sounds = section.getStringList("sounds");
-        if (eventKey.equalsIgnoreCase("halloween")) {
-            return new HalloweenEvent(sounds);
-        }
-        return null;
+
+        return switch (eventKey.toLowerCase()) {
+            case "halloween" -> new HalloweenEvent(sounds);
+            case "christmas" -> new ChristmasEvent(sounds);
+            default -> null;
+        };
     }
 
     private boolean isDateInRange(LocalDate today, String range) {
@@ -142,22 +145,15 @@ public class SeasonalEventManager {
             return;
         }
 
-        String rawTime = plugin.getConfig().getString(
-                "seasonal-events.message-cooldown",
-                "10 minutes"
-        );
-
-        long cooldownMillis = Math.max(
-                0L,
-                TimeUtils.parseTime(rawTime, 600_000L)
+        long cooldownMillis = TimeUtils.parseTime(
+                plugin.getConfig().getString("seasonal-events.message-cooldown", "10 minutes"),
+                600_000L
         );
 
         UUID playerId = player.getUniqueId();
-        long now = System.currentTimeMillis();
 
-        Long lastSent = lastMessageTime.get(playerId);
-
-        if (lastSent != null && now - lastSent < cooldownMillis) {
+        // Jeśli wpis jeszcze nie wygasł → pomijamy
+        if (!TimedCache.isExpired(lastMessageTime, playerId, cooldownMillis)) {
             return;
         }
 
@@ -165,7 +161,7 @@ public class SeasonalEventManager {
         String randomMessage = messages.get(randomIndex);
 
         player.sendMessage(randomMessage);
-        lastMessageTime.put(playerId, now);
+        TimedCache.touch(lastMessageTime, playerId);
     }
 
     public SeasonalEvent getActiveEvent() {
@@ -174,5 +170,10 @@ public class SeasonalEventManager {
 
     public boolean hasActiveEvent() {
         return activeEvent != null;
+    }
+
+    public void cleanCache() {
+        long ttl = 43_200_000L;
+        TimedCache.cleanExpired(lastMessageTime, ttl);
     }
 }

@@ -20,11 +20,11 @@ messages:
 
   # --- Login ---
   login:
-    server-busy: "&cThe server is currently experiencing heavy login traffic. Try again"
-    rate-limit: "&cToo many login attempts! Please wait &6%time% &cbefore trying again"
+    server-busy: "&cThe server is currently experiencing heavy login traffic. Please try again in a moment!"
+    rate-limit: "&cToo many login attempts! Please wait &6%time% &cbefore trying again."
 
-    already-logged: "&cYou are already logged in/registered!"
-    already-online: "&cA player with this nickname is on the server!"
+    already-logged: "&cYou are already logged in or registered!"
+    already-online: "&cA player with this name is already on the server!"
     wrong-casing: "&cJoin the server using the correct case!\n&7Correct nickname: &6%registered%"
     no-account: "&cYou do not have an account! Type &e/register <password, repeat>"
     success: "&aSuccessfully logged in!"
@@ -42,14 +42,14 @@ messages:
 
   # --- Premium Login ---
   premium:
-    success: "&ePremium &aaccount detected, logged in automatically!"
+    success: "&ePremium &aaccount detected. Logged in automatically!"
 
 
   # --- /forgotpass ---
   forgot-password:
     usage: "&cCorrect usage: &e/forgotpass <PIN>"
     wrong-pin: "&cWrong PIN!"
-    no-has-pin: "&cYou don't have a registered PIN!"
+    no-has-pin: "&cYou do not have a registered PIN!"
 
     player:
       kick: "&aYour password has been successfully reset!"
@@ -91,27 +91,27 @@ messages:
       exceeded: "&cToo many failed login attempts! Remaining attempts: &6%remaining%"
       ban: "&cToo many failed login attempts! You have been banned for &6%time%"
     multiaccount: "&cAccount limit for this IP address has been reached!"
-    ip-spam: "&cToo many connection attempts from your IP address! You are blocked on &6%time%"
+    ip-spam: "&cToo many connection attempts from your IP address! You are blocked for &6%time%"
     suspicious-ip-alert: "&cSuspicious activity detected! Player &4%target% &cjoined from an unknown IP address: &6%ip%"
 
     reminders:
       no-2fa-no-pin:
-        - "&c----------------------------------------"
+        - "&7&m----------------------------------------"
         - "&eYour account is not fully secured!"
         - "&f1. Enable 2FA using &a/2fa <setup>&f to prevent account theft"
         - "&f2. Set a PIN using &a/pin <setup>&f to recover your account if you forget your password"
-        - "&c----------------------------------------"
+        - "&7&m----------------------------------------"
       no-2fa-has-pin:
-        - "&c----------------------------------------"
+        - "&7&m----------------------------------------"
         - "&eYour account does not have 2FA enabled yet!"
         - "&fIncrease your account security using &a/2fa <setup>"
-        - "&c----------------------------------------"
+        - "&7&m----------------------------------------"
       has-2fa-no-pin:
-        - "&e----------------------------------------"
+        - "&7&m----------------------------------------"
         - "&aAlmost there!"
         - "&fYou have 2FA enabled, but you haven't set a recovery PIN"
         - "&fSet it using &a/pin <setup>&f so you can recover access to your account"
-        - "&e----------------------------------------"
+        - "&7&m----------------------------------------"
 
 
   # --- Captcha (Bot Protection) ---
@@ -126,44 +126,44 @@ messages:
     modes:
       gui:
         title: "&6Captcha"
-        wrong-choice: "&c✖ Incorrect choice! Attempt &6%attempts%&c/&6%max% &cTry again"
+        wrong-choice: "&c✖ Incorrect choice! Attempt &6%attempts%&c/&6%max%&c. Try again."
         prompts:
-          edible: "&8- &eClick Edible"
-          red: "&8- &eClick Red"
-          blue: "&8- &eClick Blue"
-          green: "&8- &eClick Green"
-          yellow: "&8- &eClick Yellow"
-          wood: "&8- &eClick Wood"
-          bow_ammo: "&8- &eClick Bow Ammo"
-          chicken_drop: "&8- &eClick Chicken Drop"
-          redstone: "&8- &eClick Redstone"
-          ore: "&8- &eClick Ore"
-          helmet: "&8- &eClick Helmet"
-          netherite: "&8- &eClick Netherite"
-          potion: "&8- &eClick Potion"
-          music_disc: "&8- &eClick Music Disc"
-          boat: "&8- &eClick Boat"
-          tool: "&8- &eClick Tool"
+          edible: "&8- &eClick an edible item"
+          red: "&8- &eClick red"
+          blue: "&8- &eClick blue"
+          green: "&8- &eClick green"
+          yellow: "&8- &eClick yellow"
+          wood: "&8- &eClick wood"
+          bow_ammo: "&8- &eClick arrows"
+          chicken_drop: "&8- &eClick a chicken drop"
+          redstone: "&8- &eClick redstone"
+          ore: "&8- &eClick ore"
+          helmet: "&8- &eClick a helmet"
+          netherite: "&8- &eClick netherite"
+          potion: "&8- &eClick a potion"
+          music_disc: "&8- &eClick a music disc"
+          boat: "&8- &eClick a boat"
+          tool: "&8- &eClick a tool"
       map:
-        instruction: "&eType the code shown on the map in your hand into the chat!"
+        instruction: "&eType the code shown on the map in your hand in chat!"
         item-name: "&6Captcha Map"
-        wrong-code: "&c✖ Incorrect code! Attempt &6%attempts%&c/&6%max% &cTry again"
+        wrong-code: "&c✖ Incorrect code! Attempt &6%attempts%&c/&6%max%&c. Try again."
       chat:
         instruction: "&eSolve the math puzzle: &6%equation%"
-        wrong-answer: "&c✖ Incorrect answer! Attempt &6%attempts%&c/&6%max% &cTry again"
+        wrong-answer: "&c✖ Incorrect answer! Attempt &6%attempts%&c/&6%max%&c. Try again."
 
 
   # --- IP Trust ---
   ip-trust:
     usage: "&cCorrect usage: &6/iptrust <reset, info, set, IP address, score>"
     ip-not-found: "&cIP address not found: &6(%ip%)"
-    invalid-number: "&cThe amount of points can only contain numbers!"
+    invalid-number: "&cThe point value can contain digits only!"
     reset-success: "&aSuccessfully reset reputation for IP: &e(%ip%)"
     set-success: "&aSuccessfully set reputation: &6(%score%) &afor IP: &e(%ip%)"
     ip-info:
       - "&7&m-------------------------"
       - "&6&lIP Address Reputation (%ip%):"
-      - "&eTrust Score: &f%score%"
+      - "&eTrust score: &f%score%"
       - "&6Rating: %rate%"
       - "&7&m-------------------------"
     rate-fatal: "&0Fatal"
@@ -179,8 +179,8 @@ messages:
     no-ip: "&cNo registered IP address found for player &6%player%&c!"
 
     info:
-      not-banned: "&aPlayer &6%player% &7(IP address: %ip%) &adoes not have an active IP address ban"
-      banned: "&cPlayer &6%player% &7(IP address: %ip%) &cis banned! Reason: &6%reason%&c, Time left: &6%time%"
+      not-banned: "&aPlayer &6%player% &7(IP address: %ip%) &adoes not have an active IP ban."
+      banned: "&cPlayer &6%player% &7(IP address: %ip%) &cis banned! Reason: &6%reason%&c. Time remaining: &6%time%"
 
     unban:
       not-banned: "&cIP address for player &6%player% &cis not banned!"
@@ -188,15 +188,15 @@ messages:
 
     bypass:
       enabled: "&aEnabled IP address check bypass for player &6%player%"
-      already-enabled: "&cIP address Bypass for player &6%player% &cis already enabled!"
+      already-enabled: "&cIP address check bypass for player &6%player% &cis already enabled!"
       disabled: "&cDisabled IP address check bypass for player &6%player%"
-      already-disabled: "&cIP address Bypass for player &6%player% &cis already disabled!"
+      already-disabled: "&cIP address check bypass for player &6%player% &cis already disabled!"
 
 
   # --- Sessions ---
   session:
     timer: "&ePlease log in within &6%time%&e!"
-    restored: "&eSession active. Logged in automatically!"
+    restored: "&aSession restored. You have been logged in automatically!"
     twofactor-expired: "&cYour 2FA session has expired! Please enter the code"
 
 
@@ -209,52 +209,90 @@ messages:
     twofactor: "&b&l2FA"
 
 
-  # --- Two-Factor Authentication (2FA) ---
+  # --- Two-Factor Authentication 2FA ---
   twofactor:
+    required: "&eEnter code from application: &6/2fa <code>"
     usage: "&cCorrect usage: &6/2fa <setup, unsetup, code>"
-    already-enabled: "&cYou already have 2FA enabled!"
-    not-enabled: "&cYou do not have 2FA enabled!"
-
-    setup-instructions:
-      - "&7&m-------------------------"
-      - "&6&l2FA - Setup"
-      - "&eSecret Key: &f%secret%"
-      - "&eEnter the code in your app, then type: &6/2fa <code>"
-      - "&7&m-------------------------"
-
-    setup-backup-codes:
-      - "&eBackup Codes:"
-      - "&7- &f%codes%"
-      - "&6Use one of these if you lose access to your authenticator app!"
-      - "&7&m-------------------------"
-
-    setup-timer: "&aTime remaining for setup: &e%seconds%"
-    expired: "&cVerification time has expired!"
+    setup-method-usage: "&cCorrect usage: &6/2fa setup <totp, mail>"
+    already-enabled: "&c2FA protection is already enabled!"
+    not-enabled: "&c2FA protection is not enabled!"
+    not-needed: "&cYou do not need to enter a 2FA code right now!"
     setup-already-active: "&cYou are already setting up 2FA!"
-    not-in-setup: "&cYou are not currently setting up or removing 2FA"
-
-    success: "&a2FA protection has been successfully enabled!"
-    removed-success: "&a2FA has been successfully removed!"
-
+    expired: "&cVerification time has expired!"
+    setup-timer: "&aTime for setup: &e%seconds%"
     wrong-code: "&cIncorrect 2FA code!"
-    required: "&eEnter the code from your app: &6/2fa <code>"
-    not-needed: "&cYou do not need to enter a 2FA code right now"
+    success: "&a2FA protection successfully enabled!"
+    removed-success: "&a2FA successfully removed!"
 
-    unsetup-instructions: "&cTo disable 2FA, enter the code: /2fa unsetup <code>"
+    setup:
+      instructions:
+        - "&7&m-------------------------"
+        - "&6&l2FA - TOTP Setup"
+        - "&eKey: &f%secret%"
+        - "&eEnter code in app, then: &6/2fa <code>"
+        - "&7&m-------------------------"
+      backup-codes:
+        - "&eBackup codes:"
+        - "&7- &f%codes%"
+        - "&6Use one of these if you lose access to the app!"
+        - "&7&m-------------------------"
+
+    mail:
+      not-configured: "&cEmail sending is not configured!"
+      not-set: "&cYou do not have an email address set! Use &6/mail set <address>"
+      send-failed: "&cFailed to send code to email address!"
+      save-failed: "&cFailed to save the MAIL 2FA configuration!"
+      code-expired: "&cEmail code expired or attempt limit exceeded!"
+      setup-instructions:
+        - "&7&m-------------------------"
+        - "&6&l2FA - MAIL Setup"
+        - "&eCode has been sent to: &f%email%"
+        - "&eEnter it using: &6/2fa <code>"
+        - "&7&m-------------------------"
+      setup-code-sent: "&aVerification code has been sent to &f%email%"
+
+    login:
+      code-expired: "&cYour login code has expired. Use &6/2fa &cto request a new one."
+      code-pending: "&eLogin code has already been sent. Check your inbox!"
+      code-sent: "&aLogin code has been sent to &f%email%"
+
+    unsetup:
+      instructions: "&cTo disable 2FA, enter the code: &6/2fa unsetup <code>"
+      mail-required: "&cFirst request a 2FA disable code using &6/2fa unsetup"
+      code-pending: "&e2FA disable code has already been sent. Check your inbox!"
+      code-sent: "&a2FA disable code has been sent to &f%email%"
+
+
+  # --- Email address ---
+  mail:
+    usage: "&cCorrect usage: &6/mail <set, del>"
+    invalid-address: "&cThe specified email address is invalid!"
+    set-success: "&aEmail address successfully set to: &f%email%"
+    already-set: "&cEmail address is already set!"
+    not-set: "&cYou do not have an email address set!"
+    mail-2fa-active: "&cDisable MAIL 2FA protection first!"
+    setup-active: "&cYou cannot change email address during 2FA setup!"
+    deleted: "&aEmail address successfully deleted!"
+    deleted-mail-disabled: "&aEmail address deleted and MAIL 2FA protection disabled!"
+
+    delete:
+      confirm: "&cAre you sure you want to delete email address &6%email%&c?"
+      button: "&4&l[DELETE]"
+      hover: "&aClick to delete email address: &e%email%"
 
 
   # --- Account Info Command (/account) ---
   account:
     usage: "&cCorrect usage: &e/account <player>"
-    no-data: "No data"
-    logout-success: "&aLogged Out Successfully"
+    no-data: "&7No data"
+    logout-success: "&aSuccessfully logged out!"
 
     stats:
       header: "&8--- &6Account Statistics: &e%target% &8---"
       uuid: "&7UUID: &f%uuid%"
       ip: "&7Last IP address: &f%ip%"
-      register-date: "&7Registration Date: &f%register_date%"
-      login-date: "&7Last Login: &f%login_date%"
+      register-date: "&7Registration date: &f%register_date%"
+      login-date: "&7Last login: &f%login_date%"
       status-2fa: "&72FA Status: %status%"
       footer: "&8--------------------------------"
 
@@ -268,23 +306,23 @@ messages:
   accounts-list:
     generating: "&7Loading registered accounts list..."
     empty: "&cThe account database is empty"
-    header: "&7===== &6Registered Accounts &7====="
+    header: "&7===== &6Registered accounts &7====="
     format: "&7- &e%name% &7(&aUUID: &b%uuid%&7)"
     footer: "&7======================================="
 
 
   # --- IP List Command (/iplist) ---
   ip-list:
-    generating: "&7Loading IP List..."
+    generating: "&7Loading IP address list..."
     empty: "&cThe IP address database is empty"
-    header: "&7===== &6Registered IPs &7====="
+    header: "&7===== &6Registered IP addresses &7====="
     format: "&e%ip% &b(&6Accounts: %count%&b) &7-> &a%players%"
     footer: "&7==========================================="
 
 
   # --- Move Account Command (/moveaccount) ---
   account-move:
-    usage: "&cCorrect usage: &e/moveaccount <old nick, new nick>"
+    usage: "&cCorrect usage: &e/moveaccount <old name, new name>"
     start: "&aStarting verification and migration process for &e%old% &a--> &e%new%"
 
     success: "&aSuccessfully transferred data from &e%old% &ato &e%new%&a!"
@@ -293,9 +331,9 @@ messages:
     new-player-exists: "&cThe new UUID &6(%uuid%) &calready exists in the plugin database!"
     old-player-no-data: "&cPlayer &6%target% &chas no data saved in this plugin. Nothing to transfer!"
 
-    player-is-the-same: "&cThe old and new player nicknames are identical!"
+    player-same: "&cThe old and new player nicknames are identical!"
 
-    players-online: "&cPlayer &6%old% &cor &6%new% &cis online! &4They must be offline during migration to prevent data corruption!"
+    players-online: "&cPlayer &6%old% &cor &6%new% &cis online! &4Both must be offline during migration to prevent data corruption!"
 
     confirm: "&cThis action is &4&nIRREVERSIBLE&c!"
     button: "&6&l[TRANSFER]"
@@ -305,6 +343,7 @@ messages:
   # --- Reset Password (/resetpass) ---
   reset-password:
     usage: "&cCorrect usage: &e/resetpass <player>"
+    no-account: "&cPlayer &6%player% &cdoes not have a registered account!"
 
     admin:
       success: "&aPassword for player &6%player% &ahas been successfully reset"
@@ -319,10 +358,20 @@ messages:
     no-has-pin: "&cThis player does not have a registered PIN!"
 
     admin:
-      success: "&aPlayer &6%player%['s] PIN has been reset"
+      success: "&aSuccessfully reset the PIN for player &6%player%&a!"
 
     player:
       message: "&cYour PIN has been reset by the administrator!"
+
+
+  # --- Reset Email /resetmail ---
+  reset-email:
+    usage: "&cCorrect usage: &e/resetmail <player>"
+    no-email: "&cThis player does not have an assigned email address!"
+    admin:
+      success: "&aSuccessfully reset the email address for player &6%player%!"
+    player:
+      message: "&cAn administrator has reset your email address. You can set a new one."
 
 
   # --- Reset IP (/resetip) ---
@@ -341,7 +390,7 @@ messages:
   purge-account:
     usage: "&cCorrect usage: &e/resetaccount <player>"
     admin:
-      success: "&aSuccessfully purged ALL account data for player &e%player%"
+      success: "&aSuccessfully deleted all account data for player &e%player%!"
 
     player:
       kick: "&cYour account has been completely removed from the server database by an administrator"
@@ -356,32 +405,35 @@ messages:
     usage: "&cCorrect usage: &e/reset2fa <player>"
 
     admin:
-      success: "&aSuccessfully removed two-factor authentication from &e%player%['s] account"
+      success: "&aSuccessfully removed two-factor authentication from player &e%player%&a!"
 
     target:
       not-enabled: "&cPlayer &6%target% &cdoes not have two-factor authentication (2FA) enabled!"
-      waiting: "&cPlayer &6%target% &cis currently undergoing verification!"
+      waiting: "&cPlayer &6%target% &cis currently being verified!"
       setting-up: "&cPlayer &6%target% &cis currently setting up 2FA!"
 
     player:
       kick: "&cYour two-factor authentication has been removed by an administrator"
 
 
-  # --- Login Spawn System ---
+  # --- Login spawn system ---
   spawn:
-    set-success: "&aSuccessfully set spawn location for: &e%type%"
-    deleted-success: "&aSuccessfully removed spawn location for: &e%type%"
+    set-success: "&aSuccessfully set the location for: &e%type%"
 
-    usage: "&cCorrect usage: &e/loginspawn <setspawn, delspawn> <before_login, after_login>"
+    usage: "&cUsage: &e/loginspawn <setspawn, delspawn> <before_login, after_login>"
     invalid-type: "&cInvalid type! &eUse: before_login or after_login"
-    exists: "&cSpawn for &6%type% &calready exists!"
-    does-not-exist: "&cSpawn for &6%type% &cdoes not exist!"
+    exists: "&cSpawn &6%type% &calready exists!"
+    does-not-exist: "&cSpawn &6%type% &cdoes not exist!"
 
-    overwrite-button: "&e&l[OVERWRITE]"
-    overwrite-hover: "&aClick here to force overwrite the location for: &e%type%"
-    delete-confirm: "&cAre you sure you want to delete the &6%type% &cspawn?"
-    delete-button: "&4&l[CONFIRM DELETE]"
-    delete-hover: "&aClick to permanently delete the spawn: &e%type%"
+    overwrite:
+      button: "&e&l[REPLACE]"
+      hover: "&aClick here to force overwrite the location for: &e%type%"
+
+    delete:
+      success: "&aDeleted spawn location: &e%type%"
+      confirm: "&cAre you sure you want to delete spawn &6%type%&c?"
+      button: "&4&l[DELETE]"
+      hover: "&aClick to permanently delete the spawn: &e%type%"
 
 
   # --- Seasonal Events ---
@@ -392,6 +444,12 @@ messages:
       - "&6[Halloween] &cTrick or treat? There is no &4escape &ctoday!"
       - "&6[Halloween] &cDo you hear those quiet whispers behind your &4back?"
       - "&6[Halloween] &cThe night has just begun, and your &4fate &cis already sealed..."
+    christmas:
+      - "&b[Christmas] &fSnow is falling outside, and holiday magic fills the whole &3world!"
+      - "&b[Christmas] &fMay this special time bring you lots of joy and &3happiness!"
+      - "&b[Christmas] &fBells are already ringing, and festive spirit reaches even the farthest corners of the &3server!"
+      - "&b[Christmas] &fSanta is preparing gifts, and what about you? Don't forget the holiday &3fun!"
+      - "&b[Christmas] &fThe year is slowly coming to an end... May the upcoming New Year be full of &3adventures!"
 
 
   # --- Update System ---
@@ -400,10 +458,10 @@ messages:
     api-error: "&cFailed to connect to the Modrinth API"
     no-versions: "&cNo published versions were found"
     up-to-date: "&aAstraLogin is already up to date"
-    local-newer: "&eThe installed version is newer than the latest version published on Modrinth. Update skipped"
+    local-newer: "&eThe installed version is newer than the latest version published on Modrinth. Update skipped."
     no-files: "&cNo downloadable file was found for the latest version"
     directory-error: "&cFailed to create the update directory"
     download-error: "&cFailed to download the update"
     downloaded: "&aAstraLogin update downloaded successfully"
     restart-required: "&eRestart the server to apply the update"
-    failed: "&cAn error occurred while checking for or downloading the update"
+    failed: "&cAn error occurred while checking for updates or downloading the file."

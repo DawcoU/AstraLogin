@@ -3,13 +3,13 @@ package pl.dawcou.astralogin.auth.security.premium;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.system.utils.TimedCache;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,12 +36,10 @@ public class PremiumManager {
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
     private final Map<String, Boolean> usernameCache = new ConcurrentHashMap<>();
-    private final Map<String, Long> usernameCacheTime = new ConcurrentHashMap<>();
+    private final Map<String, Long> usernameCacheTime = TimedCache.create();
 
     // Jedna główna mapa zarządzająca stanem gracza
     private final Map<UUID, StateEntry> playerStates = new ConcurrentHashMap<>();
-
-    public Map<String, Boolean> getUsernameCache() { return Collections.unmodifiableMap(usernameCache); }
 
     public PremiumManager(AstraLogin plugin) {
         this.plugin = plugin;
@@ -108,7 +106,7 @@ public class PremiumManager {
             boolean premium = response.statusCode() == 200;
 
             usernameCache.put(lowerName, premium);
-            usernameCacheTime.put(lowerName, System.currentTimeMillis());
+            TimedCache.touch(usernameCacheTime, lowerName);
 
             return premium;
         } catch (Exception e) {
@@ -118,34 +116,23 @@ public class PremiumManager {
     }
 
     public Boolean checkUsernameCache(String lowerName) {
-        Boolean cached = usernameCache.get(lowerName);
-        Long cacheTime = usernameCacheTime.get(lowerName);
-
-        if (cached != null && cacheTime != null) {
-            long cacheAge = System.currentTimeMillis() - cacheTime;
-
-            if (cacheAge < 12L * 60 * 60 * 1000L) {
-                return cached;
-            }
+        if (TimedCache.isExpired(usernameCacheTime, lowerName, 86_400_000L)) {
             usernameCache.remove(lowerName);
             usernameCacheTime.remove(lowerName);
+            return null;
         }
-        return null;
+        return usernameCache.get(lowerName);
     }
 
     public void cleanCache() {
         long now = System.currentTimeMillis();
 
-        // Czyścimy cache nicków Premium po 12 godzinach
-        usernameCacheTime.forEach((name, time) -> {
-            if (now - time >= 12L * 60 * 60 * 1000L) {
-                usernameCache.remove(name);
-                usernameCacheTime.remove(name);
-            }
-        });
+        // Cache nicków – 24 godziny
+        TimedCache.cleanExpired(usernameCacheTime, 86_400_000L);
+        // Usuwamy też odpowiadające wpisy z głównej mapy
+        usernameCache.keySet().removeIf(name -> !usernameCacheTime.containsKey(name));
 
-        // Czyścimy porzucone stany z pakietów
-        // (np. połączenia zerwane przed dołączeniem do świata > 30s)
+        // Porzucone stany z pakietów (> 30s i nie AUTHENTICATED)
         playerStates.forEach((uuid, entry) -> {
             if (now - entry.timestamp >= 30_000
                     && entry.state != BypassState.AUTHENTICATED) {

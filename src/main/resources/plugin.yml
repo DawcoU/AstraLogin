@@ -14,6 +14,8 @@ commands:
     aliases: [al]
   zresetujhaslo:
     aliases: [resetpass, delpass]
+  zresetujmail:
+    aliases: [resetmail, delmail]
   zresetujpin:
     aliases: [resetpin, delpin]
   zmienhaslo:
@@ -38,6 +40,8 @@ commands:
     aliases: [accountslist]
   2fa:
     aliases: [tfa]
+  mail:
+    aliases: [email]
   przenieskonto:
     aliases: [moveaccount]
   spawnlogowania:
@@ -57,6 +61,8 @@ permissions:
   astralogin.update:
     default: op
   astralogin.resetpassword:
+    default: op
+  astralogin.resetmail:
     default: op
   astralogin.resetpin:
     default: op

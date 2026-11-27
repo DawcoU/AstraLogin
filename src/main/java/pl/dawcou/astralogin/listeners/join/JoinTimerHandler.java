@@ -45,7 +45,7 @@ public class JoinTimerHandler {
         }
 
         plugin.getSchedulerManager().runAsyncRepeating(task -> {
-            if (!p.isOnline() || (loginSystem.getLoggedIn().contains(uuid) && !loginSystem.isWaitingFor2FA(uuid))) {
+            if (!p.isOnline() || (loginSystem.isLoggedIn(uuid) && !loginSystem.getTwoFactorSystem().isWaitingFor2FA(uuid))) {
                 hideBossBar(p, bossBar, useBossBar);
                 task.cancel();
                 return;

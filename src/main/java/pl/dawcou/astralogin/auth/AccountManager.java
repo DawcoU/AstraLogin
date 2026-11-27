@@ -23,8 +23,8 @@ public class AccountManager {
     public void recordRegister(UUID uuid, String name) {
         String now = getCurrentDateTime();
         playerDataManager.set(uuid, "account.name", name);
-        playerDataManager.set(uuid, "account.register-date", now);
-        playerDataManager.set(uuid, "account.last-login-date", now);
+        playerDataManager.set(uuid, "account.registered-at", now);
+        playerDataManager.set(uuid, "account.last-login-at", now);
 
         plugin.getGlobalDataManager().set("usermap.names." + name.toLowerCase(), name);
         plugin.getGlobalDataManager().set("usermap.uuids." + name.toLowerCase(), uuid.toString());
@@ -32,18 +32,18 @@ public class AccountManager {
 
     public void recordLogin(UUID uuid, String name) {
         playerDataManager.set(uuid, "account.name", name);
-        playerDataManager.set(uuid, "account.last-login-date", getCurrentDateTime());
+        playerDataManager.set(uuid, "account.last-login-at", getCurrentDateTime());
 
         plugin.getGlobalDataManager().set("usermap.names." + name.toLowerCase(), name);
         plugin.getGlobalDataManager().set("usermap.uuids." + name.toLowerCase(), uuid.toString());
     }
 
     public long getLastSecurityReminderTime(UUID uuid) {
-        return playerDataManager.getLong(uuid, "account.last-security-reminder-timestamp", 0L);
+        return playerDataManager.getLong(uuid, "account.last-security-reminder", 0L);
     }
 
     public void setLastSecurityReminderTime(UUID uuid, long timestamp) {
-        playerDataManager.set(uuid, "account.last-security-reminder-timestamp", timestamp);
+        playerDataManager.set(uuid, "account.last-security-reminder", timestamp);
     }
 
     public void purgeAccountData(UUID uuid) {
@@ -63,7 +63,7 @@ public class AccountManager {
     //--------------------------------------------------
     // Wyszukiwanie zarejestrowanego nicku (ignoruje wielkość liter)
     //--------------------------------------------------
-    public String getRegisteredNameIgnoreCase(String inputName) {
+    public String getRegisteredName(String inputName) {
         if (inputName == null || inputName.isEmpty()) {
             return null;
         }

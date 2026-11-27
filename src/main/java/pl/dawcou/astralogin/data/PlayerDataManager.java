@@ -11,6 +11,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -27,6 +28,7 @@ public class PlayerDataManager {
     private final Set<UUID> blockedSaves = ConcurrentHashMap.newKeySet();
 
     private final Map<UUID, SaveState> saveStates = new ConcurrentHashMap<>();
+    private final Set<UUID> unloadingPlayers = ConcurrentHashMap.newKeySet();
 
     private static class SaveState {
         private final Object lock = new Object();
@@ -70,6 +72,15 @@ public class PlayerDataManager {
         return JsonHelper.has(getOrLoad(uuid), key);
     }
 
+    public JsonElement getElement(UUID uuid, String key) {
+        JsonElement element = JsonHelper.getElementByPath(
+                getOrLoad(uuid),
+                key
+        );
+
+        return element == null ? null : element.deepCopy();
+    }
+
     //--------------------------------------------------
     // Metody zapisu i usuwania kluczy
     //--------------------------------------------------
@@ -104,6 +115,10 @@ public class PlayerDataManager {
         SaveState state = getSaveState(uuid);
 
         synchronized (state.lock) {
+            if (unloadingPlayers.contains(uuid)) {
+                return;
+            }
+
             JsonObject root = cache.computeIfAbsent(uuid, this::loadFromFile);
 
             if (value == null) {
@@ -120,6 +135,10 @@ public class PlayerDataManager {
         SaveState state = getSaveState(uuid);
 
         synchronized (state.lock) {
+            if (unloadingPlayers.contains(uuid)) {
+                return;
+            }
+
             JsonObject root = cache.computeIfAbsent(uuid, this::loadFromFile);
             removeInternal(root, key);
             saveAsyncInternal(uuid, root, state);
@@ -239,55 +258,30 @@ public class PlayerDataManager {
         }
     }
 
-    private synchronized void saveToFile(UUID uuid, JsonObject json) {
+    private synchronized boolean saveToFile(UUID uuid, JsonObject json) {
         if (blockedSaves.contains(uuid)) {
             plugin.getLogger().warning(
                     "Save skipped for " + uuid
                             + "! Player data file is corrupted or could not be loaded."
             );
-            return;
+            return false;
         }
 
         File file = new File(playersFolder, uuid + ".json");
 
-        try (BufferedWriter writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
+        try (BufferedWriter writer = Files.newBufferedWriter(
+                file.toPath(),
+                StandardCharsets.UTF_8
+        )) {
             gson.toJson(json, writer);
+            return true;
+
         } catch (IOException e) {
             plugin.getLogger().severe(
                     "Could not save player data for " + uuid + ": " + e.getMessage()
             );
+            return false;
         }
-    }
-
-    private void saveAsync(UUID uuid, JsonObject json) {
-        JsonObject copy = json.deepCopy();
-        SaveState state = getSaveState(uuid);
-        long version = state.version.incrementAndGet();
-
-        if (!plugin.isEnabled()) {
-            synchronized (state.lock) {
-                if (state.version.get() != version) {
-                    return;
-                }
-
-                saveToFile(uuid, copy);
-            }
-            return;
-        }
-
-        plugin.getSchedulerManager().runAsync(() -> {
-            synchronized (state.lock) {
-                if (state.version.get() != version) {
-                    return;
-                }
-
-                if (!cache.containsKey(uuid)) {
-                    return;
-                }
-
-                saveToFile(uuid, copy);
-            }
-        });
     }
 
     public void saveAll() {
@@ -325,14 +319,81 @@ public class PlayerDataManager {
         }
     }
 
-    public void unloadPlayer(UUID uuid) {
+    //--------------------------------------------------
+    // Saves player snapshot asynchronously before evicting cache
+    //--------------------------------------------------
+    public CompletableFuture<Boolean> unloadPlayer(UUID uuid) {
         SaveState state = getSaveState(uuid);
 
+        final JsonObject snapshot;
+        final long version;
+
         synchronized (state.lock) {
-            state.version.incrementAndGet();
-            cache.remove(uuid);
-            saveStates.remove(uuid);
+            if (!unloadingPlayers.add(uuid)) {
+                return CompletableFuture.completedFuture(false);
+            }
+
+            JsonObject data = cache.get(uuid);
+            if (data == null) {
+                unloadingPlayers.remove(uuid);
+                return CompletableFuture.completedFuture(true);
+            }
+
+            snapshot = data.deepCopy();
+            version = state.version.incrementAndGet();
         }
+
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+
+        Runnable saveTask = () -> {
+            try {
+                synchronized (state.lock) {
+                    if (state.version.get() != version) {
+                        unloadingPlayers.remove(uuid);
+                        future.complete(false);
+                        return;
+                    }
+                }
+
+                boolean saved = saveToFile(uuid, snapshot);
+
+                synchronized (state.lock) {
+                    if (state.version.get() != version) {
+                        unloadingPlayers.remove(uuid);
+                        future.complete(false);
+                        return;
+                    }
+
+                    //--------------------------------------------------
+                    // Evicts cache only on successful save and releases lock
+                    //--------------------------------------------------
+                    if (saved) {
+                        cache.remove(uuid);
+                    }
+                    unloadingPlayers.remove(uuid);
+
+                    future.complete(saved);
+                }
+            } catch (Exception e) {
+                plugin.getLogger().severe(
+                        "Could not unload player data for " + uuid + ": " + e.getMessage()
+                );
+                future.completeExceptionally(e);
+            }
+        };
+
+        if (!plugin.isEnabled()) {
+            saveTask.run();
+        } else {
+            try {
+                plugin.getSchedulerManager().runAsync(saveTask);
+            } catch (Exception e) {
+                unloadingPlayers.remove(uuid);
+                future.completeExceptionally(e);
+            }
+        }
+
+        return future;
     }
 
     //--------------------------------------------------

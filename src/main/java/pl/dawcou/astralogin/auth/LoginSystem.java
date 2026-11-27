@@ -1,7 +1,5 @@
 package pl.dawcou.astralogin.auth;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -20,63 +18,49 @@ import pl.dawcou.astralogin.auth.security.attempt.AttemptType;
 import pl.dawcou.astralogin.system.SoundManager;
 import pl.dawcou.astralogin.system.utils.TimeUtils;
 
-import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class LoginSystem implements CommandExecutor, TabCompleter {
 
     private final AstraLogin plugin;
+    private final TwoFactorSystem twoFactorSystem;
 
     private final Set<UUID> loggedIn = new HashSet<>();
-    private final Map<UUID, String> waitingFor2FA = new HashMap<>();
 
     public LoginSystem(AstraLogin plugin) {
         this.plugin = plugin;
+        this.twoFactorSystem = new TwoFactorSystem(plugin, this);
     }
 
-    public Set<UUID> getLoggedIn() {
-        return loggedIn;
+    public TwoFactorSystem getTwoFactorSystem() {
+        return twoFactorSystem;
     }
 
-    public boolean isWaitingFor2FA(UUID uuid) {
-        return waitingFor2FA.containsKey(uuid);
+    // --------------------------------------------------
+    // Checks whether a player UUID is currently marked as logged in
+    // --------------------------------------------------
+    public boolean isLoggedIn(UUID uuid) {
+        return loggedIn.contains(uuid);
     }
 
-    public void addWaitingFor2FA(UUID uuid, String uuidString) {
-        waitingFor2FA.put(uuid, uuidString);
+    // --------------------------------------------------
+    // Adds a player UUID to the active logged-in set
+    // --------------------------------------------------
+    public void addLoggedIn(UUID uuid) {
+        loggedIn.add(uuid);
     }
 
-    public void removeWaitingFor2FA(UUID uuid) {
-        waitingFor2FA.remove(uuid);
-    }
-
-    // ----------------------------------------------------------------
-    // TWO-FACTOR AUTHENTICATION
-    // ----------------------------------------------------------------
-
-    public void requestTwoFactor(Player p, boolean playReminderSound) {
-        UUID uuid = p.getUniqueId();
-
-        addWaitingFor2FA(uuid, uuid.toString());
-
-        p.sendMessage(plugin.getLanguageManager().getWithPrefix("twofactor.required"));
-
-        Title title = Title.title(
-                Component.text(plugin.getLanguageManager().getMessage("title.twofactor")),
-                Component.text(plugin.getLanguageManager().getMessage("twofactor.required")),
-                Title.Times.times(
-                        Duration.ofMillis(500),
-                        Duration.ofHours(1),
-                        Duration.ofMillis(500)
-                )
-        );
-
-        plugin.getAdventure().player(p).showTitle(title);
-
-        if (playReminderSound) {
-            plugin.getSoundManager().playSound(p, SoundManager.SoundType.SECURITY_REMINDER);
-        }
+    // --------------------------------------------------
+    // Removes a player UUID from the active logged-in set
+    // --------------------------------------------------
+    public void removeLoggedIn(UUID uuid) {
+        loggedIn.remove(uuid);
     }
 
     // ----------------------------------------------------------------
@@ -84,12 +68,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
     // ----------------------------------------------------------------
 
     @Override
-    public boolean onCommand(
-            @NonNull CommandSender sender,
-            Command command,
-            @NonNull String label,
-            String[] args
-    ) {
+    public boolean onCommand(@NonNull CommandSender sender, Command command, @NonNull String label, String[] args) {
         Player p = sender instanceof Player ? (Player) sender : null;
         String commandName = command.getName();
 
@@ -271,7 +250,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
         plugin.getAccountManager().recordRegister(uuid, playerName);
 
         if (plugin.getTwoFactorManager().has2FA(uuid)) {
-            requestTwoFactor(p, false);
+            twoFactorSystem.requestTwoFactor(p, false);
 
             plugin.getLogManager().log(
                     "Player " + p.getName() + " registered, but has active 2FA. Waiting for code..."
@@ -370,13 +349,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
         });
     }
 
-    private void handlePasswordVerificationSuccess(
-            Player p,
-            UUID uuid,
-            String currentIP,
-            boolean rehashNeeded,
-            String newHash
-    ) {
+    private void handlePasswordVerificationSuccess(Player p, UUID uuid, String currentIP, boolean rehashNeeded, String newHash) {
         if (rehashNeeded && newHash != null) {
             plugin.getPasswordManager().savePassword(uuid, newHash);
         }
@@ -394,17 +367,15 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                 .hasActive2FASession(uuid, currentIP);
 
         if (is2FAEnabled && !hasActive2FA) {
-            plugin.getSchedulerManager().runSync(() -> {
-                requestTwoFactor(p, true);
-            });
+            plugin.getSchedulerManager().runSync(() -> twoFactorSystem.requestTwoFactor(p, true));
         } else {
             plugin.getSchedulerManager().runSync(() ->
-                    completePasswordLogin(p, uuid, currentIP, is2FAEnabled)
+                    completePasswordLogin(p, uuid, currentIP)
             );
         }
     }
 
-    private void completePasswordLogin(Player p, UUID uuid, String currentIP, boolean is2FAEnabled) {
+    private void completePasswordLogin(Player p, UUID uuid, String currentIP) {
         if (!p.isOnline()) {
             return;
         }
@@ -435,11 +406,6 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
         );
 
         plugin.getAccountManager().recordLogin(uuid, p.getName());
-
-        if (is2FAEnabled) {
-            plugin.getSessionManager().getTwoFactorSessionManager()
-                    .saveSession2FA(uuid, currentIP);
-        }
     }
 
     private void handleInvalidPassword(Player p, String currentIP) {
@@ -460,7 +426,7 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
                 plugin.getIpTrustManager().getFailedPasswordPoints()
         );
 
-        plugin.getAttemptManager().checkCrime(p, AttemptType.PASSWORD);
+        plugin.getAttemptManager().addTrial(p, AttemptType.PASSWORD);
     }
 
     // ----------------------------------------------------------------
@@ -532,40 +498,6 @@ public class LoginSystem implements CommandExecutor, TabCompleter {
 
         plugin.getSoundManager().playSound(p, SoundManager.SoundType.AUTO_LOGIN);
         plugin.getSeasonalEventManager().sendEventNotice(p);
-    }
-
-    public void completeTwoFactorLogin(Player p, String ip, boolean backupCode) {
-        UUID uuid = p.getUniqueId();
-
-        removeWaitingFor2FA(uuid);
-        finishLogin(p);
-
-        if (plugin.getConfig().getBoolean("security.2fa.session.enabled")) {
-            plugin.getSessionManager().getTwoFactorSessionManager()
-                    .saveSession2FA(uuid, ip);
-        }
-
-        plugin.getLogManager().log(
-                "Player " + p.getName() +
-                        (backupCode
-                                ? " entered a valid backup code and was logged in"
-                                : " entered the correct 2FA code and was logged in")
-        );
-
-        plugin.getIpTrustManager().changeTrustScore(
-                ip,
-                plugin.getIpTrustManager().getTwofaSuccessPoints()
-        );
-
-        p.sendMessage(plugin.getLanguageManager().getWithPrefix("login.success"));
-        plugin.getSuspicionManager().decrementSuspicion(uuid);
-        plugin.getSoundManager().playSound(p, SoundManager.SoundType.LOGIN);
-
-        p.sendTitle(
-                plugin.getLanguageManager().getMessage("title.login"),
-                plugin.getLanguageManager().getMessage("title.login-subtitle"),
-                10, 40, 10
-        );
     }
 
     // ----------------------------------------------------------------

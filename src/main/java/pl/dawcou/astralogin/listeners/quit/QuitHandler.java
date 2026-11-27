@@ -6,11 +6,14 @@ import pl.dawcou.astralogin.AstraLogin;
 import pl.dawcou.astralogin.auth.LoginSystem;
 import pl.dawcou.astralogin.auth.manage.InventoryManager;
 import pl.dawcou.astralogin.auth.manage.spawn.SpawnManager;
+import pl.dawcou.astralogin.auth.password.PasswordManager;
 import pl.dawcou.astralogin.auth.security.captcha.mode.chat.ChatCaptchaHandler;
 import pl.dawcou.astralogin.auth.security.captcha.mode.gui.GuiCaptchaHandler;
 import pl.dawcou.astralogin.auth.security.captcha.mode.map.MapCaptchaHandler;
+import pl.dawcou.astralogin.auth.security.premium.PremiumManager;
 import pl.dawcou.astralogin.auth.sessions.SessionManager;
-import pl.dawcou.astralogin.auth.security.TwoFactorManager;
+import pl.dawcou.astralogin.auth.security.twofactor.TwoFactorManager;
+import pl.dawcou.astralogin.data.PlayerDataManager;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -31,15 +34,19 @@ public class QuitHandler {
         SessionManager sessionManager = plugin.getSessionManager();
         InventoryManager inventoryManager = plugin.getInventoryManager();
         TwoFactorManager twoFactorManager = plugin.getTwoFactorManager();
+        PasswordManager passwordManager = plugin.getPasswordManager();
+        PremiumManager premiumManager = plugin.getPremiumManager();
+        PlayerDataManager playerDataManager = plugin.getPlayerDataManager();
 
         // Czyszczenie sesji CAPTCHA
         GuiCaptchaHandler.removeSession(p);
         MapCaptchaHandler.removeSession(p, plugin);
         ChatCaptchaHandler.removeSession(p);
+        plugin.getCaptchaManager().removeFlagged(uuid);
 
-        if (loginSystem != null && loginSystem.getLoggedIn() != null) {
+        if (loginSystem != null) {
 
-            if (loginSystem.getLoggedIn().contains(uuid)) {
+            if (loginSystem.isLoggedIn(uuid)) {
 
                 // --- GRACZ BYŁ ZALOGOWANY ---
                 if (spawnManager != null) {
@@ -56,6 +63,10 @@ public class QuitHandler {
                     inventoryManager.restore(p);
                 }
             }
+
+            // Usuwamy z mapy zalogowanych
+            loginSystem.removeLoggedIn(uuid);
+            loginSystem.getTwoFactorSystem().removeWaitingFor2FA(uuid);
         }
 
         // Logika widoczności wykonywana tylko gdy serwer NIE jest wyłączany
@@ -65,23 +76,21 @@ public class QuitHandler {
             }
         }
 
-        // Usuwamy z mapy zalogowanych
-        if (loginSystem != null && loginSystem.getLoggedIn() != null) {
-            loginSystem.getLoggedIn().remove(uuid);
-            loginSystem.removeWaitingFor2FA(uuid);
-        }
-
-        // CZYSZCZENIE (zamrożonych setup'ów)
+        // Czyszczenie pamięci
         if (twoFactorManager != null) {
             twoFactorManager.invalidateSetup(uuid);
         }
-
-        // Czyszczenie pamięci
-        plugin.getPremiumManager().removeAuthenticatedPlayer(uuid);
-        plugin.getPasswordManager().getPasswordHasher().cleanupPlayer(uuid);
+        if (premiumManager != null) {
+            premiumManager.removeAuthenticatedPlayer(uuid);;
+        }
+        if (passwordManager != null) {
+            passwordManager.getPasswordHasher().cleanupPlayer(uuid);
+        }
 
         if (!isShutdown) {
-            plugin.getPlayerDataManager().unloadPlayer(uuid);
+            if (playerDataManager != null) {
+                playerDataManager.unloadPlayer(uuid);
+            }
         }
     }
 }

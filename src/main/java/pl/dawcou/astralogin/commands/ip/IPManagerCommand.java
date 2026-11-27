@@ -33,9 +33,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
         if (args.length < 2) {
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.usage"));
-            if (p != null) {
-                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
-            }
+            plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
             return true;
         }
 
@@ -43,9 +41,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
         if (!sender.hasPermission("astralogin.ipmanager." + action)) {
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.no-permission"));
-            if (p != null) {
-                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
-            }
+            plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
             return true;
         }
 
@@ -55,9 +51,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
         if (targetUuid == null) {
             sender.sendMessage(plugin.getLanguageManager().getWithPrefix("general.player-not-found")
                     .replace("%target%", inputName));
-            if (p != null) {
-                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
-            }
+            plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
             return true;
         }
 
@@ -72,14 +66,12 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
                 if (playerIp == null) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.no-ip")
                             .replace("%player%", inputName));
-                    if (p != null) {
-                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
-                    }
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     return true;
                 }
 
                 if (!banManager.isIPBanned(playerIp)) {
-                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.info.unban.not-banned")
+                    sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.info.not-banned")
                             .replace("%player%", inputName)
                             .replace("%ip%", playerIp));
                 } else {
@@ -91,27 +83,21 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
                             .replace("%time%", String.valueOf(timeLeft))
                             .replace("%reason%", reason.name()));
                 }
-                if (p != null) {
-                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
-                }
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
                 break;
 
             case "unban":
                 if (playerIp == null) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.no-ip")
                             .replace("%player%", inputName));
-                    if (p != null) {
-                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
-                    }
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     return true;
                 }
 
                 if (!banManager.isIPBanned(playerIp)) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.unban.not-banned")
                             .replace("%player%", inputName));
-                    if (p != null) {
-                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
-                    }
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     return true;
                 }
 
@@ -121,18 +107,14 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.unban.success")
                         .replace("%player%", inputName)
                         .replace("%ip%", playerIp));
-                if (p != null) {
-                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
-                }
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
                 break;
 
             case "bypass":
                 if (banManager.hasBypass(uuid)) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass.already-enabled")
                             .replace("%player%", inputName));
-                    if (p != null) {
-                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
-                    }
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     return true;
                 }
 
@@ -141,18 +123,14 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass.enabled")
                         .replace("%player%", inputName));
-                if (p != null) {
-                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
-                }
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
                 break;
 
             case "unbypass":
                 if (!banManager.hasBypass(uuid)) {
                     sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass.already-disabled")
                             .replace("%player%", inputName));
-                    if (p != null) {
-                        plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
-                    }
+                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                     return true;
                 }
 
@@ -162,9 +140,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.bypass.disabled")
                         .replace("%player%", inputName));
-                if (p != null) {
-                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
-                }
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.SUCCESS);
 
                 // 2. Pobieramy gracza online (jeśli gracz jest offline, getPlayerExact zwróci null)
                 Player onlineTarget = Bukkit.getPlayerExact(inputName);
@@ -188,9 +164,7 @@ public class IPManagerCommand implements CommandExecutor, TabCompleter {
 
             default:
                 sender.sendMessage(plugin.getLanguageManager().getWithPrefix("ip-manager.usage"));
-                if (p != null) {
-                    plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
-                }
+                plugin.getSoundManager().playSound(p, SoundManager.SoundType.FAIL);
                 break;
         }
 

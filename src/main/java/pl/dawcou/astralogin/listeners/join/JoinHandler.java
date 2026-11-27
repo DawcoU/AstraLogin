@@ -96,20 +96,14 @@ public class JoinHandler {
                 boolean passwordBypassedBySession = sessionHandler.handleSession(p, uuid, level, loginSystem);
 
                 // Jeśli sesja przywróciła gracza całkowicie (hasło + 2FA lub samo hasło bez 2FA), przerwij
-                if (loginSystem.getLoggedIn().contains(uuid) && !loginSystem.isWaitingFor2FA(uuid)) {
+                if (loginSystem.isLoggedIn(uuid) && !loginSystem.getTwoFactorSystem().isWaitingFor2FA(uuid)) {
                     return;
                 }
 
                 // --- LOGIKA POZA SESJĄ LUB DLA BLOKADY 2FA ---
                 applyUnauthenticatedRestrictions(p);
 
-                // Jeśli hasło NIE zostało przywrócone przez sesję, standardowo wyrzucamy z zalogowanych
-                if (!passwordBypassedBySession) {
-                    loginSystem.getLoggedIn().remove(uuid);
-                } else {
-                    // Jeśli hasło przeszło z sesji, upewniamy się, że gracz ma status zalogowanego z hasła
-                    loginSystem.getLoggedIn().add(uuid);
-                }
+                loginSystem.removeLoggedIn(uuid);
 
                 // Dostosowanie przypomnienia w zależności od statusu
                 if (passwordBypassedBySession) {

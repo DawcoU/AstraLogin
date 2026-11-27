@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import pl.dawcou.astralogin.AstraLogin;
+import pl.dawcou.astralogin.system.utils.TimeUtils;
 
 public class NoticeManager {
 
@@ -47,6 +48,7 @@ public class NoticeManager {
         String pinCmd, pinSyntax;
         String forgotCmd, forgotSyntax;
         String tfaCmd, tfaSyntax;
+        String mailCmd, mailSyntax;
 
         // Zmienne dla komend i parametrów admina
         String adminCmds;
@@ -55,6 +57,7 @@ public class NoticeManager {
         String resetPassCmd, resetPassSyntax;
         String resetIpCmd, resetIpSyntax;
         String resetPinCmd, resetPinSyntax;
+        String resetEmailCmd, resetEmailSyntax;
         String resetAccountCmd, resetAccountSyntax;
         String moveCmd, moveSyntax;
         String spawnCmd, spawnSyntax;
@@ -62,6 +65,8 @@ public class NoticeManager {
         String ipTrustCmd, ipTrustSyntax;
         String reloadCmd, reloadSyntax;
         String updateCmd, updateSyntax;
+        String reset2faCmd, reset2faSyntax;
+        String ipListCmd;
 
         switch (lang) {
             case "pl":
@@ -88,7 +93,10 @@ public class NoticeManager {
                 forgotSyntax = "<PIN>";
 
                 tfaCmd = "/2fa";
-                tfaSyntax = "<setup/unsetup/code>";
+                tfaSyntax = "setup <totp/mail> | unsetup | code";
+
+                mailCmd = "/mail";
+                mailSyntax = "<set <mail>/del>";
 
                 adminCmds = "Komendy Administracji:";
 
@@ -105,6 +113,9 @@ public class NoticeManager {
 
                 resetPinCmd = "/resetpin";
                 resetPinSyntax = "<player>";
+
+                resetEmailCmd = "/zresetujmail";
+                resetEmailSyntax = "<gracz>";
 
                 resetAccountCmd = "/resetaccount";
                 resetAccountSyntax = "<player>";
@@ -126,6 +137,11 @@ public class NoticeManager {
 
                 updateCmd = "/astralogin";
                 updateSyntax = "update";
+
+                reset2faCmd = "/reset2fa";
+                reset2faSyntax = "<gracz>";
+
+                ipListCmd = "/iplist";
                 break;
 
             case "de":
@@ -152,7 +168,10 @@ public class NoticeManager {
                 forgotSyntax = "<PIN>";
 
                 tfaCmd = "/2fa";
-                tfaSyntax = "<einrichten/entfernen/code>";
+                tfaSyntax = "setup <totp/mail> | entfernen | code";
+
+                mailCmd = "/mail";
+                mailSyntax = "<setzen <mail>/entfernen>";
 
                 adminCmds = "Admin-Befehle:";
 
@@ -169,6 +188,9 @@ public class NoticeManager {
 
                 resetPinCmd = "/resetpin";
                 resetPinSyntax = "<spieler>";
+
+                resetEmailCmd = "/resetmail";
+                resetEmailSyntax = "<spieler>";
 
                 resetAccountCmd = "/resetaccount";
                 resetAccountSyntax = "<spieler>";
@@ -190,6 +212,11 @@ public class NoticeManager {
 
                 updateCmd = "/astralogin";
                 updateSyntax = "update";
+
+                reset2faCmd = "/reset2fa";
+                reset2faSyntax = "<spieler>";
+
+                ipListCmd = "/iplist";
                 break;
 
             case "es":
@@ -216,7 +243,10 @@ public class NoticeManager {
                 forgotSyntax = "<PIN>";
 
                 tfaCmd = "/2fa";
-                tfaSyntax = "<configurar/eliminar/código>";
+                tfaSyntax = "setup <totp/mail> | eliminar | código";
+
+                mailCmd = "/mail";
+                mailSyntax = "<establecer <mail>/eliminar>";
 
                 adminCmds = "Comandos de Administración:";
 
@@ -233,6 +263,9 @@ public class NoticeManager {
 
                 resetPinCmd = "/resetpin";
                 resetPinSyntax = "<jugador>";
+
+                resetEmailCmd = "/resetmail";
+                resetEmailSyntax = "<jugador>";
 
                 resetAccountCmd = "/resetaccount";
                 resetAccountSyntax = "<jugador>";
@@ -254,6 +287,11 @@ public class NoticeManager {
 
                 updateCmd = "/astralogin";
                 updateSyntax = "update";
+
+                reset2faCmd = "/reset2fa";
+                reset2faSyntax = "<jugador>";
+
+                ipListCmd = "/iplist";
                 break;
 
             default:
@@ -280,7 +318,10 @@ public class NoticeManager {
                 forgotSyntax = "<PIN>";
 
                 tfaCmd = "/2fa";
-                tfaSyntax = "<setup/unsetup/code>";
+                tfaSyntax = "setup <totp/mail> | unsetup | code";
+
+                mailCmd = "/mail";
+                mailSyntax = "<set <mail>/del>";
 
                 adminCmds = "Admin Commands:";
 
@@ -297,6 +338,9 @@ public class NoticeManager {
 
                 resetPinCmd = "/resetpin";
                 resetPinSyntax = "<player>";
+
+                resetEmailCmd = "/resetmail";
+                resetEmailSyntax = "<player>";
 
                 resetAccountCmd = "/resetaccount";
                 resetAccountSyntax = "<player>";
@@ -318,13 +362,22 @@ public class NoticeManager {
 
                 updateCmd = "/astralogin";
                 updateSyntax = "update";
+
+                reset2faCmd = "/reset2fa";
+                reset2faSyntax = "<player>";
+
+                ipListCmd = "/iplist";
                 break;
         }
+
 
         sender.sendMessage(p + "§b§l=== " + helpTitle + " ===");
         sender.sendMessage(p + "§7" + versionLabel + " §f" + plugin.getDescription().getVersion() + " §7| " + authorLabel + " §f" + plugin.getAuthor());
         sender.sendMessage(p + " ");
+
         sender.sendMessage(p + "§e§l" + playerCmds);
+
+        // Player commands
         sender.sendMessage(p + " §f" + regCmd + " " + regSyntax);
         sender.sendMessage(p + " §f" + loginCmd + " " + loginSyntax);
         sender.sendMessage(p + " §f" + logoutCmd);
@@ -332,25 +385,106 @@ public class NoticeManager {
         sender.sendMessage(p + " §f" + pinCmd + " " + pinSyntax);
         sender.sendMessage(p + " §f" + forgotCmd + " " + forgotSyntax);
         sender.sendMessage(p + " §f" + tfaCmd + " " + tfaSyntax);
+        sender.sendMessage(p + " §f" + mailCmd + " " + mailSyntax);
 
-        if (sender.hasPermission("astralogin.account") || sender.hasPermission("astralogin.reload") || sender.hasPermission("astralogin.update")) {
+        // Admin commands
+        boolean hasAdminCommands =
+                sender.hasPermission("astralogin.account")
+                        || sender.hasPermission("astralogin.accountslist")
+                        || sender.hasPermission("astralogin.resetpassword")
+                        || sender.hasPermission("astralogin.resetmail")
+                        || sender.hasPermission("astralogin.resetip")
+                        || sender.hasPermission("astralogin.resetpin")
+                        || sender.hasPermission("astralogin.resetaccount")
+                        || sender.hasPermission("astralogin.reset2fa")
+                        || sender.hasPermission("astralogin.moveaccount")
+                        || sender.hasPermission("astralogin.spawn.set")
+                        || sender.hasPermission("astralogin.spawn.delete")
+                        || sender.hasPermission("astralogin.ipmanager.info")
+                        || sender.hasPermission("astralogin.ipmanager.unban")
+                        || sender.hasPermission("astralogin.ipmanager.bypass")
+                        || sender.hasPermission("astralogin.ipmanager.unbypass")
+                        || sender.hasPermission("astralogin.iptrust.info")
+                        || sender.hasPermission("astralogin.iptrust.set")
+                        || sender.hasPermission("astralogin.iptrust.reset")
+                        || sender.hasPermission("astralogin.iplist")
+                        || sender.hasPermission("astralogin.reload")
+                        || sender.hasPermission("astralogin.update")
+                        || sender.hasPermission("astralogin.reset2fa")
+                        || sender.hasPermission("astralogin.iplist");
+
+        if (hasAdminCommands) {
             sender.sendMessage(p + " ");
             sender.sendMessage(p + "§c§l" + adminCmds);
-            sender.sendMessage(p + " §f" + accountCmd + " " + accountSyntax);
-            sender.sendMessage(p + " §f" + listCmd);
-            sender.sendMessage(p + " §f" + resetPassCmd + " " + resetPassSyntax);
-            sender.sendMessage(p + " §f" + resetIpCmd + " " + resetIpSyntax);
-            sender.sendMessage(p + " §f" + resetPinCmd + " " + resetPinSyntax);
-            sender.sendMessage(p + " §f" + resetAccountCmd + " " + resetAccountSyntax);
-            sender.sendMessage(p + " §f" + moveCmd + " " + moveSyntax);
-            sender.sendMessage(p + " §f" + spawnCmd + " " + spawnSyntax);
-            sender.sendMessage(p + " §f" + ipManagerCmd + " " + ipManagerSyntax);
-            sender.sendMessage(p + " §f" + ipTrustCmd + " " + ipTrustSyntax);
-            sender.sendMessage(p + " §f" + reloadCmd + " " + reloadSyntax);
-            sender.sendMessage(p + " §f" + updateCmd + " " + updateSyntax);
+
+            if (sender.hasPermission("astralogin.account")) {
+                sender.sendMessage(p + " §f" + accountCmd + " " + accountSyntax);
+            }
+
+            if (sender.hasPermission("astralogin.accountslist")) {
+                sender.sendMessage(p + " §f" + listCmd);
+            }
+
+            if (sender.hasPermission("astralogin.resetpassword")) {
+                sender.sendMessage(p + " §f" + resetPassCmd + " " + resetPassSyntax);
+            }
+
+            if (sender.hasPermission("astralogin.resetip")) {
+                sender.sendMessage(p + " §f" + resetIpCmd + " " + resetIpSyntax);
+            }
+
+            if (sender.hasPermission("astralogin.reset2fa")) {
+                sender.sendMessage(p + " §f" + reset2faCmd + " " + reset2faSyntax);
+            }
+
+            if (sender.hasPermission("astralogin.resetpin")) {
+                sender.sendMessage(p + " §f" + resetPinCmd + " " + resetPinSyntax);
+            }
+
+            if (sender.hasPermission("astralogin.resetmail")) {
+                sender.sendMessage(p + " §f" + resetEmailCmd + " " + resetEmailSyntax);
+            }
+
+            if (sender.hasPermission("astralogin.resetaccount")) {
+                sender.sendMessage(p + " §f" + resetAccountCmd + " " + resetAccountSyntax);
+            }
+
+            if (sender.hasPermission("astralogin.moveaccount")) {
+                sender.sendMessage(p + " §f" + moveCmd + " " + moveSyntax);
+            }
+
+            if (sender.hasPermission("astralogin.spawn.set") || sender.hasPermission("astralogin.spawn.delete")) {
+                sender.sendMessage(p + " §f" + spawnCmd + " " + spawnSyntax);
+            }
+
+            if (sender.hasPermission("astralogin.ipmanager.info")
+                    || sender.hasPermission("astralogin.ipmanager.unban")
+                    || sender.hasPermission("astralogin.ipmanager.bypass")
+                    || sender.hasPermission("astralogin.ipmanager.unbypass")) {
+                sender.sendMessage(p + " §f" + ipManagerCmd + " " + ipManagerSyntax);
+            }
+
+            if (sender.hasPermission("astralogin.iptrust.info")
+                    || sender.hasPermission("astralogin.iptrust.set")
+                    || sender.hasPermission("astralogin.iptrust.reset")) {
+                sender.sendMessage(p + " §f" + ipTrustCmd + " " + ipTrustSyntax);
+            }
+
+            if (sender.hasPermission("astralogin.iplist")) {
+                sender.sendMessage(p + " §f" + ipListCmd);
+            }
+
+            if (sender.hasPermission("astralogin.reload")) {
+                sender.sendMessage(p + " §f" + reloadCmd + " " + reloadSyntax);
+            }
+
+            if (sender.hasPermission("astralogin.update")) {
+                sender.sendMessage(p + " §f" + updateCmd + " " + updateSyntax);
+            }
         }
 
         sender.sendMessage(p + "§b§l=================================");
+
     }
 
     // --- METODY POWIADOMIEŃ PLIKÓW I KONFIGURACJI ---
@@ -496,7 +630,7 @@ public class NoticeManager {
     public void sendErrorMigrationNotice(String action) {
         String msg = switch (getLang().toLowerCase()) {
             case "pl" -> "§cBłąd podczas migracji: §f" + action;
-            case "de" -> "§cFehler bei der Migration: §f" + action;
+            case "de" -> "§cFehler bei der FileMigration: §f" + action;
             case "es" -> "§cError durante la migración: §f" + action;
             default -> "§cError during migration: §f" + action;
         };
@@ -511,6 +645,29 @@ public class NoticeManager {
             default -> "§eLoaded §6" + count + " §eactive sessions from file";
         };
         Bukkit.getConsoleSender().sendMessage(getConsolePrefix() + " " + msg);
+    }
+
+    // --- SZABLON WIADOMOŚCI EMAIL ---
+
+    public String getVerificationEmailContent(String code, long lifetimeMillis) {
+        long seconds = Math.max(1L, lifetimeMillis / 1000L);
+        String formattedTime = TimeUtils.formatTime(seconds);
+        String lang = getLang() == null ? "en" : getLang().toLowerCase();
+
+        return switch (lang) {
+            case "pl" -> "Twój kod weryfikacyjny Astralogin: " + code
+                    + "\n\nKod jest ważny przez " + formattedTime + ".\n"
+                    + "Jeśli to nie Ty wykonałeś tę operację, zignoruj tę wiadomość.";
+            case "de" -> "Dein Astralogin-Verifizierungscode: " + code
+                    + "\n\nDer Code ist " + formattedTime + " gültig.\n"
+                    + "Wenn du diesen Vorgang nicht selbst ausgeführt hast, ignoriere diese Nachricht.";
+            case "es" -> "Tu código de verificación de Astralogin: " + code
+                    + "\n\nEl código es válido durante " + formattedTime + ".\n"
+                    + "Si no realizaste esta operación, ignora este mensaje.";
+            default -> "Your Astralogin verification code: " + code
+                    + "\n\nThe code is valid for " + formattedTime + ".\n"
+                    + "If you did not perform this action, ignore this message.";
+        };
     }
 
     // --- LOGO STARTOWE I KOŃCOWE ---

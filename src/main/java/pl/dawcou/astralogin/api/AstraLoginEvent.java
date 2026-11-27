@@ -7,7 +7,6 @@ import org.jspecify.annotations.NonNull;
 
 public abstract class AstraLoginEvent extends Event {
 
-    private static final HandlerList HANDLERS = new HandlerList();
     private final Player player;
     private final long timestamp;
     private final String ip;
@@ -31,11 +30,5 @@ public abstract class AstraLoginEvent extends Event {
     }
 
     @Override
-    public @NonNull HandlerList getHandlers() {
-        return HANDLERS;
-    }
-
-    public static @NonNull HandlerList getHandlerList() {
-        return HANDLERS;
-    }
+    public abstract @NonNull HandlerList getHandlers();
 }

@@ -23,7 +23,7 @@ public class BackendManager {
         boolean loaded = false;
 
         boolean hasProtocolLib = plugin.getServer().getPluginManager().getPlugin("ProtocolLib") != null;
-        boolean hasPacketEvents = plugin.getServer().getPluginManager().getPlugin("packetevents") != null;
+        boolean hasPacketEvents = plugin.getServer().getPluginManager().getPlugin("PacketEvents") != null;
 
         String secondChoice = "PROTOCOLLIB".equals(firstChoice) ? "PACKETEVENTS" : "PROTOCOLLIB";
 

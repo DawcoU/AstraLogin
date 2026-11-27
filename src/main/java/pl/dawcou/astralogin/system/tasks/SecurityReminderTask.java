@@ -30,13 +30,13 @@ public class SecurityReminderTask {
         String rawTime = plugin.getConfig().getString("security.reminders.interval", "24 hours");
         long intervalMillis = TimeUtils.parseTime(rawTime, 86400000L);
 
-        this.currentTask = plugin.getSchedulerManager().runAsyncRepeating(task -> {
+        this.currentTask = plugin.getSchedulerManager().runSyncRepeating(task -> {
             long now = System.currentTimeMillis();
 
             for (Player player : Bukkit.getOnlinePlayers()) {
                 UUID uuid = player.getUniqueId();
 
-                if (!plugin.getLoginSystem().getLoggedIn().contains(uuid)) {
+                if (!plugin.getLoginSystem().isLoggedIn(uuid)) {
                     continue;
                 }
 
@@ -64,7 +64,7 @@ public class SecurityReminderTask {
                     plugin.getAccountManager().setLastSecurityReminderTime(uuid, now);
                 }
             }
-        }, 1L, 1L, TimeUnit.MINUTES);
+        }, 5L, 5L, TimeUnit.MINUTES);
     }
 
     /**
